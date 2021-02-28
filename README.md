@@ -1,1 +1,2 @@
-# infra-did
+# Infra DID Javascript Library
+
