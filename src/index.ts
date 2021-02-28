@@ -16,6 +16,8 @@ interface IConfig {
   registryContract: string
   rpcEndpoint: string
   jwtSigner?: any
+  txfeePayerAccount?: string
+  txfeePayerPrivateKey?: string
 }
 
 export default class InfraDID {
@@ -27,15 +29,16 @@ export default class InfraDID {
   private jsonRpc: JsonRpc
   private api: Api
   private jwtSigner: Signer
+  private txfeePayerAccount?: string
 
   constructor (conf: IConfig) {
     this.did = conf.did
     const didSplit = conf.did.split(':')
-    if (didSplit.length !== 3) {
+    if (didSplit.length !== 4) {
       throw new Error(`invalid did, needs network identifier part and id part (${conf.did})`)
     }
 
-    const idInNetwork = didSplit[2]
+    const idInNetwork = didSplit[3]
 
     if (idInNetwork.startsWith("PUB_K1_") || idInNetwork.startsWith("PUB_R1_") || idInNetwork.startsWith("EOS")) {
       this.didPubKey = idInNetwork
@@ -52,12 +55,16 @@ export default class InfraDID {
       throw new Error("unsupported private key type")
     }
 
-    // const privKey: Numeric.Key = {
-    //   type: Numeric.KeyType.k1,
-    //   data: new Uint8Array(Buffer.from(conf.privateKeyHex, 'hex'))
-    // }
-    // const privateKeyBase58 = Numeric.privateKeyToString(privKey)
-    const signatureProvider = new JsSignatureProvider([conf.privateKey]);
+    const sigProviderPrivKeys = [conf.privateKey]
+    if (conf.txfeePayerAccount && conf.txfeePayerPrivateKey) {
+      sigProviderPrivKeys.push(conf.txfeePayerPrivateKey)
+      this.txfeePayerAccount = conf.txfeePayerAccount
+    }
+    if (this.didPubKey && !this.txfeePayerAccount) {
+      throw new Error('tx fee payer account not configured for public key DID')
+    }
+
+    const signatureProvider = new JsSignatureProvider(sigProviderPrivKeys);
     this.api = new Api({ rpc, signatureProvider });
 
     if (conf.jwtSigner) {
@@ -77,82 +84,61 @@ export default class InfraDID {
     return { did, publicKey, privateKey };
   }
 
+  async setAttribute(key: string, value: string) {
 
+    if (this.didPubKey) {
 
+      // [[eosio::action]]
+      // void pksetattr( const public_key& pk, const string& key, const string& value, const signature& sig, const name& ram_payer );
 
-  // async lookupOwner (cache = true) {
-  //   if (cache && this.owner) return this.owner
-  //   const result = await this.registry.identityOwner(this.address)
-  //   return result['0']
-  // }
-  //
-  // async changeOwner (newOwner) {
-  //   const owner = await this.lookupOwner()
-  //   const txHash = await this.registry.changeOwner(this.address, newOwner, {
-  //     from: owner
-  //   })
-  //   this.owner = newOwner
-  //   return txHash
-  // }
-  //
-  // async addDelegate (delegate, {delegateType = Secp256k1VerificationKey2018, expiresIn = 86400}) {
-  //   const owner = await this.lookupOwner()
-  //   return this.registry.addDelegate(
-  //     this.address,
-  //     delegateType,
-  //     delegate,
-  //     expiresIn,
-  //     { from: owner }
-  //   )
-  // }
-  //
-  // async revokeDelegate (delegate, delegateType = Secp256k1VerificationKey2018) {
-  //   const owner = await this.lookupOwner()
-  //   return this.registry.revokeDelegate(this.address, delegateType, delegate, {
-  //     from: owner
-  //   })
-  // }
-  //
-  // async setAttribute (key, value, expiresIn = 86400, gasLimit) {
-  //   const owner = await this.lookupOwner()
-  //   return this.registry.setAttribute(
-  //     this.address,
-  //     stringToBytes32(key),
-  //     attributeToHex(key, value),
-  //     expiresIn,
-  //     {
-  //       from: owner,
-  //       gas: gasLimit
-  //     }
-  //   )
-  // }
-  //
-  // async revokeAttribute (key, value, gasLimit) {
-  //   const owner = await this.lookupOwner()
-  //   return this.registry.revokeAttribute(
-  //     this.address,
-  //     stringToBytes32(key),
-  //     attributeToHex(key, value),
-  //     {
-  //       from: owner,
-  //       gas: gasLimit
-  //     }
-  //   )
-  // }
-  //
-  // // Create a temporary signing delegate able to sign JWT on behalf of identity
-  // async createSigningDelegate (
-  //   delegateType = Secp256k1VerificationKey2018,
-  //   expiresIn = 86400
-  // ) {
-  //   const kp = EthrDID.createKeyPair()
-  //   this.signer = SimpleSigner(kp.privateKey)
-  //   const txHash = await this.addDelegate(kp.address, {
-  //     delegateType,
-  //     expiresIn
-  //   })
-  //   return { kp, txHash }
-  // }
+      return await this.api.transact({
+        actions: [{
+          account: this.registryContract,
+          name: 'pksetattr',
+          authorization: [{
+            actor: this.txfeePayerAccount,
+            permission: 'active'
+          }],
+          data: {
+            pk: this.didPubKey,
+            key,
+            value,
+            sig: 'SIG_K1_KkLuqSPgkvVT2udyy1PUs94ufraBvUd2C8KdcVrxQ8LptrSK7UAzRfFtphPT4wEqveJNAAh8JcvYyZUNTqinNeT9yZz7Sr', // for test
+            ram_payer: this.txfeePayerAccount
+          }
+        }]
+      }, {
+        blocksBehind: 3,
+        expireSeconds: 30
+      })
+    } else if (this.didAccount) {
+
+      // [[eosio::action]]
+      // void accsetattr( const name& account, const string& key, const string& value );
+
+      return await this.api.transact({
+        actions: [{
+          account: this.registryContract,
+          name: 'accsetattr',
+          authorization: [{
+            actor: this.didAccount,
+            permission: 'active'
+          }],
+          data: {
+            account: this.didAccount,
+            key,
+            value
+          }
+        }]
+      }, {
+        blocksBehind: 3,
+        expireSeconds: 30
+      })
+
+    } else {
+      throw new Error("no DID configured")
+    }
+  }
 
   async signJWT (payload, expiresIn?: number) {
     if (typeof this.jwtSigner !== 'function') {
