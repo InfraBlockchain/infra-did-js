@@ -1,17 +1,19 @@
-import { createJWT, Signer, SimpleSigner, toEthereumAddress, verifyJWT } from 'did-jwt'
+import { createJWT, Signer, SimpleSigner, verifyJWT } from 'did-jwt'
 import { Api, JsonRpc, Numeric } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
+import { SerialBuffer } from 'eosjs/dist/eosjs-serialize'
 import { PublicKey } from 'eosjs/dist/PublicKey'
 import { PrivateKey } from 'eosjs/dist/PrivateKey'
-import { ec as EC } from 'elliptic'
-// const EC = require('elliptic').ec
 import fetch from 'node-fetch'
+import { ec as EC } from 'elliptic'
+import { Buffer } from 'buffer'
+// const EC = require('elliptic').ec
 
 const secp256k1 = new EC('secp256k1') // currently only support secp256k1 key
 
 interface IConfig {
   did: string
-  privateKey: string // did controller key, currently only support secp256k1 key
+  privateKey: string // did controller key, currently only support secp256k1 key, EOSIO base58 format
   networkId: string
   registryContract: string
   rpcEndpoint: string
@@ -24,6 +26,7 @@ export default class InfraDID {
   public did: string
   public didPubKey?: string
   public didAccount?: string
+  private privateKeyObj: PrivateKey
 
   private registryContract: string
   private jsonRpc: JsonRpc
@@ -55,6 +58,8 @@ export default class InfraDID {
       throw new Error("unsupported private key type")
     }
 
+    this.privateKeyObj = PrivateKey.fromString(conf.privateKey, secp256k1) //secp256k1.keyFromPrivate(this.privKey)
+
     const sigProviderPrivKeys = [conf.privateKey]
     if (conf.txfeePayerAccount && conf.txfeePayerPrivateKey) {
       sigProviderPrivKeys.push(conf.txfeePayerPrivateKey)
@@ -84,9 +89,82 @@ export default class InfraDID {
     return { did, publicKey, privateKey };
   }
 
+  private async getNonceForPubKeyDid() : Promise<number> {
+    const pubKey = Numeric.stringToPublicKey(this.didPubKey)
+    const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1,pubKey.data.length)).toString('hex')
+
+    const options = {
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
+      table: 'pubkeydid',
+      index_position: 2,
+      key_type: 'sha256',
+      lower_bound: pubkey_index_256bits,
+      upper_bound: pubkey_index_256bits,
+      limit: 1
+    }
+
+    const res = await this.jsonRpc.get_table_rows(options)
+    if (res && res.rows.length > 0 && res.rows[0].nonce) {
+      return res.rows[0].nonce
+    } else {
+      return 0
+    }
+  }
+
+  private digestForPubKeySetAttributeSig(pubKey: string, key: string, value: string, nonce: number) {
+    const buf = new SerialBuffer({
+      textEncoder: this.api.textEncoder,
+      textDecoder: this.api.textDecoder
+    })
+    const prefix = "infra-mainnet"
+    const actionName = "pksetattr"
+    buf.pushString(prefix)
+    buf.pushString(actionName)
+    buf.pushPublicKey(pubKey)
+    buf.pushUint16(nonce)
+    buf.pushString(key)
+    buf.pushString(value)
+
+    const prefixBytes = buf.getBytes()
+    const actionNameBytes = buf.getBytes()
+    const pubKeyBytes = buf.getUint8Array(1 + Numeric.publicKeyDataSize) // type byte + pub key binary
+    const nonceBytes = buf.getUint8Array(2)
+    const keyBytes = buf.getBytes()
+    const valueBytes = buf.getBytes()
+
+    const data = this.mergeBytesArrays([prefixBytes, actionNameBytes, pubKeyBytes, nonceBytes, keyBytes, valueBytes])
+    const digest = secp256k1.hash().update(data).digest()
+    return digest
+  }
+
+  private mergeBytesArrays(bytesArrays: Uint8Array[]) : Uint8Array {
+    let dataLength = 0
+    bytesArrays.forEach(item => {
+      dataLength += item.length;
+    });
+
+    // merge bytes
+    const data = new Uint8Array(dataLength);
+    let offset = 0;
+    bytesArrays.forEach(item => {
+      data.set(item, offset);
+      offset += item.length;
+    });
+
+    return data
+  }
+
   async setAttribute(key: string, value: string) {
 
     if (this.didPubKey) {
+
+      const nonce = await this.getNonceForPubKeyDid()
+      const digest = this.digestForPubKeySetAttributeSig(this.didPubKey, key, value, nonce)
+      const signature = this.privateKeyObj.sign(digest, false)
+
+      // console.log({nonce, digest, signature, sigStr: signature.toString()})
 
       // [[eosio::action]]
       // void pksetattr( const public_key& pk, const string& key, const string& value, const signature& sig, const name& ram_payer );
@@ -103,7 +181,7 @@ export default class InfraDID {
             pk: this.didPubKey,
             key,
             value,
-            sig: 'SIG_K1_KkLuqSPgkvVT2udyy1PUs94ufraBvUd2C8KdcVrxQ8LptrSK7UAzRfFtphPT4wEqveJNAAh8JcvYyZUNTqinNeT9yZz7Sr', // for test
+            sig: signature.toString(), //'SIG_K1_KkLuqSPgkvVT2udyy1PUs94ufraBvUd2C8KdcVrxQ8LptrSK7UAzRfFtphPT4wEqveJNAAh8JcvYyZUNTqinNeT9yZz7Sr', // for test
             ram_payer: this.txfeePayerAccount
           }
         }]
