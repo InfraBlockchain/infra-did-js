@@ -113,7 +113,7 @@ export default class InfraDID {
     }
   }
 
-  private digestForPubKeySetAttributeSig(pubKey: string, key: string, value: string, nonce: number) {
+  private digestForPubKeyDIDSetAttributeSig(pubKey: string, key: string, value: string, nonce: number) {
 
     const prefix = "infra-mainnet"
     const actionName = "pksetattr"
@@ -140,66 +140,70 @@ export default class InfraDID {
     return digest
   }
 
-  async setAttribute(key: string, value: string) {
+  async setAttributePubKeyDID(key: string, value: string) {
 
-    if (this.didPubKey) {
-
-      const nonce = await this.getNonceForPubKeyDid()
-      const digest = this.digestForPubKeySetAttributeSig(this.didPubKey, key, value, nonce)
-      const signature = this.privateKeyObj.sign(digest, false)
-
-      // console.log({nonce, digest, signature, sigStr: signature.toString()})
-
-      // [[eosio::action]]
-      // void pksetattr( const public_key& pk, const string& key, const string& value, const signature& sig, const name& ram_payer );
-
-      return await this.api.transact({
-        actions: [{
-          account: this.registryContract,
-          name: 'pksetattr',
-          authorization: [{
-            actor: this.txfeePayerAccount,
-            permission: 'active'
-          }],
-          data: {
-            pk: this.didPubKey,
-            key,
-            value,
-            sig: signature.toString(), //'SIG_K1_KkLuqSPgkvVT2udyy1PUs94ufraBvUd2C8KdcVrxQ8LptrSK7UAzRfFtphPT4wEqveJNAAh8JcvYyZUNTqinNeT9yZz7Sr', // for test
-            ram_payer: this.txfeePayerAccount
-          }
-        }]
-      }, {
-        blocksBehind: 3,
-        expireSeconds: 30
-      })
-    } else if (this.didAccount) {
-
-      // [[eosio::action]]
-      // void accsetattr( const name& account, const string& key, const string& value );
-
-      return await this.api.transact({
-        actions: [{
-          account: this.registryContract,
-          name: 'accsetattr',
-          authorization: [{
-            actor: this.didAccount,
-            permission: 'active'
-          }],
-          data: {
-            account: this.didAccount,
-            key,
-            value
-          }
-        }]
-      }, {
-        blocksBehind: 3,
-        expireSeconds: 30
-      })
-
-    } else {
-      throw new Error("no DID configured")
+    if (!this.didPubKey) {
+      throw new Error('public key did is not configured')
     }
+
+    const nonce = await this.getNonceForPubKeyDid()
+    const digest = this.digestForPubKeyDIDSetAttributeSig(this.didPubKey, key, value, nonce)
+    const signature = this.privateKeyObj.sign(digest, false)
+
+    // console.log({nonce, digest, signature, sigStr: signature.toString()})
+
+    // [[eosio::action]]
+    // void pksetattr( const public_key& pk, const string& key, const string& value, const signature& sig, const name& ram_payer );
+
+    return await this.api.transact({
+      actions: [{
+        account: this.registryContract,
+        name: 'pksetattr',
+        authorization: [{
+          actor: this.txfeePayerAccount,
+          permission: 'active'
+        }],
+        data: {
+          pk: this.didPubKey,
+          key,
+          value,
+          sig: signature.toString(), //'SIG_K1_KkLuqSPgkvVT2udyy1PUs94ufraBvUd2C8KdcVrxQ8LptrSK7UAzRfFtphPT4wEqveJNAAh8JcvYyZUNTqinNeT9yZz7Sr', // for test
+          ram_payer: this.txfeePayerAccount
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  async setAttributeAccountDID(key: string, value: string) {
+
+    if (!this.didAccount) {
+      throw new Error('account did is not configured')
+    }
+
+    // [[eosio::action]]
+    // void accsetattr( const name& account, const string& key, const string& value );
+
+    return await this.api.transact({
+      actions: [{
+        account: this.registryContract,
+        name: 'accsetattr',
+        authorization: [{
+          actor: this.didAccount,
+          permission: 'active'
+        }],
+        data: {
+          account: this.didAccount,
+          key,
+          value
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
   }
 
   async signJWT (payload, expiresIn?: number) {

@@ -39,7 +39,7 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resSetAttr = await didApi.setAttribute('svc/MessagingService', 'https://infradid.com/pk/3/mysvcr4')
+      const resSetAttr = await didApi.setAttributePubKeyDID('svc/MessagingService', 'https://infradid.com/pk/3/mysvcr4')
       console.log({resSetAttr})
 
       expect(resSetAttr.transaction_id).toBeDefined()
@@ -65,7 +65,7 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resSetAttr = await didApi.setAttribute('svc/MessagingService', 'https://infradid.com/acc/1/mysvcr5')
+      const resSetAttr = await didApi.setAttributeAccountDID('svc/MessagingService', 'https://infradid.com/acc/1/mysvcr5')
       console.log({resSetAttr})
 
       expect(resSetAttr.transaction_id).toBeDefined()
