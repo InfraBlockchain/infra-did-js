@@ -11,28 +11,32 @@ import { Buffer } from 'buffer'
 
 const secp256k1 = new EC('secp256k1') // currently only support secp256k1 key
 
+const defaultPubKeyDidSignDataPrefix = "infra-mainnet"
+
 interface IConfig {
   did: string
-  privateKey: string // did controller key, currently only support secp256k1 key, EOSIO base58 format
+  didOwnerPrivateKey: string // did controller key, currently only supports secp256k1 key, in EOSIO base58 format
   networkId: string
   registryContract: string
   rpcEndpoint: string
   jwtSigner?: any
   txfeePayerAccount?: string
   txfeePayerPrivateKey?: string
+  pubKeyDidSignDataPrefix?: string
 }
 
 export default class InfraDID {
   public did: string
   public didPubKey?: string
   public didAccount?: string
-  private privateKeyObj: PrivateKey
+  private didOwnerPrivateKeyObj: PrivateKey
 
   private registryContract: string
   private jsonRpc: JsonRpc
   private api: Api
   private jwtSigner: Signer
   private txfeePayerAccount?: string
+  private pubKeyDidSignDataPrefix: string
 
   constructor (conf: IConfig) {
     this.did = conf.did
@@ -53,14 +57,14 @@ export default class InfraDID {
     const rpc = new JsonRpc(conf.rpcEndpoint, { fetch } );
     this.jsonRpc = rpc
 
-    const privKey = Numeric.stringToPrivateKey(conf.privateKey)
+    const privKey = Numeric.stringToPrivateKey(conf.didOwnerPrivateKey)
     if (privKey.type != Numeric.KeyType.k1 ) {
       throw new Error("unsupported private key type")
     }
 
-    this.privateKeyObj = PrivateKey.fromString(conf.privateKey, secp256k1) //secp256k1.keyFromPrivate(this.privKey)
+    this.didOwnerPrivateKeyObj = PrivateKey.fromString(conf.didOwnerPrivateKey, secp256k1) //secp256k1.keyFromPrivate(this.privKey)
 
-    const sigProviderPrivKeys = [conf.privateKey]
+    const sigProviderPrivKeys = [conf.didOwnerPrivateKey]
     if (conf.txfeePayerAccount && conf.txfeePayerPrivateKey) {
       sigProviderPrivKeys.push(conf.txfeePayerPrivateKey)
       this.txfeePayerAccount = conf.txfeePayerAccount
@@ -68,6 +72,8 @@ export default class InfraDID {
     if (this.didPubKey && !this.txfeePayerAccount) {
       throw new Error('tx fee payer account not configured for public key DID')
     }
+
+    this.pubKeyDidSignDataPrefix = conf.pubKeyDidSignDataPrefix || defaultPubKeyDidSignDataPrefix
 
     const signatureProvider = new JsSignatureProvider(sigProviderPrivKeys);
     this.api = new Api({ rpc, signatureProvider });
@@ -113,21 +119,22 @@ export default class InfraDID {
     }
   }
 
-  private digestForPubKeyDIDSetAttributeSig(pubKey: string, key: string, value: string, nonce: number) {
-
-    const prefix = "infra-mainnet"
-    const actionName = "pksetattr"
-
-    const dataLength = prefix.length + actionName.length + 1 + Numeric.publicKeyDataSize + 2 + key.length + value.length
-
+  private newSerialBuffer(dataLength: number) : SerialBuffer {
     const buf = new SerialBuffer({
       textEncoder: this.api.textEncoder,
       textDecoder: this.api.textDecoder,
       array: new Uint8Array(dataLength)
     })
     buf.length = 0
+    return buf
+  }
 
-    buf.pushArray(buf.textEncoder.encode(prefix))
+  private digestForPubKeyDIDSetAttributeSig(pubKey: string, key: string, value: string, nonce: number) {
+    const actionName = "pksetattr"
+    const dataLength = this.pubKeyDidSignDataPrefix.length + actionName.length + (1 + Numeric.publicKeyDataSize) + 2 + key.length + value.length
+
+    const buf = this.newSerialBuffer(dataLength)
+    buf.pushArray(buf.textEncoder.encode(this.pubKeyDidSignDataPrefix))
     buf.pushArray(buf.textEncoder.encode(actionName))
     buf.pushPublicKey(pubKey)
     buf.pushUint16(nonce)
@@ -148,9 +155,9 @@ export default class InfraDID {
 
     const nonce = await this.getNonceForPubKeyDid()
     const digest = this.digestForPubKeyDIDSetAttributeSig(this.didPubKey, key, value, nonce)
-    const signature = this.privateKeyObj.sign(digest, false)
+    const signature = this.didOwnerPrivateKeyObj.sign(digest, false)
 
-    // console.log({nonce, digest, signature, sigStr: signature.toString()})
+    // console.log({nonce, digest, signature: signature.toString()})
 
     // [[eosio::action]]
     // void pksetattr( const public_key& pk, const string& key, const string& value, const signature& sig, const name& ram_payer );
@@ -167,7 +174,7 @@ export default class InfraDID {
           pk: this.didPubKey,
           key,
           value,
-          sig: signature.toString(), //'SIG_K1_KkLuqSPgkvVT2udyy1PUs94ufraBvUd2C8KdcVrxQ8LptrSK7UAzRfFtphPT4wEqveJNAAh8JcvYyZUNTqinNeT9yZz7Sr', // for test
+          sig: signature.toString(), // ex, SIG_K1_KkLuqSPgkvVT2udyy1PUs94ufraBvUd2C8KdcVrxQ8LptrSK7UAzRfFtphPT4wEqveJNAAh8JcvYyZUNTqinNeT9yZz7Sr
           ram_payer: this.txfeePayerAccount
         }
       }]
@@ -175,6 +182,62 @@ export default class InfraDID {
       blocksBehind: 3,
       expireSeconds: 30
     })
+  }
+
+  private digestForPubKeyDIDChangeOwnerSig(pubKey: string, newOwnerPubKey: string, nonce: number) {
+    const actionName = "pkchowner"
+    const dataLength = this.pubKeyDidSignDataPrefix.length + actionName.length + (1 + Numeric.publicKeyDataSize) + 2 + (1 + Numeric.publicKeyDataSize)
+
+    const buf = this.newSerialBuffer(dataLength)
+    buf.pushArray(buf.textEncoder.encode(this.pubKeyDidSignDataPrefix))
+    buf.pushArray(buf.textEncoder.encode(actionName))
+    buf.pushPublicKey(pubKey)
+    buf.pushUint16(nonce)
+    buf.pushPublicKey(newOwnerPubKey)
+
+    // console.log({data: buf.array})
+
+    const digest = secp256k1.hash().update(buf.array).digest()
+    return digest
+  }
+
+  async changeOwnerPubKeyDID(newOwnerPubKey: string) {
+    if (!this.didPubKey) {
+      throw new Error('public key did is not configured')
+    }
+
+    const nonce = await this.getNonceForPubKeyDid()
+    const digest = this.digestForPubKeyDIDChangeOwnerSig(this.didPubKey, newOwnerPubKey, nonce)
+    const signature = this.didOwnerPrivateKeyObj.sign(digest, false)
+
+    console.log({nonce, digest, signature: signature.toString()})
+
+    // [[eosio::action]]
+    // void pkchowner( const public_key& pk, const public_key& new_owner_pk, const signature& sig, const name& ram_payer );
+
+    return await this.api.transact({
+      actions: [{
+        account: this.registryContract,
+        name: 'pkchowner',
+        authorization: [{
+          actor: this.txfeePayerAccount,
+          permission: 'active'
+        }],
+        data: {
+          pk: this.didPubKey,
+          new_owner_pk: newOwnerPubKey,
+          sig: signature.toString(),
+          ram_payer: this.txfeePayerAccount
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  async revokePubKeyDID() {
+    return this.changeOwnerPubKeyDID('PUB_K1_11111111111111111111111111111111149Mr2R') // set dead key (33 bytes zero value) as new owner key
   }
 
   async setAttributeAccountDID(key: string, value: string) {
