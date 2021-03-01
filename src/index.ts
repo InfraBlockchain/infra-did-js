@@ -114,46 +114,30 @@ export default class InfraDID {
   }
 
   private digestForPubKeySetAttributeSig(pubKey: string, key: string, value: string, nonce: number) {
-    const buf = new SerialBuffer({
-      textEncoder: this.api.textEncoder,
-      textDecoder: this.api.textDecoder
-    })
+
     const prefix = "infra-mainnet"
     const actionName = "pksetattr"
-    buf.pushString(prefix)
-    buf.pushString(actionName)
+
+    const dataLength = prefix.length + actionName.length + 1 + Numeric.publicKeyDataSize + 2 + key.length + value.length
+
+    const buf = new SerialBuffer({
+      textEncoder: this.api.textEncoder,
+      textDecoder: this.api.textDecoder,
+      array: new Uint8Array(dataLength)
+    })
+    buf.length = 0
+
+    buf.pushArray(buf.textEncoder.encode(prefix))
+    buf.pushArray(buf.textEncoder.encode(actionName))
     buf.pushPublicKey(pubKey)
     buf.pushUint16(nonce)
-    buf.pushString(key)
-    buf.pushString(value)
+    buf.pushArray(buf.textEncoder.encode(key))
+    buf.pushArray(buf.textEncoder.encode(value))
 
-    const prefixBytes = buf.getBytes()
-    const actionNameBytes = buf.getBytes()
-    const pubKeyBytes = buf.getUint8Array(1 + Numeric.publicKeyDataSize) // type byte + pub key binary
-    const nonceBytes = buf.getUint8Array(2)
-    const keyBytes = buf.getBytes()
-    const valueBytes = buf.getBytes()
+    // console.log({data: buf.array})
 
-    const data = this.mergeBytesArrays([prefixBytes, actionNameBytes, pubKeyBytes, nonceBytes, keyBytes, valueBytes])
-    const digest = secp256k1.hash().update(data).digest()
+    const digest = secp256k1.hash().update(buf.array).digest()
     return digest
-  }
-
-  private mergeBytesArrays(bytesArrays: Uint8Array[]) : Uint8Array {
-    let dataLength = 0
-    bytesArrays.forEach(item => {
-      dataLength += item.length;
-    });
-
-    // merge bytes
-    const data = new Uint8Array(dataLength);
-    let offset = 0;
-    bytesArrays.forEach(item => {
-      data.set(item, offset);
-      offset += item.length;
-    });
-
-    return data
   }
 
   async setAttribute(key: string, value: string) {
