@@ -237,7 +237,7 @@ export default class InfraDID {
   }
 
   private digestForPubKeyDIDRevokeSig(pubKey: string, nonce: number) {
-    const actionName = "pkrevokedid"
+    const actionName = "pkdidrevoke"
     const dataLength = this.pubKeyDidSignDataPrefix.length + actionName.length + (1 + Numeric.publicKeyDataSize) + 2
 
     const buf = this.newSerialBuffer(dataLength)
@@ -271,7 +271,7 @@ export default class InfraDID {
     return await this.api.transact({
       actions: [{
         account: this.registryContract,
-        name: 'pkrevokedid',
+        name: 'pkdidrevoke',
         authorization: [{
           actor: this.txfeePayerAccount,
           permission: 'active'
@@ -280,6 +280,55 @@ export default class InfraDID {
           pk: this.didPubKey,
           sig: signature.toString(),
           ram_payer: this.txfeePayerAccount
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  private digestForPubKeyDIDClearSig(pubKey: string, nonce: number) {
+    const actionName = "pkdidclear"
+    const dataLength = this.pubKeyDidSignDataPrefix.length + actionName.length + (1 + Numeric.publicKeyDataSize) + 2
+
+    const buf = this.newSerialBuffer(dataLength)
+    buf.pushArray(buf.textEncoder.encode(this.pubKeyDidSignDataPrefix))
+    buf.pushArray(buf.textEncoder.encode(actionName))
+    buf.pushPublicKey(pubKey)
+    buf.pushUint16(nonce)
+
+    // console.log({data: buf.array, dataUtf8: new TextDecoder().decode(buf.array)})
+
+    const digest = secp256k1.hash().update(buf.array).digest()
+    return digest
+  }
+
+  async clearPubKeyDID() {
+    if (!this.didPubKey) {
+      throw new Error('public key did is not configured')
+    }
+
+    const nonce = await this.getNonceForPubKeyDid()
+    const digest = this.digestForPubKeyDIDClearSig(this.didPubKey, nonce)
+    const signature = this.didOwnerPrivateKeyObj.sign(digest, false)
+
+    console.log({nonce, digest, signature: signature.toString()})
+
+    // [[eosio::action]]
+    // void pkrevokedid( const public_key& pk, const signature& sig, const name& ram_payer );
+
+    return await this.api.transact({
+      actions: [{
+        account: this.registryContract,
+        name: 'pkdidclear',
+        authorization: [{
+          actor: this.txfeePayerAccount,
+          permission: 'active'
+        }],
+        data: {
+          pk: this.didPubKey,
+          sig: signature.toString()
         }
       }]
     }, {

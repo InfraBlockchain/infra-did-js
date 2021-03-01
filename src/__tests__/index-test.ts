@@ -28,8 +28,8 @@ describe('InfraDID', () => {
       // console.log({pubKeyDID})
 
       const conf = {
-        did: 'did:infra:local:PUB_K1_7pM9qiBuHWF6WqRSjPTMfVYKV5ZFRavK4PkUq4oFhqi9Z46mWc', //pubKeyDID.did,
-        didOwnerPrivateKey: 'PVT_K1_2Gowe7JiuzsxifyjKoQ2XNzXe1FcTax6vsGhU58Kxt4LuLFDyQ', //pubKeyDID.privateKey,
+        did: 'did:infra:local:PUB_K1_7nxEa8qHEiy34dpuYH4yE2zRWaAoeT1gsdTnh8n5ikapZZrzjx', //pubKeyDID.did,
+        didOwnerPrivateKey: 'PVT_K1_2anMa3Wq7rkQy7AyNdqMDmkycT6emGnP857zmZa13FyhkHY9JD', //pubKeyDID.privateKey,
         networkId,
         registryContract,
         rpcEndpoint,
@@ -116,6 +116,24 @@ describe('InfraDID', () => {
       expect(resRevoke.transaction_id).toBeDefined()
     })
 
+    it('should clear pubkey DID chain db rows',async () => {
+      const conf = {
+        did: 'did:infra:local:PUB_K1_7nxEa8qHEiy34dpuYH4yE2zRWaAoeT1gsdTnh8n5ikapZZrzjx',
+        didOwnerPrivateKey: 'PVT_K1_2anMa3Wq7rkQy7AyNdqMDmkycT6emGnP857zmZa13FyhkHY9JD',
+        networkId,
+        registryContract,
+        rpcEndpoint,
+        // jwtSigner?: any,
+        txfeePayerAccount,
+        txfeePayerPrivateKey,
+      }
+
+      const didApi = new InfraDID(conf)
+      const resRevoke = await didApi.clearPubKeyDID()
+      console.log({resRevoke})
+
+      expect(resRevoke.transaction_id).toBeDefined()
+    })
   })
 
   describe('Account-based DID', () => {
