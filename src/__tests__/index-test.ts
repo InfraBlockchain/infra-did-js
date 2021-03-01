@@ -95,6 +95,27 @@ describe('InfraDID', () => {
 
       expect(resChangeOwner.transaction_id).toBeDefined()
     })
+
+    it('should revoke pubkey DID',async () => {
+      const conf = {
+        did: 'did:infra:local:PUB_K1_7pM9qiBuHWF6WqRSjPTMfVYKV5ZFRavK4PkUq4oFhqi9Z46mWc',
+        // didOwnerPrivateKey: 'PVT_K1_2Gowe7JiuzsxifyjKoQ2XNzXe1FcTax6vsGhU58Kxt4LuLFDyQ',
+        didOwnerPrivateKey: 'PVT_K1_2YiPos21thxcTSrYLafUrvnHHLUkZKVxTdUdysJGAfjAAbZqNe',
+        networkId,
+        registryContract,
+        rpcEndpoint,
+        // jwtSigner?: any,
+        txfeePayerAccount,
+        txfeePayerPrivateKey,
+      }
+
+      const didApi = new InfraDID(conf)
+      const resRevoke = await didApi.revokePubKeyDID()
+      console.log({resRevoke})
+
+      expect(resRevoke.transaction_id).toBeDefined()
+    })
+
   })
 
   describe('Account-based DID', () => {
