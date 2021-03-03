@@ -266,7 +266,7 @@ export default class InfraDID {
     console.log({nonce, digest, signature: signature.toString()})
 
     // [[eosio::action]]
-    // void pkrevokedid( const public_key& pk, const signature& sig, const name& ram_payer );
+    // void pkdidrevoke( const public_key& pk, const signature& sig, const name& ram_payer );
 
     return await this.api.transact({
       actions: [{
@@ -316,7 +316,7 @@ export default class InfraDID {
     console.log({nonce, digest, signature: signature.toString()})
 
     // [[eosio::action]]
-    // void pkrevokedid( const public_key& pk, const signature& sig, const name& ram_payer );
+    // void pkdidclear( const public_key& pk, const signature& sig );
 
     return await this.api.transact({
       actions: [{
