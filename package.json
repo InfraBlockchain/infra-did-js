@@ -1,6 +1,6 @@
 {
   "name": "infra-did-js",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "InfraBlockchain DID library creating and managing DIDs",
   "main": "lib/index.js",
   "module": "lib/index.esm.js",
@@ -50,6 +50,8 @@
     "@types/jest": "26.0.19",
     "@types/node": "^14.14.31",
     "codecov": "3.8.1",
+    "did-resolver": "^2.1.2",
+    "infra-did-resolver": "^0.1.0",
     "jest": "26.6.3",
     "microbundle": "0.12.4",
     "prettier": "2.2.1",
@@ -62,9 +64,7 @@
   "dependencies": {
     "buffer": "^6.0.3",
     "did-jwt": "^4.8.0",
-    "did-resolver": "^2.1.2",
     "eosjs": "^21.0.3",
-    "infra-did-resolver": "^0.1.0",
     "node-fetch": "^2.6.1"
   }
 }

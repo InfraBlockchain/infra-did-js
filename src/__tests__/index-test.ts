@@ -1,6 +1,7 @@
 import InfraDID from '../index'
 import { Resolver } from 'did-resolver'
-import { getResolver } from "infra-did-resolver"
+// @ts-ignore
+import { getResolver } from 'infra-did-resolver'
 
 describe('InfraDID', () => {
 
@@ -41,7 +42,7 @@ describe('InfraDID', () => {
 
   beforeAll(async () => {
     infraDidResolver = getResolver(infraDidResolverConfig)
-    didResolver = new Resolver(infraDidResolver)
+    didResolver = new Resolver({...infraDidResolver})
   })
 
   describe('DID creation', () => {

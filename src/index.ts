@@ -25,16 +25,24 @@ interface IConfig {
   pubKeyDidSignDataPrefix?: string
 }
 
+// for 'did-jwt-vc' library interoperability
+export interface JwtVcIssuer {
+  did: string
+  signer: Signer
+  alg?: string
+}
+
 export default class InfraDID {
   public did: string
   public didPubKey?: string
   public didAccount?: string
+  public jwtSigner: Signer
+
   private didOwnerPrivateKeyObj: PrivateKey
 
   private registryContract: string
   private jsonRpc: JsonRpc
   private api: Api
-  private jwtSigner: Signer
   private txfeePayerAccount?: string
   private pubKeyDidSignDataPrefix: string
 
@@ -364,6 +372,14 @@ export default class InfraDID {
       blocksBehind: 3,
       expireSeconds: 30
     })
+  }
+
+  getJwtVcIssuer() : JwtVcIssuer {
+    return {
+      did: this.did,
+      signer: this.jwtSigner,
+      alg: 'ES256K'
+    }
   }
 
   async signJWT (payload, expiresIn?: number) {
