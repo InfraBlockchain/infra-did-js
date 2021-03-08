@@ -202,8 +202,15 @@ describe('InfraDID', () => {
       const signerDidApi = new InfraDID(signerDidConf)
       const payload = {
         aud: audienceDid,
-        claim1: 'claim1_value',
-        claim2: 'claim2_value'
+        vc: {
+          '@context': ['https://www.w3.org/2018/credentials/v1'],
+          type: ['VerifiableCredential'],
+          credentialSubject: {
+            id: signerDidConf.did,
+            claim1: 'claim1_value',
+            claim2: 'claim2_value'
+          }
+        }
       }
       const jwt = await signerDidApi.signJWT(payload)
       console.log({jwt})
@@ -213,8 +220,8 @@ describe('InfraDID', () => {
 
       console.dir(resVerify, { depth: null })
       expect(resVerify.payload.aud === audienceDid).toBeTruthy()
-      expect(resVerify.payload.claim1 === payload.claim1).toBeTruthy()
-      expect(resVerify.payload.claim2 === payload.claim2).toBeTruthy()
+      expect(resVerify.payload.vc.credentialSubject.claim1 === payload.vc.credentialSubject.claim1).toBeTruthy()
+      expect(resVerify.payload.vc.credentialSubject.claim2 === payload.vc.credentialSubject.claim2).toBeTruthy()
       expect(resVerify.payload.iss === signerDidConf.did).toBeTruthy()
       expect(resVerify.issuer === signerDidConf.did).toBeTruthy()
       expect(resVerify.jwt === jwt).toBeTruthy()
