@@ -64,6 +64,7 @@
     "did-jwt": "^4.8.0",
     "did-resolver": "^2.1.2",
     "eosjs": "^21.0.3",
+    "infra-did-resolver": "^0.1.0",
     "node-fetch": "^2.6.1"
   }
 }
