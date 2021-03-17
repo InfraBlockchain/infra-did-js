@@ -2,6 +2,13 @@ import InfraDID from '../index'
 import { Resolver } from 'did-resolver'
 // @ts-ignore
 import { getResolver } from 'infra-did-resolver'
+import {
+  createVerifiableCredentialJwt,
+  verifyCredential,
+  createVerifiablePresentationJwt,
+  verifyPresentation
+} from 'did-jwt-vc'
+import { CredentialPayload, CredentialStatus, DateType, IssuerType } from 'did-jwt-vc/src/types'
 
 describe('InfraDID', () => {
 
@@ -12,7 +19,8 @@ describe('InfraDID', () => {
   // const txfeePayerAccount = 'infradidinit'
   // const txfeePayerPrivateKey = '5HwviX14H6M2g4qgF8DU1CSWtxZqx2c5bDZQJBmQmgzCTyEoJtU' // EOS6hiaAMKE7iHd7BgfoKJ63JCFNoser35hu3KNsjLEgo8TV4P4db
 
-  const networkId = 'vapptest1'
+  // const networkId = 'vapptest1'
+  const networkId = '01'
   const registryContract = 'fmapkumrotfc'
   const rpcEndpoint = 'https://api.testnet.eos.io'
 
@@ -64,12 +72,12 @@ describe('InfraDID', () => {
 
       const conf = {
         ...confDefaults,
-        did: `did:infra:${networkId}:PUB_K1_7nxEa8qHEiy34dpuYH4yE2zRWaAoeT1gsdTnh8n5ikapZZrzjx`, //pubKeyDID.did,
-        didOwnerPrivateKey: 'PVT_K1_2anMa3Wq7rkQy7AyNdqMDmkycT6emGnP857zmZa13FyhkHY9JD', //pubKeyDID.privateKey,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`, //pubKeyDID.did,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', //pubKeyDID.privateKey,
       }
 
       const didApi = new InfraDID(conf)
-      const resSetAttr = await didApi.setAttributePubKeyDID('svc/MessagingService', 'https://infradid.com/pk/3/mysvcr4')
+      const resSetAttr = await didApi.setAttributePubKeyDID('svc/MessagingService', 'https://infradid.com/pk/3/mysvcr9')
       console.log({resSetAttr})
 
       expect(resSetAttr.transaction_id).toBeDefined()
@@ -80,8 +88,8 @@ describe('InfraDID', () => {
     it('should remove pubkey DID attribute',async () => {
       const conf = {
         ...confDefaults,
-        did: `did:infra:${networkId}:PUB_K1_7pM9qiBuHWF6WqRSjPTMfVYKV5ZFRavK4PkUq4oFhqi9Z46mWc`,
-        didOwnerPrivateKey: 'PVT_K1_2Gowe7JiuzsxifyjKoQ2XNzXe1FcTax6vsGhU58Kxt4LuLFDyQ',
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`, //pubKeyDID.did,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', //pubKeyDID.privateKey,
         // did: `did:infra:${networkId}:PUB_K1_7nxEa8qHEiy34dpuYH4yE2zRWaAoeT1gsdTnh8n5ikapZZrzjx`, //pubKeyDID.did,
         // didOwnerPrivateKey: 'PVT_K1_2anMa3Wq7rkQy7AyNdqMDmkycT6emGnP857zmZa13FyhkHY9JD', //pubKeyDID.privateKey,
       }
@@ -101,8 +109,8 @@ describe('InfraDID', () => {
 
       const conf = {
         ...confDefaults,
-        did: `did:infra:${networkId}:PUB_K1_7pM9qiBuHWF6WqRSjPTMfVYKV5ZFRavK4PkUq4oFhqi9Z46mWc`,
-        didOwnerPrivateKey: 'PVT_K1_2Gowe7JiuzsxifyjKoQ2XNzXe1FcTax6vsGhU58Kxt4LuLFDyQ',
+        did: `did:infra:${networkId}:PUB_K1_5TaEgpVur391dimVnFCDHB122DXYBbwWdKUpEJCNv3ko1KMYwz`,
+        didOwnerPrivateKey: 'PVT_K1_2QUHdXAKxtfbCbFDL5FoVtLpPp6sWQpXzRpW7dXXZFS2qVqFFn',
       }
 
       // pubKeyDID: {
@@ -120,9 +128,9 @@ describe('InfraDID', () => {
 
     it('should revoke pubkey DID',async () => {
       const conf = {
-        did: `did:infra:${networkId}:PUB_K1_7pM9qiBuHWF6WqRSjPTMfVYKV5ZFRavK4PkUq4oFhqi9Z46mWc`,
-        // didOwnerPrivateKey: 'PVT_K1_2Gowe7JiuzsxifyjKoQ2XNzXe1FcTax6vsGhU58Kxt4LuLFDyQ',
-        didOwnerPrivateKey: 'PVT_K1_2YiPos21thxcTSrYLafUrvnHHLUkZKVxTdUdysJGAfjAAbZqNe',
+        did: `did:infra:${networkId}:PUB_K1_5TaEgpVur391dimVnFCDHB122DXYBbwWdKUpEJCNv3ko1KMYwz`,
+        didOwnerPrivateKey: 'PVT_K1_2QUHdXAKxtfbCbFDL5FoVtLpPp6sWQpXzRpW7dXXZFS2qVqFFn',
+        // didOwnerPrivateKey: 'PVT_K1_2YiPos21thxcTSrYLafUrvnHHLUkZKVxTdUdysJGAfjAAbZqNe',
         networkId,
         registryContract,
         rpcEndpoint,
@@ -141,8 +149,8 @@ describe('InfraDID', () => {
     it('should clear pubkey DID chain db rows',async () => {
       const conf = {
         ...confDefaults,
-        did: `did:infra:${networkId}:PUB_K1_7nxEa8qHEiy34dpuYH4yE2zRWaAoeT1gsdTnh8n5ikapZZrzjx`,
-        didOwnerPrivateKey: 'PVT_K1_2anMa3Wq7rkQy7AyNdqMDmkycT6emGnP857zmZa13FyhkHY9JD',
+        did: `did:infra:${networkId}:PUB_K1_5TaEgpVur391dimVnFCDHB122DXYBbwWdKUpEJCNv3ko1KMYwz`,
+        didOwnerPrivateKey: 'PVT_K1_2QUHdXAKxtfbCbFDL5FoVtLpPp6sWQpXzRpW7dXXZFS2qVqFFn',
       }
 
       const didApi = new InfraDID(conf)
@@ -176,7 +184,7 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resSetAttr = await didApi.setAttributeAccountDID('svc/MessagingService', 'https://infradid.com/acc/1/mysvcr5')
+      const resSetAttr = await didApi.setAttributeAccountDID('svc/MessagingService', 'https://infradid.com/acc/1/mysvcr7')
       console.log({resSetAttr})
 
       expect(resSetAttr.transaction_id).toBeDefined()
@@ -187,8 +195,8 @@ describe('InfraDID', () => {
     it('should sign and verify JWT (Verifiable Credential)',async () => {
       const signerDidConf = {
         ...confDefaults,
-        did: `did:infra:${networkId}:PUB_K1_7nxEa8qHEiy34dpuYH4yE2zRWaAoeT1gsdTnh8n5ikapZZrzjx`, //pubKeyDID.did,
-        didOwnerPrivateKey: 'PVT_K1_2anMa3Wq7rkQy7AyNdqMDmkycT6emGnP857zmZa13FyhkHY9JD', //pubKeyDID.privateKey,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`, //pubKeyDID.did,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', //pubKeyDID.privateKey,
         // didOwnerPrivateKey: 'PVT_K1_2YiPos21thxcTSrYLafUrvnHHLUkZKVxTdUdysJGAfjAAbZqNe'
       }
 
@@ -219,6 +227,9 @@ describe('InfraDID', () => {
       const verifierDidApi = new InfraDID(verifierDidConf)
       const resVerify = await verifierDidApi.verifyJWT(jwt, didResolver, audienceDid)
 
+      const didDoc = await didResolver.resolve(signerDidConf.did)
+      console.dir(didDoc, { depth:null })
+
       console.dir(resVerify, { depth: null })
       expect(resVerify.payload.aud === audienceDid).toBeTruthy()
       expect(resVerify.payload.vc.credentialSubject.claim1 === payload.vc.credentialSubject.claim1).toBeTruthy()
@@ -230,5 +241,64 @@ describe('InfraDID', () => {
     })
   })
 
+  describe('did-jwt-vc interoperability test', () => {
+    it('Create and Verify Verifiable Credential Jwt',async () => {
+      const vcIssuerDidConf = {
+        ...confDefaults,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA',
+      }
+
+      const vcSubjectDidConf = {
+        ...confDefaults,
+        did: `did:infra:${networkId}:PUB_K1_7jCDarXnZ3SdPAwfFEciTSyUzA4fnfnktvFH9Fj7J89UrFiHpt`,
+        didOwnerPrivateKey: 'PVT_K1_2NqB8nrfnd6Eqj46uQvvKXiwNj6rp7dp3iJjm4K86BJW4KGSVb',
+      }
+
+      const issuerDidApi = new InfraDID(vcIssuerDidConf)
+      const issuer = issuerDidApi.getJwtVcIssuer()
+      const credential : CredentialPayload = {
+        '@context': ['https://www.w3.org/2018/credentials/v1'],
+        id: 'http://example.vc/credentials/123532',
+        type: ['VerifiableCredential', 'VaccinationCredential'],
+        issuer: vcIssuerDidConf.did,
+        // issuanceDate: '2021-03-17T12:17:26.000Z',
+        issuanceDate: new Date().toISOString(), //'2021-03-17T12:17:26.000Z',
+        credentialSubject: {
+          id: vcSubjectDidConf.did,
+          claim1: 'claim1_value',
+          claim2: 'claim2_value'
+        }
+      }
+      console.log(new Date(credential.issuanceDate).valueOf())
+      const vcJWT = await createVerifiableCredentialJwt(credential, issuer)
+      console.log({vcJWT})
+
+      const verifiedCredential = await verifyCredential(vcJWT, didResolver)
+      console.log(JSON.stringify(verifiedCredential, null, 3))
+
+      expect(verifiedCredential.payload.vc.credentialSubject.claim1).toBe('claim1_value')
+      expect(verifiedCredential.payload.vc.credentialSubject.claim2).toBe('claim2_value')
+      expect(verifiedCredential.payload.sub).toBe(vcSubjectDidConf.did)
+      expect(verifiedCredential.payload.jti).toBe(credential.id)
+      expect(verifiedCredential.payload.nbf).toBe(Math.floor(new Date(credential.issuanceDate).getTime()/1000))
+      expect(verifiedCredential.payload.iss).toBe(vcIssuerDidConf.did)
+      expect(verifiedCredential.didResolutionResult.didDocument.id).toBe(vcIssuerDidConf.did)
+      expect(verifiedCredential.issuer).toBe(vcIssuerDidConf.did)
+      // @ts-ignore
+      expect(verifiedCredential.signer.id.startsWith(vcIssuerDidConf.did)).toBeTruthy()
+      expect(verifiedCredential.jwt).toBe(vcJWT)
+      expect(verifiedCredential.verifiableCredential.credentialSubject.claim1).toBe('claim1_value')
+      expect(verifiedCredential.verifiableCredential.credentialSubject.claim2).toBe('claim2_value')
+      expect(verifiedCredential.verifiableCredential.credentialSubject.id).toBe(vcSubjectDidConf.did)
+      expect(verifiedCredential.verifiableCredential.issuer.id).toBe(vcIssuerDidConf.did)
+      // expect(verifiedCredential.verifiableCredential.issuanceDate).toBe(credential.issuanceDate)
+      expect(verifiedCredential.verifiableCredential.proof.jwt).toBe(vcJWT)
+    })
+
+    it('Create and Verify Verifiable Presentation Jwt',async () => {
+
+    })
+  })
 
 })
