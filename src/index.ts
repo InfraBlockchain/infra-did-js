@@ -1,4 +1,4 @@
-import { createJWT, Signer, SimpleSigner, verifyJWT } from 'did-jwt'
+import { createJWT, Signer, ES256KSigner, verifyJWT } from 'did-jwt'
 import { Api, JsonRpc, Numeric } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
 import { SerialBuffer } from 'eosjs/dist/eosjs-serialize'
@@ -90,7 +90,7 @@ export default class InfraDID {
       this.jwtSigner = conf.jwtSigner
     } else {
       const privateKeyHex = Buffer.from(privKey.data).toString('hex')
-      this.jwtSigner = SimpleSigner(privateKeyHex)
+      this.jwtSigner = ES256KSigner(privateKeyHex)
     }
   }
 
