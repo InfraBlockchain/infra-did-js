@@ -6,16 +6,11 @@ import {
   createVerifiableCredentialJwt,
   verifyCredential,
   createVerifiablePresentationJwt,
-  verifyPresentation
-} from 'did-jwt-vc'
-import {
+  verifyPresentation,
   CredentialPayload,
-  CredentialStatus,
-  DateType,
-  IssuerType,
   PresentationPayload,
   VerifiableCredential
-} from 'did-jwt-vc/src/types'
+} from 'did-jwt-vc'
 
 describe('InfraDID', () => {
 
