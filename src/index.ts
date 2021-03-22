@@ -5,7 +5,8 @@ import { SerialBuffer } from 'eosjs/dist/eosjs-serialize'
 import { PublicKey } from 'eosjs/dist/PublicKey'
 import { PrivateKey } from 'eosjs/dist/PrivateKey'
 import fetch from 'node-fetch'
-import { ec as EC } from 'elliptic'
+// import { ec as EC } from 'elliptic'
+import { ec as EC } from 'elliptic-expo'
 import { Buffer } from 'buffer'
 // const EC = require('elliptic').ec
 

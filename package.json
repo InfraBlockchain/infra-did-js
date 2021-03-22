@@ -1,6 +1,6 @@
 {
   "name": "infra-did-js",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "InfraBlockchain DID library creating and managing DIDs",
   "main": "lib/index.js",
   "module": "lib/index.esm.js",
@@ -15,6 +15,7 @@
     "src",
     "LICENSE"
   ],
+  "author": "Bezalel Lim <bezalel@infrablockchain.com>",
   "license": "MIT",
   "scripts": {
     "test": "jest",
@@ -65,6 +66,7 @@
   "dependencies": {
     "buffer": "^6.0.3",
     "did-jwt": "^5.0.1",
+    "elliptic-expo": "^6.5.3",
     "eosjs": "^21.0.3",
     "node-fetch": "^2.6.1"
   }
