@@ -21,8 +21,15 @@ describe('InfraDID', () => {
   // const txfeePayerAccount = 'infradidinit'
   // const txfeePayerPrivateKey = '5HwviX14H6M2g4qgF8DU1CSWtxZqx2c5bDZQJBmQmgzCTyEoJtU' // EOS6hiaAMKE7iHd7BgfoKJ63JCFNoser35hu3KNsjLEgo8TV4P4db
 
-  // const networkId = 'vapptest1'
+  // // const networkId = 'vapptest1'
+  // const networkId = '01'
+  // const registryContract = 'fmapkumrotfc'
+  // const rpcEndpoint = 'https://api.testnet.eos.io'
+
   const networkId = '01'
+  // const registryContract ='infradidregi'
+  // const rpcEndpoint = 'http://kdca.osong.bc.coov.io:9180'
+  // // const rpcEndpoint = 'http://152.99.73.160:9180'
   const registryContract = 'fmapkumrotfc'
   const rpcEndpoint = 'https://api.testnet.eos.io'
 
@@ -43,7 +50,7 @@ describe('InfraDID', () => {
       {
         networkId,
         registryContract,
-        rpcEndpoint: 'https://api.testnet.eos.io'
+        rpcEndpoint
       }
     ]
   }
@@ -156,10 +163,10 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resRevoke = await didApi.clearPubKeyDID()
-      console.log({resRevoke})
+      const resClear = await didApi.clearPubKeyDID()
+      console.log({resClear})
 
-      expect(resRevoke.transaction_id).toBeDefined()
+      expect(resClear.transaction_id).toBeDefined()
     })
   })
 
