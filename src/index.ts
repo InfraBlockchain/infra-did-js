@@ -78,9 +78,9 @@ export default class InfraDID {
       sigProviderPrivKeys.push(conf.txfeePayerPrivateKey)
       this.txfeePayerAccount = conf.txfeePayerAccount
     }
-    if (this.didPubKey && !this.txfeePayerAccount) {
-      throw new Error('tx fee payer account not configured for public key DID')
-    }
+    // if (this.didPubKey && !this.txfeePayerAccount) {
+    //   throw new Error('tx fee payer account not configured for public key DID')
+    // }
 
     this.pubKeyDidSignDataPrefix = conf.pubKeyDidSignDataPrefix || defaultPubKeyDidSignDataPrefix
 
@@ -161,6 +161,9 @@ export default class InfraDID {
     if (!this.didPubKey) {
       throw new Error('public key did is not configured')
     }
+    if (!this.txfeePayerAccount) {
+      throw new Error('tx fee payer account not configured for public key DID')
+    }
 
     const nonce = await this.getNonceForPubKeyDid()
     const digest = this.digestForPubKeyDIDSetAttributeSig(this.didPubKey, key, value, nonce)
@@ -213,6 +216,10 @@ export default class InfraDID {
   async changeOwnerPubKeyDID(newOwnerPubKey: string) {
     if (!this.didPubKey) {
       throw new Error('public key did is not configured')
+    }
+
+    if (!this.txfeePayerAccount) {
+      throw new Error('tx fee payer account not configured for public key DID')
     }
 
     const nonce = await this.getNonceForPubKeyDid()
@@ -268,6 +275,10 @@ export default class InfraDID {
       throw new Error('public key did is not configured')
     }
 
+    if (!this.txfeePayerAccount) {
+      throw new Error('tx fee payer account not configured for public key DID')
+    }
+
     const nonce = await this.getNonceForPubKeyDid()
     const digest = this.digestForPubKeyDIDRevokeSig(this.didPubKey, nonce)
     const signature = this.didOwnerPrivateKeyObj.sign(digest, false)
@@ -316,6 +327,9 @@ export default class InfraDID {
   async clearPubKeyDID() {
     if (!this.didPubKey) {
       throw new Error('public key did is not configured')
+    }
+    if (!this.txfeePayerAccount) {
+      throw new Error('tx fee payer account not configured for public key DID')
     }
 
     const nonce = await this.getNonceForPubKeyDid()
