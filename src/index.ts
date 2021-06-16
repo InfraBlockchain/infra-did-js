@@ -1,3 +1,4 @@
+import "@babel/polyfill"
 import { createJWT, Signer, ES256KSigner, verifyJWT } from 'did-jwt'
 import { Api, JsonRpc, Numeric } from 'eosjs'
 import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
