@@ -227,7 +227,7 @@ export default class InfraDID {
     const digest = this.digestForPubKeyDIDChangeOwnerSig(this.didPubKey, newOwnerPubKey, nonce)
     const signature = this.didOwnerPrivateKeyObj.sign(digest, false)
 
-    console.log({nonce, digest, signature: signature.toString()})
+    // console.log({nonce, digest, signature: signature.toString()})
 
     // [[eosio::action]]
     // void pkchowner( const public_key& pk, const public_key& new_owner_pk, const signature& sig, const name& ram_payer );
@@ -263,7 +263,7 @@ export default class InfraDID {
     buf.pushPublicKey(pubKey)
     buf.pushUint16(nonce)
 
-    console.log({data: buf.array, dataUtf8: new TextDecoder().decode(buf.array)})
+    // console.log({data: buf.array, dataUtf8: new TextDecoder().decode(buf.array)})
 
     const digest = secp256k1.hash().update(buf.array).digest()
     return digest
@@ -284,7 +284,7 @@ export default class InfraDID {
     const digest = this.digestForPubKeyDIDRevokeSig(this.didPubKey, nonce)
     const signature = this.didOwnerPrivateKeyObj.sign(digest, false)
 
-    console.log({nonce, digest, signature: signature.toString()})
+    // console.log({nonce, digest, signature: signature.toString()})
 
     // [[eosio::action]]
     // void pkdidrevoke( const public_key& pk, const signature& sig, const name& ram_payer );
@@ -337,7 +337,7 @@ export default class InfraDID {
     const digest = this.digestForPubKeyDIDClearSig(this.didPubKey, nonce)
     const signature = this.didOwnerPrivateKeyObj.sign(digest, false)
 
-    console.log({nonce, digest, signature: signature.toString()})
+    // console.log({nonce, digest, signature: signature.toString()})
 
     // [[eosio::action]]
     // void pkdidclear( const public_key& pk, const signature& sig );
