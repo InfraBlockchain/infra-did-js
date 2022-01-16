@@ -14,6 +14,7 @@ Feature provided by infra-did-js library
   * update DID attributes (service endpoint)
   * update Pub-Key DID owner key
   * revoke Pub-Key DID
+  * VC/VP creation/verification using did-jwt-vc library 
 
 ### Infra DID API Configuration
 
