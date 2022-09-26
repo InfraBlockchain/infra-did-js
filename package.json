@@ -1,6 +1,6 @@
 {
   "name": "infra-did-js",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "description": "InfraBlockchain DID library creating and managing DIDs",
   "main": "lib/index.js",
   "module": "lib/index.esm.js",
@@ -77,7 +77,7 @@
     "crypto-browserify": "^3.12.0",
     "did-jwt": "^5.0.1",
     "elliptic-expo": "^6.5.3",
-    "eosjs": "^21.0.4",
+    "infrablockchain-js": "^22.1.2",
     "node-fetch": "^2.6.1",
     "stream-browserify": "^3.0.0"
   }

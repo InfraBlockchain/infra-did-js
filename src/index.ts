@@ -1,10 +1,11 @@
 import "@babel/polyfill"
 import { createJWT, Signer, ES256KSigner, verifyJWT } from 'did-jwt'
-import { Api, JsonRpc, Numeric } from 'eosjs'
-import { JsSignatureProvider } from 'eosjs/dist/eosjs-jssig'
-import { SerialBuffer } from 'eosjs/dist/eosjs-serialize'
-import { PublicKey } from 'eosjs/dist/PublicKey'
-import { PrivateKey } from 'eosjs/dist/PrivateKey'
+import { Api, JsonRpc, Numeric } from 'infrablockchain-js'
+import { JsSignatureProvider } from 'infrablockchain-js/dist/infrablockchain-js-jssig'
+import { SerialBuffer } from 'infrablockchain-js/dist/infrablockchain-js-serialize'
+import { encodeName } from "infrablockchain-js/dist/infrablockchain-js-utils";
+import { PublicKey } from 'infrablockchain-js/dist/PublicKey'
+import { PrivateKey } from 'infrablockchain-js/dist/PrivateKey'
 import fetch from 'node-fetch'
 // import { ec as EC } from 'elliptic'
 import { ec as EC } from 'elliptic-expo'
