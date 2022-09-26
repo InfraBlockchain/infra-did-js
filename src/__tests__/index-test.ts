@@ -86,7 +86,7 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resSetAttr = await didApi.setAttributePubKeyDID('svc/MessagingService', 'https://infradid.com/pk/3/mysvcr9')
+      const resSetAttr: any = await didApi.setAttributePubKeyDID('svc/MessagingService', 'https://infradid.com/pk/3/mysvcr9')
       console.log({resSetAttr})
 
       expect(resSetAttr.transaction_id).toBeDefined()
@@ -104,7 +104,7 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resSetAttr = await didApi.setAttributePubKeyDID('svc/MessagingService', '')
+      const resSetAttr: any = await didApi.setAttributePubKeyDID('svc/MessagingService', '')
       // const resSetAttr = await didApi.setAttributePubKeyDID('svc01', '')
       console.log({resSetAttr})
 
@@ -129,7 +129,7 @@ describe('InfraDID', () => {
       // }
 
       const didApi = new InfraDID(conf)
-      const resChangeOwner = await didApi.changeOwnerPubKeyDID('PUB_K1_584qGNgteYFppoisbDz6vBFArrw3As8qeeRCekLepG4pJVrhJt')
+      const resChangeOwner: any = await didApi.changeOwnerPubKeyDID('PUB_K1_584qGNgteYFppoisbDz6vBFArrw3As8qeeRCekLepG4pJVrhJt')
       console.log({resChangeOwner})
 
       expect(resChangeOwner.transaction_id).toBeDefined()
@@ -137,9 +137,8 @@ describe('InfraDID', () => {
 
     it('should revoke pubkey DID',async () => {
       const conf = {
-        did: `did:infra:${networkId}:PUB_K1_5TaEgpVur391dimVnFCDHB122DXYBbwWdKUpEJCNv3ko1KMYwz`,
-        didOwnerPrivateKey: 'PVT_K1_2QUHdXAKxtfbCbFDL5FoVtLpPp6sWQpXzRpW7dXXZFS2qVqFFn',
-        // didOwnerPrivateKey: 'PVT_K1_2YiPos21thxcTSrYLafUrvnHHLUkZKVxTdUdysJGAfjAAbZqNe',
+        did: `did:infra:${networkId}:PUB_K1_584qGNgteYFppoisbDz6vBFArrw3As8qeeRCekLepG4pJVrhJt`,
+        didOwnerPrivateKey: 'PVT_K1_2YiPos21thxcTSrYLafUrvnHHLUkZKVxTdUdysJGAfjAAbZqNe',
         networkId,
         registryContract,
         rpcEndpoint,
@@ -149,7 +148,7 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resRevoke = await didApi.revokePubKeyDID()
+      const resRevoke: any = await didApi.revokePubKeyDID()
       console.log({resRevoke})
 
       expect(resRevoke.transaction_id).toBeDefined()
@@ -158,29 +157,86 @@ describe('InfraDID', () => {
     it('should clear pubkey DID chain db rows',async () => {
       const conf = {
         ...confDefaults,
-        did: `did:infra:${networkId}:PUB_K1_5TaEgpVur391dimVnFCDHB122DXYBbwWdKUpEJCNv3ko1KMYwz`,
-        didOwnerPrivateKey: 'PVT_K1_2QUHdXAKxtfbCbFDL5FoVtLpPp6sWQpXzRpW7dXXZFS2qVqFFn',
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
       }
 
       const didApi = new InfraDID(conf)
-      const resClear = await didApi.clearPubKeyDID()
+      const resClear: any = await didApi.clearPubKeyDID()
       console.log({resClear})
 
       expect(resClear.transaction_id).toBeDefined()
     })
+
+    it('should register pubkey DID as authorized DID',async () => {
+      const conf = {
+        ...confDefaults,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+      }
+
+      const didApi = new InfraDID(conf)
+      const resAdd: any = await didApi.registerAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU", JSON.stringify({type:"issuer"}))
+      console.log({resAdd})
+
+      expect(resAdd.transaction_id).toBeDefined()
+    })
+
+    it('should update authorized pubkey DID properties',async () => {
+      const conf = {
+        ...confDefaults,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+      }
+
+      const didApi = new InfraDID(conf)
+      const resUpdate: any = await didApi.updateAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU", JSON.stringify({type:"verifier"}))
+      console.log({resUpdate})
+
+      expect(resUpdate.transaction_id).toBeDefined()
+    })
+
+    it('should check authorized pubkey DID',async () => {
+      const conf = {
+        ...confDefaults,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+      }
+
+      const didApi = new InfraDID(conf)
+      const resCheck: any = await didApi.checkAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+      console.log({resCheck})
+
+      expect(resCheck).toEqual(true)
+    })
+
+    it('should remove authorized pubkey DID',async () => {
+      const conf = {
+        ...confDefaults,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+      }
+
+      const didApi = new InfraDID(conf)
+      const resRemove: any = await didApi.removeAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+      console.log({resRemove})
+
+      expect(resRemove.transaction_id).toBeDefined()
+    })
   })
 
   describe('Account-based DID', () => {
+
+    const account = 'jghpykcpaoko'
+    const accountPrivateKey = '5Hucf4g3riLDHVWKbLLbnQU2cqC5oAXoP6XiPjYGc4qS1ASqq5T'
+    
     it('should set account DID attribute',async () => {
       // const pubKeyDID = InfraDID.createPubKeyDIDsecp256k1(networkId)
       // console.log({pubKeyDID})
 
       // const account = 'diduser22222'
       // const accountPrivateKey = 'PVT_K1_2uTgvsmdT7U12HNqLg1Y8UQtAtgoDew2erCkNuPvqDMzcUspCS'
-
-      const account = 'jghpykcpaoko'
-      const accountPrivateKey = '5Hucf4g3riLDHVWKbLLbnQU2cqC5oAXoP6XiPjYGc4qS1ASqq5T'
-
+      
       const conf = {
         did: `did:infra:${networkId}:${account}`,
         didOwnerPrivateKey: accountPrivateKey,
@@ -193,10 +249,74 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resSetAttr = await didApi.setAttributeAccountDID('svc/MessagingService', 'https://infradid.com/acc/1/mysvcr7')
+      const resSetAttr: any = await didApi.setAttributeAccountDID('svc/MessagingService', 'https://infradid.com/acc/1/mysvcr7')
       console.log({resSetAttr})
 
       expect(resSetAttr.transaction_id).toBeDefined()
+    })
+
+    it('should register account DID as authorized DID',async () => {
+      const conf = {
+        did: `did:infra:${networkId}:${account}`,
+        didOwnerPrivateKey: accountPrivateKey,
+        networkId,
+        registryContract,
+        rpcEndpoint,
+      }
+
+      const didApi = new InfraDID(conf)
+      const resAdd: any = await didApi.registerAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3], JSON.stringify({type:"issuer"}))
+      console.log({resAdd})
+
+      expect(resAdd.transaction_id).toBeDefined()
+    })
+
+    it('should update account pubkey DID properties',async () => {
+      const conf = {
+        did: `did:infra:${networkId}:${account}`,
+        didOwnerPrivateKey: accountPrivateKey,
+        networkId,
+        registryContract,
+        rpcEndpoint,
+      }
+
+      const didApi = new InfraDID(conf)
+      const resUpdate: any = await didApi.updateAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3], JSON.stringify({type:"verifier"}))
+      console.log({resUpdate})
+
+      expect(resUpdate.transaction_id).toBeDefined()
+    })
+
+    it('should check account pubkey DID',async () => {
+      const conf = {
+        did: `did:infra:${networkId}:${account}`,
+        didOwnerPrivateKey: accountPrivateKey,
+        networkId,
+        registryContract,
+        rpcEndpoint,
+      }
+
+      const didApi = new InfraDID(conf)
+      const resCheck: any = await didApi.checkAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+      console.log({resCheck})
+
+      expect(resCheck).toEqual(true)
+    })
+
+    it('should remove account pubkey DID',async () => {
+      const conf = {
+        did: `did:infra:${networkId}:${account}`,
+        didOwnerPrivateKey: accountPrivateKey,
+        networkId,
+        registryContract,
+        rpcEndpoint,
+      }
+
+      const didApi = new InfraDID(conf)
+      const resRemove: any = await didApi.removeAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+      console.log({resRemove})
+
+      expect(resRemove.transaction_id).toBeDefined()
     })
   })
 
@@ -279,7 +399,7 @@ describe('InfraDID', () => {
       const vcJWT = await createVerifiableCredentialJwt(credential, issuer)
       console.log({vcJWT})
 
-      const verifiedCredential = await verifyCredential(vcJWT, didResolver)
+      const verifiedCredential: any = await verifyCredential(vcJWT, didResolver)
       console.log(JSON.stringify(verifiedCredential, null, 3))
 
       expect(verifiedCredential.payload.vc.credentialSubject.claim1).toBe('claim1_value')
@@ -434,7 +554,7 @@ describe('InfraDID', () => {
       const vpJWT = await createVerifiablePresentationJwt(presentation, holder)
       console.log({vpJWT})
 
-      const verifiedPresentation = await verifyPresentation(vpJWT, didResolver, { audience: verifierDid })
+      const verifiedPresentation: any = await verifyPresentation(vpJWT, didResolver, { audience: verifierDid })
       console.log(JSON.stringify(verifiedPresentation, null, 3))
 
       expect(verifiedPresentation.payload.iss).toBe(vcHolderDidConf.did)
