@@ -391,6 +391,225 @@ export default class InfraDID {
     })
   }
 
+  async registerAuthorizedPubKeyDID(authorizer: string, didPubKey: string, properties: string) {
+
+    // [[eosio::action]]
+    // void pkauthreg(const name& authorizer, const public_key& pk, const string& properties);
+
+    return await this.api.transact({
+      transaction_extensions: [
+        [
+          10, // txfee-payer
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
+        ]
+      ],
+      actions: [{
+        account: this.registryContract,
+        name: 'pkauthreg',
+        authorization: [{
+          actor: authorizer,
+          permission: 'active'
+        }],
+        data: {
+          authorizer,
+          pk: didPubKey,
+          properties
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  async updateAuthorizedPubKeyDID(authorizer: string, didPubKey: string, properties: string) {
+
+    // [[eosio::action]]
+    // void pkauthupdate(const name& authorizer, const public_key& pk, const string& properties);
+
+    return await this.api.transact({
+      transaction_extensions: [
+        [
+          10, // txfee-payer
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
+        ]
+      ],
+      actions: [{
+        account: this.registryContract,
+        name: 'pkauthupdate',
+        authorization: [{
+          actor: authorizer,
+          permission: 'active'
+        }],
+        data: {
+          authorizer,
+          pk: didPubKey,
+          properties
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  async removeAuthorizedPubKeyDID(authorizer: string, didPubKey: string) {
+
+    // [[eosio::action]]
+    // void pkauthremove(const name& authorizer, const public_key& pk);
+
+    return await this.api.transact({
+      transaction_extensions: [
+        [
+          10, // txfee-payer
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
+        ]
+      ],
+      actions: [{
+        account: this.registryContract,
+        name: 'pkauthremove',
+        authorization: [{
+          actor: authorizer,
+          permission: 'active'
+        }],
+        data: {
+          authorizer,
+          pk: didPubKey,
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  async registerAuthorizedAccountDID(authorizer: string, account: string, properties: string) {
+
+    // [[eosio::action]]
+    // void accauthreg(const name& authorizer, const name& account, const string& properties);
+
+    return await this.api.transact({
+      transaction_extensions: [
+        [
+          10, // txfee-payer
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
+        ]
+      ],
+      actions: [{
+        account: this.registryContract,
+        name: 'accauthreg',
+        authorization: [{
+          actor: authorizer,
+          permission: 'active'
+        }],
+        data: {
+          authorizer,
+          account,
+          properties
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  async updateAuthorizedAccountDID(authorizer: string, account: string, properties: string) {
+
+    // [[eosio::action]]
+    // void accauthupdt(const name& authorizer, const name& account, const string& properties);
+
+    return await this.api.transact({
+      transaction_extensions: [
+        [
+          10, // txfee-payer
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
+        ]
+      ],
+      actions: [{
+        account: this.registryContract,
+        name: 'accauthupdt',
+        authorization: [{
+          actor: authorizer,
+          permission: 'active'
+        }],
+        data: {
+          authorizer,
+          account,
+          properties
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  async removeAuthorizedAccountDID(authorizer: string, account: string) {
+
+    //  [[eosio::action]]
+    //  void accauthrm(const name& authorizer, const name& account);
+
+    return await this.api.transact({
+      transaction_extensions: [
+        [
+          10, // txfee-payer
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
+        ]
+      ],
+      actions: [{
+        account: this.registryContract,
+        name: 'accauthrm',
+        authorization: [{
+          actor: authorizer,
+          permission: 'active'
+        }],
+        data: {
+          authorizer,
+          account,
+        }
+      }]
+    }, {
+      blocksBehind: 3,
+      expireSeconds: 30
+    })
+  }
+
+  async checkAuthorizedPubKeyDID(authorizer: string, didPubKey: string) {
+
+    const pubKey = Numeric.stringToPublicKey(didPubKey)
+    const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1,pubKey.data.length)).toString('hex')
+
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: authorizer,
+      table: "authpkdid",
+      index_position: 2,
+      key_type: "sha256",
+      lower_bound: pubkey_index_256bits,
+      upper_bound: pubkey_index_256bits,
+    })).rows;
+
+    return rows.length > 0;
+  }
+
+  async checkAuthorizedAccountDID(authorizer: string, account: string) {
+
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: authorizer,
+      table: "authaccdid",
+      index_position: 2,
+      key_type: "i64",
+      lower_bound: account,
+      upper_bound: account,
+    })).rows;
+
+    return rows.length > 0;
+  }
+
   getJwtVcIssuer() : JwtVcIssuer {
     return {
       did: this.did,
