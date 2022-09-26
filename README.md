@@ -14,6 +14,8 @@ Feature provided by infra-did-js library
   * update DID attributes (service endpoint)
   * update Pub-Key DID owner key
   * revoke Pub-Key DID
+  * add/update/remove authorized Pub-Key DID & Account DID
+  * check authrized Pub-Key DID & Account DID
   * VC/VP creation/verification using did-jwt-vc library 
 
 ### Infra DID API Configuration
@@ -127,6 +129,126 @@ Update Pub-Key DID owner key
   const didApi = new InfraDID(conf)
   const resRevoke = await didApi.revokePubKeyDID()
   console.log(resRevoke.transaction_id)
+```
+
+### Add Authorized Pub-Key DID
+
+```javascript
+   const conf = {
+     ...confDefaults,
+     did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+     didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+   }
+
+   const didApi = new InfraDID(conf)
+   const resAdd: any = await didApi.registerAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU", JSON.stringif({type:"issuer"}))
+   console.log({resAdd})
+```
+
+### Update Authorized Pub-Key DID
+
+```javascript
+   const conf = {
+     ...confDefaults,
+     did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+     didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+   }
+
+   const didApi = new InfraDID(conf)
+   const resUpdate: any = await didApi.updateAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU", JSON.stringif({type:"verifier"}))
+   console.log({resUpdate})
+```
+
+### Remove Authorized Pub-Key DID
+
+```javascript
+   const conf = {
+     ...confDefaults,
+     did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+     didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+   }
+
+   const didApi = new InfraDID(conf)
+   const resRemove: any = await didApi.removeAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+   console.log({resRemove})
+```
+
+### Check Authorized Pub-Key DID
+
+```javascript
+   const conf = {
+     ...confDefaults,
+     did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+     didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+   }
+
+   const didApi = new InfraDID(conf)
+   const resCheck: boolean = await didApi.checkAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+   console.log({resCheck})
+```
+
+### Add Authorized Account DID
+
+```javascript
+   const conf = {
+     did: `did:infra:${networkId}:${account}`,
+     didOwnerPrivateKey: accountPrivateKey,
+     networkId,
+     registryContract,
+     rpcEndpoint,
+   }
+
+   const didApi = new InfraDID(conf)
+   const resAdd: any = await didApi.registerAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3], JSON.stringify({type:"issuer"}))
+   console.log({resAdd})
+```
+
+### Update Authorized Account DID
+
+```javascript
+   const conf = {
+     did: `did:infra:${networkId}:${account}`,
+     didOwnerPrivateKey: accountPrivateKey,
+     networkId,
+     registryContract,
+     rpcEndpoint,
+   }
+
+   const didApi = new InfraDID(conf)
+   const resUpdate: any = await didApi.updateAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3], JSON.stringify({type:"verifier"}))
+   console.log({resUpdate})
+```
+
+### Remove Authorized Account DID
+
+```javascript
+   const conf = {
+     did: `did:infra:${networkId}:${account}`,
+     didOwnerPrivateKey: accountPrivateKey,
+     networkId,
+     registryContract,
+     rpcEndpoint,
+   }
+
+   const didApi = new InfraDID(conf)
+   const resCheck: boolean = await didApi.checkAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+   console.log({resCheck})
+```
+
+### Check Authorized Account DID
+
+```javascript
+   const conf = {
+     did: `did:infra:${networkId}:${account}`,
+     didOwnerPrivateKey: accountPrivateKey,
+     networkId,
+     registryContract,
+     rpcEndpoint,
+   }
+
+   const didApi = new InfraDID(conf)
+   const resCheck: any = await didApi.checkAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+   console.log({resCheck})
 ```
 
 ### Issuing and Verifying W3C Verifiable Credential (VC), Verifiable Presentation (VP) using did-jwt-vc library 
