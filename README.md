@@ -15,7 +15,7 @@ Feature provided by infra-did-js library
   * update Pub-Key DID owner key
   * revoke Pub-Key DID
   * add/update/remove authorized Pub-Key DID & Account DID
-  * check authrized Pub-Key DID & Account DID
+  * get authorized Pub-Key DID & Account DID
   * VC/VP creation/verification using did-jwt-vc library 
 
 ### Infra DID API Configuration
@@ -173,7 +173,7 @@ Update Pub-Key DID owner key
    console.log({resRemove})
 ```
 
-### Check Authorized Pub-Key DID
+### Get Authorized Pub-Key DID
 
 ```javascript
    const conf = {
@@ -183,8 +183,8 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resCheck: boolean = await didApi.checkAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
-   console.log({resCheck})
+   const resGet: boolean = await didApi.getAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+   console.log({resGet})
 ```
 
 ### Add Authorized Account DID
@@ -231,11 +231,11 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resCheck: boolean = await didApi.checkAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
-   console.log({resCheck})
+   const resRemove: boolean = await didApi.removeAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+   console.log({resRemove})
 ```
 
-### Check Authorized Account DID
+### Get Authorized Account DID
 
 ```javascript
    const conf = {
@@ -247,8 +247,8 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resCheck: any = await didApi.checkAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
-   console.log({resCheck})
+   const resGet: any = await didApi.getAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+   console.log({resGet})
 ```
 
 ### Issuing and Verifying W3C Verifiable Credential (VC), Verifiable Presentation (VP) using did-jwt-vc library 
