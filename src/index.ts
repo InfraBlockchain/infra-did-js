@@ -575,7 +575,7 @@ export default class InfraDID {
     })
   }
 
-  async checkAuthorizedPubKeyDID(authorizer: string, didPubKey: string) {
+  async getAuthorizedPubKeyDID(authorizer: string, didPubKey: string) {
 
     const pubKey = Numeric.stringToPublicKey(didPubKey)
     const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1,pubKey.data.length)).toString('hex')
@@ -591,10 +591,10 @@ export default class InfraDID {
       upper_bound: pubkey_index_256bits,
     })).rows;
 
-    return rows.length > 0;
+    return rows;
   }
 
-  async checkAuthorizedAccountDID(authorizer: string, account: string) {
+  async getAuthorizedAccountDID(authorizer: string, account: string) {
 
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
@@ -607,7 +607,7 @@ export default class InfraDID {
       upper_bound: account,
     })).rows;
 
-    return rows.length > 0;
+    return rows;
   }
 
   getJwtVcIssuer() : JwtVcIssuer {
