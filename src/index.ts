@@ -391,27 +391,27 @@ export default class InfraDID {
     })
   }
 
-  async registerTrustedPubKeyDID(trusted: string, didPubKey: string, properties: string) {
+  async registerTrustedPubKeyDID(authorizer: string, didPubKey: string, properties: string) {
 
     // [[eosio::action]]
-    // void pktrstdreg(const name& trusted, const public_key& pk, const string& properties);
+    // void pktrstdreg(const name& authorizer, const public_key& pk, const string& properties);
 
     return await this.api.transact({
       transaction_extensions: [
         [
           10, // txfee-payer
-          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : trusted)
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
         ]
       ],
       actions: [{
         account: this.registryContract,
         name: 'pktrstdreg',
         authorization: [{
-          actor: trusted,
+          actor: authorizer,
           permission: 'active'
         }],
         data: {
-          trusted,
+          authorizer,
           pk: didPubKey,
           properties
         }
@@ -422,27 +422,27 @@ export default class InfraDID {
     })
   }
 
-  async updateTrustedPubKeyDID(trusted: string, didPubKey: string, properties: string) {
+  async updateTrustedPubKeyDID(authorizer: string, didPubKey: string, properties: string) {
 
     // [[eosio::action]]
-    // void pktrstdupdt(const name& trusted, const public_key& pk, const string& properties);
+    // void pktrstdupdt(const name& authorizer, const public_key& pk, const string& properties);
 
     return await this.api.transact({
       transaction_extensions: [
         [
           10, // txfee-payer
-          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : trusted)
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
         ]
       ],
       actions: [{
         account: this.registryContract,
         name: 'pktrstdupdt',
         authorization: [{
-          actor: trusted,
+          actor: authorizer,
           permission: 'active'
         }],
         data: {
-          trusted,
+          authorizer,
           pk: didPubKey,
           properties
         }
@@ -453,27 +453,27 @@ export default class InfraDID {
     })
   }
 
-  async removeTrustedPubKeyDID(trusted: string, didPubKey: string) {
+  async removeTrustedPubKeyDID(authorizer: string, didPubKey: string) {
 
     // [[eosio::action]]
-    // void pktrstdrmv(const name& trusted, const public_key& pk);
+    // void pktrstdrmv(const name& authorizer, const public_key& pk);
 
     return await this.api.transact({
       transaction_extensions: [
         [
           10, // txfee-payer
-          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : trusted)
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
         ]
       ],
       actions: [{
         account: this.registryContract,
         name: 'pktrstdrmv',
         authorization: [{
-          actor: trusted,
+          actor: authorizer,
           permission: 'active'
         }],
         data: {
-          trusted,
+          authorizer,
           pk: didPubKey,
         }
       }]
@@ -483,27 +483,27 @@ export default class InfraDID {
     })
   }
 
-  async registerTrustedAccountDID(trusted: string, account: string, properties: string) {
+  async registerTrustedAccountDID(authorizer: string, account: string, properties: string) {
 
     // [[eosio::action]]
-    // void acctrstdreg(const name& trusted, const name& account, const string& properties);
+    // void acctrstdreg(const name& authorizer, const name& account, const string& properties);
 
     return await this.api.transact({
       transaction_extensions: [
         [
           10, // txfee-payer
-          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : trusted)
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
         ]
       ],
       actions: [{
         account: this.registryContract,
         name: 'acctrstdreg',
         authorization: [{
-          actor: trusted,
+          actor: authorizer,
           permission: 'active'
         }],
         data: {
-          trusted,
+          authorizer,
           account,
           properties
         }
@@ -514,27 +514,27 @@ export default class InfraDID {
     })
   }
 
-  async updateTrustedAccountDID(trusted: string, account: string, properties: string) {
+  async updateTrustedAccountDID(authorizer: string, account: string, properties: string) {
 
     // [[eosio::action]]
-    // void acctrstdupdt(const name& trusted, const name& account, const string& properties);
+    // void acctrstdupdt(const name& authorizer, const name& account, const string& properties);
 
     return await this.api.transact({
       transaction_extensions: [
         [
           10, // txfee-payer
-          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : trusted)
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
         ]
       ],
       actions: [{
         account: this.registryContract,
         name: 'acctrstdupdt',
         authorization: [{
-          actor: trusted,
+          actor: authorizer,
           permission: 'active'
         }],
         data: {
-          trusted,
+          authorizer,
           account,
           properties
         }
@@ -545,27 +545,27 @@ export default class InfraDID {
     })
   }
 
-  async removeTrustedAccountDID(trusted: string, account: string) {
+  async removeTrustedAccountDID(authorizer: string, account: string) {
 
     // [[eosio::action]]
-    // void acctrstdrmv(const name& trusted, const name& account);
+    // void acctrstdrmv(const name& authorizer, const name& account);
 
     return await this.api.transact({
       transaction_extensions: [
         [
           10, // txfee-payer
-          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : trusted)
+          encodeName(this.txfeePayerAccount ? this.txfeePayerAccount : authorizer)
         ]
       ],
       actions: [{
         account: this.registryContract,
         name: 'acctrstdrmv',
         authorization: [{
-          actor: trusted,
+          actor: authorizer,
           permission: 'active'
         }],
         data: {
-          trusted,
+          authorizer,
           account,
         }
       }]
@@ -586,7 +586,7 @@ export default class InfraDID {
     return rows;
   }
 
-  async getTrustedPubKeyDIDByTrusted(trusted: string) {
+  async getTrustedPubKeyDIDByTrusted(authorizer: string) {
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
       code: this.registryContract,
@@ -594,8 +594,8 @@ export default class InfraDID {
       table: "trstdpkdid",
       index_position: 2,
       key_type: "i64",
-      lower_bound: trusted,
-      upper_bound: trusted,
+      lower_bound: authorizer,
+      upper_bound: authorizer,
     })).rows;
 
     return rows;
@@ -632,7 +632,7 @@ export default class InfraDID {
     return rows;
   }
 
-  async getTrustedAccountDIDByTrusted(trusted: string) {
+  async getTrustedAccountDIDByTrusted(authorizer: string) {
 
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
@@ -641,8 +641,8 @@ export default class InfraDID {
       table: "trstdaccdid",
       index_position: 2,
       key_type: "i64",
-      lower_bound: trusted,
-      upper_bound: trusted,
+      lower_bound: authorizer,
+      upper_bound: authorizer,
     })).rows;
 
     return rows;
