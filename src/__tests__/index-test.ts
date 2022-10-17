@@ -204,7 +204,35 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resGet: any = await didApi.getTrustedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+      const resGet: any = await didApi.getTrustedPubKeyDID();
+      console.log({resGet})
+
+      expect(resGet).toBeDefined();
+    })
+
+    it('should get trusted pubkey DID By Trusted',async () => {
+      const conf = {
+        ...confDefaults,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+      }
+
+      const didApi = new InfraDID(conf)
+      const resGet: any = await didApi.getTrustedPubKeyDIDByTrusted(txfeePayerAccount);
+      console.log({resGet})
+
+      expect(resGet).toBeDefined();
+    })
+
+    it('should get trusted pubkey DID By Target',async () => {
+      const conf = {
+        ...confDefaults,
+        did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+        didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+      }
+
+      const didApi = new InfraDID(conf)
+      const resGet: any = await didApi.getTrustedPubKeyDIDByTarget("PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
       console.log({resGet})
 
       expect(resGet).toBeDefined();
@@ -297,7 +325,39 @@ describe('InfraDID', () => {
       }
 
       const didApi = new InfraDID(conf)
-      const resGet: any = await didApi.getTrustedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+      const resGet: any = await didApi.getTrustedAccountDID();
+      console.log({resGet})
+
+      expect(resGet).toBeDefined();
+    })
+
+    it('should get account pubkey DID By Trusted',async () => {
+      const conf = {
+        did: `did:infra:${networkId}:${account}`,
+        didOwnerPrivateKey: accountPrivateKey,
+        networkId,
+        registryContract,
+        rpcEndpoint,
+      }
+
+      const didApi = new InfraDID(conf)
+      const resGet: any = await didApi.getTrustedAccountDIDByTrusted(txfeePayerAccount);
+      console.log({resGet})
+
+      expect(resGet).toBeDefined();
+    })
+
+    it('should get account pubkey DID By Target',async () => {
+      const conf = {
+        did: `did:infra:${networkId}:${account}`,
+        didOwnerPrivateKey: accountPrivateKey,
+        networkId,
+        registryContract,
+        rpcEndpoint,
+      }
+
+      const didApi = new InfraDID(conf)
+      const resGet: any = await didApi.getTrustedAccountDIDByTarget(conf.did.split(":")[3]);
       console.log({resGet})
 
       expect(resGet).toBeDefined();

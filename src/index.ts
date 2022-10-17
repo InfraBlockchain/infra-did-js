@@ -575,7 +575,33 @@ export default class InfraDID {
     })
   }
 
-  async getTrustedPubKeyDID(authorizer: string, didPubKey: string) {
+  async getTrustedPubKeyDID() {
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
+      table: "trstdpkdid",
+    })).rows;
+
+    return rows;
+  }
+
+  async getTrustedPubKeyDIDByTrusted(trusted: string) {
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
+      table: "trstdpkdid",
+      index_position: 2,
+      key_type: "i64",
+      lower_bound: trusted,
+      upper_bound: trusted,
+    })).rows;
+
+    return rows;
+  }
+
+  async getTrustedPubKeyDIDByTarget(didPubKey: string) {
 
     const pubKey = Numeric.stringToPublicKey(didPubKey)
     const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1,pubKey.data.length)).toString('hex')
@@ -583,9 +609,9 @@ export default class InfraDID {
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
       code: this.registryContract,
-      scope: authorizer,
+      scope: this.registryContract,
       table: "trstdpkdid",
-      index_position: 2,
+      index_position: 3,
       key_type: "sha256",
       lower_bound: pubkey_index_256bits,
       upper_bound: pubkey_index_256bits,
@@ -594,14 +620,42 @@ export default class InfraDID {
     return rows;
   }
 
-  async getTrustedAccountDID(authorizer: string, account: string) {
+  async getTrustedAccountDID() {
 
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
       code: this.registryContract,
-      scope: authorizer,
+      scope: this.registryContract,
+      table: "trstdaccdid",
+    })).rows;
+
+    return rows;
+  }
+
+  async getTrustedAccountDIDByTrusted(trusted: string) {
+
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
       table: "trstdaccdid",
       index_position: 2,
+      key_type: "i64",
+      lower_bound: trusted,
+      upper_bound: trusted,
+    })).rows;
+
+    return rows;
+  }
+
+  async getTrustedAccountDIDByTarget(account: string) {
+
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
+      table: "trstdaccdid",
+      index_position: 3,
       key_type: "i64",
       lower_bound: account,
       upper_bound: account,

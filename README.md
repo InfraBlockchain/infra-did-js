@@ -183,7 +183,35 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resGet: boolean = await didApi.getTrustedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+   const resGet: boolean = await didApi.getTrustedPubKeyDID();
+   console.log({resGet})
+```
+
+### Get Trusted Pub-Key DID By Trusted
+
+```javascript
+   const conf = {
+     ...confDefaults,
+     did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+     didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+   }
+
+   const didApi = new InfraDID(conf)
+   const resGet: any = await didApi.getTrustedPubKeyDIDByTrusted(txfeePayerAccount);
+   console.log({resGet})
+```
+
+### Get Trusted Pub-Key DID By Target
+
+```javascript
+   const conf = {
+     ...confDefaults,
+     did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+     didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+   }
+
+   const didApi = new InfraDID(conf)
+   const resGet: any = await didApi.getTrustedPubKeyDIDByTarget("PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
    console.log({resGet})
 ```
 
@@ -247,7 +275,40 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resGet: any = await didApi.getTrustedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+   const resGet: any = await didApi.getTrustedAccountDID();
+   console.log({resGet})
+```
+
+### Get Trusted Account DID By Trusted
+
+```javascript
+   const conf = {
+     did: `did:infra:${networkId}:${account}`,
+     didOwnerPrivateKey: accountPrivateKey,
+     networkId,
+     registryContract,
+     rpcEndpoint,
+   }
+
+   const didApi = new InfraDID(conf)
+   const resGet: any = await didApi.getTrustedAccountDIDByTrusted(txfeePayerAccount);
+   console.log({resGet})
+```
+
+
+### Get Trusted Account DID By Target
+
+```javascript
+   const conf = {
+     did: `did:infra:${networkId}:${account}`,
+     didOwnerPrivateKey: accountPrivateKey,
+     networkId,
+     registryContract,
+     rpcEndpoint,
+   }
+
+   const didApi = new InfraDID(conf)
+   const resGet: any = await didApi.getTrustedAccountDIDByTarget(conf.did.split(":")[3]);
    console.log({resGet})
 ```
 
