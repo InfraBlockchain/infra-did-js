@@ -575,17 +575,6 @@ export default class InfraDID {
     })
   }
 
-  async getTrustedPubKeyDID() {
-    const rows = await (await this.jsonRpc.get_table_rows({
-      json: true,
-      code: this.registryContract,
-      scope: this.registryContract,
-      table: "trstdpkdid",
-    })).rows;
-
-    return rows;
-  }
-
   async getTrustedPubKeyDIDByAuthorizer(authorizer: string) {
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
@@ -619,7 +608,7 @@ export default class InfraDID {
     return rows;
   }
 
-  async getTrustedPubKeyDIDByBoth(authorizer: string, didPubKey: string) {
+  async getTrustedPubKeyDID(authorizer: string, didPubKey: string) {
     const authorizer_index = Buffer.from(encodeName(authorizer), "hex");
     const pubKey = Numeric.stringToPublicKey(didPubKey)
 
@@ -642,17 +631,6 @@ export default class InfraDID {
     const result = rows.filter(row => row.authorizer === authorizer && row.pk === didPubKey);
     
     return result;
-  }
-
-  async getTrustedAccountDID() {
-    const rows = await (await this.jsonRpc.get_table_rows({
-      json: true,
-      code: this.registryContract,
-      scope: this.registryContract,
-      table: "trstdaccdid",
-    })).rows;
-
-    return rows;
   }
 
   async getTrustedAccountDIDByAuthorizer(authorizer: string) {
@@ -685,7 +663,7 @@ export default class InfraDID {
     return rows;
   }
 
-  async getTrustedAccountDIDByBoth(authorizer: string, account: string) {
+  async getTrustedAccountDID(authorizer: string, account: string) {
     const authorizer_index = parseInt(encodeName(authorizer)) * Math.pow(2,64);
     const account_index = parseInt(encodeName(account));
     const index_128bits = authorizer_index + account_index;
