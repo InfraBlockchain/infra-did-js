@@ -14,8 +14,8 @@ Feature provided by infra-did-js library
   * update DID attributes (service endpoint)
   * update Pub-Key DID owner key
   * revoke Pub-Key DID
-  * add/update/remove authorized Pub-Key DID & Account DID
-  * get authorized Pub-Key DID & Account DID
+  * add/update/remove trusted Pub-Key DID & Account DID
+  * get trusted Pub-Key DID & Account DID
   * VC/VP creation/verification using did-jwt-vc library 
 
 ### Infra DID API Configuration
@@ -131,7 +131,7 @@ Update Pub-Key DID owner key
   console.log(resRevoke.transaction_id)
 ```
 
-### Add Authorized Pub-Key DID
+### Add Trusted Pub-Key DID
 
 ```javascript
    const conf = {
@@ -141,11 +141,11 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resAdd: any = await didApi.registerAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU", JSON.stringif({type:"issuer"}))
+   const resAdd: any = await didApi.registerTrustedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU", JSON.stringif({type:"issuer"}))
    console.log({resAdd})
 ```
 
-### Update Authorized Pub-Key DID
+### Update Trusted Pub-Key DID
 
 ```javascript
    const conf = {
@@ -155,11 +155,11 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resUpdate: any = await didApi.updateAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU", JSON.stringif({type:"verifier"}))
+   const resUpdate: any = await didApi.updateTrustedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU", JSON.stringif({type:"verifier"}))
    console.log({resUpdate})
 ```
 
-### Remove Authorized Pub-Key DID
+### Remove Trusted Pub-Key DID
 
 ```javascript
    const conf = {
@@ -169,11 +169,11 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resRemove: any = await didApi.removeAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+   const resRemove: any = await didApi.removeTrustedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
    console.log({resRemove})
 ```
 
-### Get Authorized Pub-Key DID
+### Get Trusted Pub-Key DID By Authorizer
 
 ```javascript
    const conf = {
@@ -183,11 +183,39 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resGet: boolean = await didApi.getAuthorizedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+   const resGet: any = await didApi.getTrustedPubKeyDIDByAuthorizer(txfeePayerAccount);
    console.log({resGet})
 ```
 
-### Add Authorized Account DID
+### Get Trusted Pub-Key DID By Target
+
+```javascript
+   const conf = {
+     ...confDefaults,
+     did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+     didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+   }
+
+   const didApi = new InfraDID(conf)
+   const resGet: any = await didApi.getTrustedPubKeyDIDByTarget("PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+   console.log({resGet})
+```
+
+### Get Trusted Pub-Key DID By Authorizer and Target
+
+```javascript
+   const conf = {
+     ...confDefaults,
+     did: `did:infra:${networkId}:PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU`,
+     didOwnerPrivateKey: 'PVT_K1_tSwgNjuLyhyGo96qadzzqkaA5tfwMeAfreQzWo652gVPxiVLA', 
+   }
+
+   const didApi = new InfraDID(conf)
+   const resGet: any = await didApi.getTrustedPubKeyDID(txfeePayerAccount, "PUB_K1_8PwG7of5B8p9Mpaw6XzeyYtSWJyeSXVtxZhPHQC5eZxZCkqiLU");
+   console.log({resGet})
+```
+
+### Add Trusted Account DID
 
 ```javascript
    const conf = {
@@ -199,11 +227,11 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resAdd: any = await didApi.registerAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3], JSON.stringify({type:"issuer"}))
+   const resAdd: any = await didApi.registerTrustedAccountDID(txfeePayerAccount, conf.did.split(":")[3], JSON.stringify({type:"issuer"}))
    console.log({resAdd})
 ```
 
-### Update Authorized Account DID
+### Update Trusted Account DID
 
 ```javascript
    const conf = {
@@ -215,11 +243,11 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resUpdate: any = await didApi.updateAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3], JSON.stringify({type:"verifier"}))
+   const resUpdate: any = await didApi.updateTrustedAccountDID(txfeePayerAccount, conf.did.split(":")[3], JSON.stringify({type:"verifier"}))
    console.log({resUpdate})
 ```
 
-### Remove Authorized Account DID
+### Remove Trusted Account DID
 
 ```javascript
    const conf = {
@@ -231,11 +259,11 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resRemove: boolean = await didApi.removeAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+   const resRemove: boolean = await didApi.removeTrustedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
    console.log({resRemove})
 ```
 
-### Get Authorized Account DID
+### Get Trusted Account DID By Authorizer
 
 ```javascript
    const conf = {
@@ -247,7 +275,39 @@ Update Pub-Key DID owner key
    }
 
    const didApi = new InfraDID(conf)
-   const resGet: any = await didApi.getAuthorizedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
+   const resGet: any = await didApi.getTrustedAccountDIDByAuthorizer(txfeePayerAccount);
+   console.log({resGet})
+```
+
+### Get Trusted Account DID By Target
+
+```javascript
+   const conf = {
+     did: `did:infra:${networkId}:${account}`,
+     didOwnerPrivateKey: accountPrivateKey,
+     networkId,
+     registryContract,
+     rpcEndpoint,
+   }
+
+   const didApi = new InfraDID(conf)
+   const resGet: any = await didApi.getTrustedAccountDIDByTarget(conf.did.split(":")[3]);
+   console.log({resGet})
+```
+
+### Get Trusted Account DID By Authorizer and Target
+
+```javascript
+   const conf = {
+     did: `did:infra:${networkId}:${account}`,
+     didOwnerPrivateKey: accountPrivateKey,
+     networkId,
+     registryContract,
+     rpcEndpoint,
+   }
+
+   const didApi = new InfraDID(conf)
+   const resGet: any = await didApi.getTrustedAccountDID(txfeePayerAccount, conf.did.split(":")[3]);
    console.log({resGet})
 ```
 

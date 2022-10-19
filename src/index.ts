@@ -391,10 +391,10 @@ export default class InfraDID {
     })
   }
 
-  async registerAuthorizedPubKeyDID(authorizer: string, didPubKey: string, properties: string) {
+  async registerTrustedPubKeyDID(authorizer: string, didPubKey: string, properties: string) {
 
     // [[eosio::action]]
-    // void pkauthreg(const name& authorizer, const public_key& pk, const string& properties);
+    // void pktrstdreg(const name& authorizer, const public_key& pk, const string& properties);
 
     return await this.api.transact({
       transaction_extensions: [
@@ -405,7 +405,7 @@ export default class InfraDID {
       ],
       actions: [{
         account: this.registryContract,
-        name: 'pkauthreg',
+        name: 'pktrstdreg',
         authorization: [{
           actor: authorizer,
           permission: 'active'
@@ -422,10 +422,10 @@ export default class InfraDID {
     })
   }
 
-  async updateAuthorizedPubKeyDID(authorizer: string, didPubKey: string, properties: string) {
+  async updateTrustedPubKeyDID(authorizer: string, didPubKey: string, properties: string) {
 
     // [[eosio::action]]
-    // void pkauthupdate(const name& authorizer, const public_key& pk, const string& properties);
+    // void pktrstdupdt(const name& authorizer, const public_key& pk, const string& properties);
 
     return await this.api.transact({
       transaction_extensions: [
@@ -436,7 +436,7 @@ export default class InfraDID {
       ],
       actions: [{
         account: this.registryContract,
-        name: 'pkauthupdate',
+        name: 'pktrstdupdt',
         authorization: [{
           actor: authorizer,
           permission: 'active'
@@ -453,10 +453,10 @@ export default class InfraDID {
     })
   }
 
-  async removeAuthorizedPubKeyDID(authorizer: string, didPubKey: string) {
+  async removeTrustedPubKeyDID(authorizer: string, didPubKey: string) {
 
     // [[eosio::action]]
-    // void pkauthremove(const name& authorizer, const public_key& pk);
+    // void pktrstdrmv(const name& authorizer, const public_key& pk);
 
     return await this.api.transact({
       transaction_extensions: [
@@ -467,7 +467,7 @@ export default class InfraDID {
       ],
       actions: [{
         account: this.registryContract,
-        name: 'pkauthremove',
+        name: 'pktrstdrmv',
         authorization: [{
           actor: authorizer,
           permission: 'active'
@@ -483,10 +483,10 @@ export default class InfraDID {
     })
   }
 
-  async registerAuthorizedAccountDID(authorizer: string, account: string, properties: string) {
+  async registerTrustedAccountDID(authorizer: string, account: string, properties: string) {
 
     // [[eosio::action]]
-    // void accauthreg(const name& authorizer, const name& account, const string& properties);
+    // void acctrstdreg(const name& authorizer, const name& account, const string& properties);
 
     return await this.api.transact({
       transaction_extensions: [
@@ -497,7 +497,7 @@ export default class InfraDID {
       ],
       actions: [{
         account: this.registryContract,
-        name: 'accauthreg',
+        name: 'acctrstdreg',
         authorization: [{
           actor: authorizer,
           permission: 'active'
@@ -514,10 +514,10 @@ export default class InfraDID {
     })
   }
 
-  async updateAuthorizedAccountDID(authorizer: string, account: string, properties: string) {
+  async updateTrustedAccountDID(authorizer: string, account: string, properties: string) {
 
     // [[eosio::action]]
-    // void accauthupdt(const name& authorizer, const name& account, const string& properties);
+    // void acctrstdupdt(const name& authorizer, const name& account, const string& properties);
 
     return await this.api.transact({
       transaction_extensions: [
@@ -528,7 +528,7 @@ export default class InfraDID {
       ],
       actions: [{
         account: this.registryContract,
-        name: 'accauthupdt',
+        name: 'acctrstdupdt',
         authorization: [{
           actor: authorizer,
           permission: 'active'
@@ -545,10 +545,10 @@ export default class InfraDID {
     })
   }
 
-  async removeAuthorizedAccountDID(authorizer: string, account: string) {
+  async removeTrustedAccountDID(authorizer: string, account: string) {
 
-    //  [[eosio::action]]
-    //  void accauthrm(const name& authorizer, const name& account);
+    // [[eosio::action]]
+    // void acctrstdrmv(const name& authorizer, const name& account);
 
     return await this.api.transact({
       transaction_extensions: [
@@ -559,7 +559,7 @@ export default class InfraDID {
       ],
       actions: [{
         account: this.registryContract,
-        name: 'accauthrm',
+        name: 'acctrstdrmv',
         authorization: [{
           actor: authorizer,
           permission: 'active'
@@ -575,17 +575,31 @@ export default class InfraDID {
     })
   }
 
-  async getAuthorizedPubKeyDID(authorizer: string, didPubKey: string) {
+  async getTrustedPubKeyDIDByAuthorizer(authorizer: string) {
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
+      table: "trstdpkdid",
+      index_position: 2,
+      key_type: "i64",
+      lower_bound: authorizer,
+      upper_bound: authorizer,
+    })).rows;
 
+    return rows;
+  }
+
+  async getTrustedPubKeyDIDByTarget(didPubKey: string) {
     const pubKey = Numeric.stringToPublicKey(didPubKey)
     const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1,pubKey.data.length)).toString('hex')
 
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
       code: this.registryContract,
-      scope: authorizer,
-      table: "authpkdid",
-      index_position: 2,
+      scope: this.registryContract,
+      table: "trstdpkdid",
+      index_position: 3,
       key_type: "sha256",
       lower_bound: pubkey_index_256bits,
       upper_bound: pubkey_index_256bits,
@@ -594,17 +608,75 @@ export default class InfraDID {
     return rows;
   }
 
-  async getAuthorizedAccountDID(authorizer: string, account: string) {
+  async getTrustedPubKeyDID(authorizer: string, didPubKey: string) {
+    const authorizer_index = Buffer.from(encodeName(authorizer), "hex");
+    const pubKey = Numeric.stringToPublicKey(didPubKey)
+
+    const pubkey_index = Buffer.from(
+      pubKey.data.slice(9, pubKey.data.length)
+    )
+    const index_256bits = Buffer.concat([authorizer_index, pubkey_index], 32).toString("hex");
 
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
       code: this.registryContract,
-      scope: authorizer,
-      table: "authaccdid",
+      scope: this.registryContract,
+      table: "trstdpkdid",
+      index_position: 4,
+      key_type: "sha256",
+      lower_bound: index_256bits,
+      upper_bound: index_256bits,
+    })).rows;
+
+    const result = rows.filter(row => row.authorizer === authorizer && row.pk === didPubKey);
+    
+    return result;
+  }
+
+  async getTrustedAccountDIDByAuthorizer(authorizer: string) {
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
+      table: "trstdaccdid",
       index_position: 2,
+      key_type: "i64",
+      lower_bound: authorizer,
+      upper_bound: authorizer,
+    })).rows;
+
+    return rows;
+  }
+
+  async getTrustedAccountDIDByTarget(account: string) {
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
+      table: "trstdaccdid",
+      index_position: 3,
       key_type: "i64",
       lower_bound: account,
       upper_bound: account,
+    })).rows;
+
+    return rows;
+  }
+
+  async getTrustedAccountDID(authorizer: string, account: string) {
+    const authorizer_index = parseInt(encodeName(authorizer)) * Math.pow(2,64);
+    const account_index = parseInt(encodeName(account));
+    const index_128bits = authorizer_index + account_index;
+
+    const rows = await (await this.jsonRpc.get_table_rows({
+      json: true,
+      code: this.registryContract,
+      scope: this.registryContract,
+      table: "trstdaccdid",
+      index_position: 4,
+      key_type: "i128",
+      lower_bound: index_128bits,
+      upper_bound: index_128bits,
     })).rows;
 
     return rows;
