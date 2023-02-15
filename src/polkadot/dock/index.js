@@ -12,7 +12,7 @@ import TokenMigration from './modules/migration';
 import BBSPlusModule from './modules/bbs-plus';
 import AccumulatorModule from './modules/accumulator';
 import PoaRpcDefs from './rpc-defs/poa-rpc-defs';
-import PriceFeedRpcDefs from './rpc-defs/price-feed-rpc-defs';
+// import PriceFeedRpcDefs from './rpc-defs/price-feed-rpc-defs';
 import CoreModsRpcDefs from './rpc-defs/core-mods-rpc-defs';
 
 import ExtrinsicError from './errors/extrinsic-error';
@@ -84,9 +84,9 @@ class DockAPI {
   async init({
     address, keyring, chainTypes, chainRpc, loadPoaModules = true,
   } = {
-    address: null,
-    keyring: null,
-  }) {
+      address: null,
+      keyring: null,
+    }) {
     if (this.api) {
       if (this.api.isConnected) {
         throw new Error('API is already connected');
@@ -106,7 +106,7 @@ class DockAPI {
     let rpc = chainRpc || {};
 
     // Initialize price feed rpc
-    rpc = Object.assign(rpc, PriceFeedRpcDefs);
+    // rpc = Object.assign(rpc, PriceFeedRpcDefs);
 
     // Initialize the RPC for core modules
     rpc = Object.assign(rpc, CoreModsRpcDefs);
