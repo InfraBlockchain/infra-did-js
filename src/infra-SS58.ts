@@ -754,7 +754,7 @@ export default class InfraSS58DID {
     return sigParam;
   }
 
-  static BBSPlus_createG1SigPublicKey(g1SigParams: SignatureParamsG1, params = undefined): BBSPlus_PublicKey {
+  static BBSPlus_createSigPublicKey(g1SigParams: SignatureParamsG1, params = undefined): BBSPlus_PublicKey {
     // params= [did, paramCounter]
     let keypair = KeypairG2.generate(g1SigParams);
     const bytes = u8aToHex(keypair.publicKey.bytes);

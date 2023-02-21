@@ -1,8 +1,7 @@
-import InfraSS58DID, { CRYPTO_INFO, DIDSet, IConfig, PublicKey } from '../infra-SS58'
+import InfraSS58DID, { CRYPTO_INFO, DIDSet, IConfig } from '../infra-SS58'
 import { Keyring } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { cryptoWaitReady, } from '@polkadot/util-crypto';
-
+import { cryptoWaitReady } from '@polkadot/util-crypto';
 
 const failDID = "did:infra:02:thisisinvalidformofss58did"
 const address = 'ws://localhost:9944';
@@ -14,9 +13,6 @@ describe('InfraSS58DID', () => {
     let config: IConfig;
     let alice: KeyringPair;
     let newDIDSet: DIDSet;
-    beforeAll(async () => {
-
-    })
 
     describe('DID creation', () => {
         it('should create SS25519 DID ', async () => {
@@ -149,7 +145,7 @@ describe('InfraSS58DID', () => {
         )
     })
 
-    describe('bbs+ test', () => {
+    describe('BBS+ test', () => {
         beforeAll(async () => {
             srTest = await InfraSS58DID.createNewSS58DIDSet(CRYPTO_INFO.SR25519);
 
@@ -192,7 +188,7 @@ describe('InfraSS58DID', () => {
 
         it('Add bbs+ publicKey', async () => {
             const sigParam = InfraSS58DID.BBSPlus_createSigParamsWithLabel(10)
-            const pk = InfraSS58DID.BBSPlus_createG1SigPublicKey(sigParam);
+            const pk = InfraSS58DID.BBSPlus_createSigPublicKey(sigParam);
             return await infraDID.BBSPlus_addPublicKey(pk).then(async () => {
                 await infraDID.BBSPlus_getPublicKey(2).then(res => {
                     expect(res?.bytes).toEqual(pk.bytes);
@@ -202,7 +198,7 @@ describe('InfraSS58DID', () => {
 
         it('Add bbs+ publicKey by did', async () => {
             const sigParam = await infraDID.BBSPlus_createSigParamsByDID(1)
-            const pk = InfraSS58DID.BBSPlus_createG1SigPublicKey(sigParam);
+            const pk = InfraSS58DID.BBSPlus_createSigPublicKey(sigParam);
             return await infraDID.BBSPlus_addPublicKey(pk).then(async () => {
                 await infraDID.BBSPlus_getPublicKey(3).then(res => {
                     expect(res?.bytes).toEqual(pk.bytes);

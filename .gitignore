@@ -1,7 +1,7 @@
 node_modules
 lib
 dist
-.vscode/settings.json
+.vscode
 coverage
 
 *.log
