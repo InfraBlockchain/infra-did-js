@@ -19,7 +19,6 @@
   "license": "MIT",
   "scripts": {
     "test": "jest",
-    "test:ss58": "NODE_OPTIONS='--experimental-vm-modules' jest  ss58",
     "test:ci": "jest -u --coverage",
     "build:js": "microbundle",
     "build": "npm run build:js",
