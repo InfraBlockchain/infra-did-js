@@ -16,5 +16,11 @@
     "allowJs": true,
     "skipLibCheck": true
   },
-  "exclude": ["**/__tests__/**/*", "**/build/**/*", "node_modules"]
+  "exclude": [
+    "**/__tests__/**/*",
+    "**/build/**/*",
+    "node_modules",
+    "./lib/*",
+    "./*.config.js"
+  ]
 }

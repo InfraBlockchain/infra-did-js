@@ -1,12 +1,8 @@
-
-
 import "@babel/polyfill"
+import b58 from 'bs58';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-// import { ApiOptions } from '@polkadot/api/types';
 import { HttpProvider } from '@polkadot/rpc-provider';
-import { KeyringPair } from '@polkadot/keyring/types'; // eslint-disable-line
-// import typesBundle from '@docknetwork/node-types';
-import { u8aToHex } from '@polkadot/util';
+import { u8aToString, hexToU8a, u8aToHex } from '@polkadot/util';
 import {
   randomAsHex,
   encodeAddress,
@@ -16,14 +12,11 @@ import {
   decodeAddress,
 } from '@polkadot/util-crypto';
 
-
-// import BlobModule from './modules/blob';
-// import { DIDModule } from './modules/did';
-// import RevocationModule from './modules/revocation';
-
-// import BlobModule from './polkadot/dock/modules/blob';
-// import { DIDModule } from './polkadot/dock/modules/did';
-// import RevocationModule from './polkadot/dock/modules/revocation';
+import { BTreeSet } from '@polkadot/types';
+import { Codec } from '@polkadot/types-codec/types';
+import { KeyringPair } from '@polkadot/keyring/types'; // eslint-disable-line
+import { initializeWasm, KeypairG2, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
+import typesBundle from '@docknetwork/node-types';
 
 // import VerifiableCredential from './polkadot/dock/verifiable-credential';
 // import VerifiablePresentation from './polkadot/dock/verifiable-presentation';
@@ -37,24 +30,80 @@ const INFRA_DID_METHOD = 'infra';
 const INFRA_DID_NETWORK_ID = '02';
 const INFRA_DID_QUALIFIER = `did:${INFRA_DID_METHOD}:${INFRA_DID_NETWORK_ID}:`;
 const INFRA_DID_BYTE_SIZE = 32;
+export const ATTESTS_IRI = 'https://rdf.dock.io/alpha/2021#attestsDocumentContents';
+export const CRYPTO_INFO = {
+  SR25519: {
+    CRYPTO_TYPE: 'sr25519',
+    KEY_TYPE: 'Sr25519VerificationKey2020',
+    SIG_TYPE: 'Sr25519'
+  },
+  ED25519: {
+    CRYPTO_TYPE: 'ed25519',
+    KEY_TYPE: 'Ed25519VerificationKey2018',
+    SIG_TYPE: 'Ed25519'
+  }
+} as const
+export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
+export type CRYPTO_TYPE = typeof CRYPTO_INFO.ED25519.CRYPTO_TYPE | typeof CRYPTO_INFO.SR25519.CRYPTO_TYPE
+export type KEY_TYPE = typeof CRYPTO_INFO.ED25519.KEY_TYPE | typeof CRYPTO_INFO.SR25519.KEY_TYPE
+export type SIG_TYPE = typeof CRYPTO_INFO.ED25519.SIG_TYPE | typeof CRYPTO_INFO.SR25519.SIG_TYPE
 
-export enum CRYPTO_TYPE {
-  SR25519 = 'sr25519',
-  ED25519 = 'ed25519',
-};
-type HexSeed = `0x${string}`;
+type HexString = `0x${string}`;
+
 export interface IConfig {
   did: string;
   mnemonic?: string;
-  seed?: HexSeed;
+  seed?: HexString;
   address: string;
-  cryptoType?: CRYPTO_TYPE;
+  cryptoInfo?: CRYPTO_INFO;
   verRels?: VerificationRelationship;
 }
-export interface DidKey {
-  publicKey: string,
+
+export interface DIDSet {
+  did: string;
+  seed: HexString;
+  publicKey: PublicKey;
   verRels: VerificationRelationship;
+  cryptoInfo: CRYPTO_INFO;
+  didKey: DidKey;
+  keyPair: KeyringPair;
 }
+export interface BBSPlus_Params {
+  bytes: HexString,
+  curveType: 'Bls12381',
+  label: string
+}
+export class PublicKey {
+  constructor(private value: HexString, private sigType: SIG_TYPE = CRYPTO_INFO.SR25519.SIG_TYPE) {
+    this.value = value;
+    this.sigType = sigType;
+  }
+  static fromKeyringPair(pair: KeyringPair) {
+    const [k,] = Object.entries(CRYPTO_INFO).find(([k, v]) => v.CRYPTO_TYPE === pair.type);
+    return new this(u8aToHex(pair.publicKey), CRYPTO_INFO[k].SIG_TYPE);
+  }
+
+  toJSON() {
+    return {
+      [this.sigType]: this.value,
+    };
+  }
+}
+
+
+export class DidKey {
+  constructor(private publicKey: PublicKey, private verRels: VerificationRelationship = undefined) {
+    this.publicKey = publicKey;
+    this.verRels = verRels !== undefined ? verRels : new VerificationRelationship();
+  }
+  toJSON() {
+    return {
+      publicKey: this.publicKey.toJSON(),
+      verRels: this.verRels.value,
+    };
+  }
+}
+
 export class ExtrinsicError extends Error {
   constructor(message, private method, private data, private status, private events) {
     super(message);
@@ -82,182 +131,85 @@ export function getExtrinsicError(data, typeDef, api) {
   return errorMsg;
 }
 
+// eslint-disable-next-line no-bitwise
 export class VerificationRelationship {
-  value: number;
-  constructor(value = 0) {
-    this.value = value;
-  }
-
-  setAuthentication() {
+  constructor(private _value = 0) {}
+  get value() { return this._value }
+  setAuthentication() { this._value |= 0b0001 }
+  setAssertion() { this._value |= 0b0010 }
+  setCapabilityInvocation() { this._value |= 0b0100 }
+  setKeyAgreement() { this._value |= 0b1000 }
+  setAllSigning() { this._value |= 0b0111 }
+  isAuthentication() { return !!(this._value & 0b0001) }
+  isAssertion() { return !!(this._value & 0b0010) }
+  isCapabilityInvocation() { return !!(this._value & 0b0100) }
+  isKeyAgreement() { return !!(this._value & 0b1000) }
+}
+export class ServiceEndpointType {
+  constructor(private _value = 0) {}
+  get value() { return this._value }
+  setLinkedDomains() {
     // eslint-disable-next-line no-bitwise
-    this.value |= 0b0001;
-  }
-
-  setAssertion() {
-    // eslint-disable-next-line no-bitwise
-    this.value |= 0b0010;
-  }
-
-  setCapabilityInvocation() {
-    // eslint-disable-next-line no-bitwise
-    this.value |= 0b0100;
-  }
-
-  setKeyAgreement() {
-    // eslint-disable-next-line no-bitwise
-    this.value |= 0b1000;
-  }
-
-  setAllSigning() {
-    // eslint-disable-next-line no-bitwise
-    this.value |= 0b0111;
-  }
-
-  isAuthentication() {
-    // eslint-disable-next-line no-bitwise
-    return !!(this.value & 0b0001);
-  }
-
-  isAssertion() {
-    // eslint-disable-next-line no-bitwise
-    return !!(this.value & 0b0010);
-  }
-
-  isCapabilityInvocation() {
-    // eslint-disable-next-line no-bitwise
-    return !!(this.value & 0b0100);
-  }
-
-  isKeyAgreement() {
-    // eslint-disable-next-line no-bitwise
-    return !!(this.value & 0b1000);
+    this._value |= 0b0001;
   }
 }
 
 export default class InfraSS58DID {
-  private api
+  private constructor() {}
+  private static instance: InfraSS58DID
+
+  private api;
   private verRels: VerificationRelationship;
-  private seed: HexSeed;
+  private seed: HexString;
   private address: string;
-  private _account: KeyringPair;
-  private cryptoType: CRYPTO_TYPE;
-  private _keyPairs: KeyringPair[];
-  private publicKey: string;
+  private account: KeyringPair;
+  private cryptoInfo: CRYPTO_INFO;
+  private keyPairs: KeyringPair[];
+  private publicKey: PublicKey;
   private didKey: DidKey;
   private did: string;
-  // private blobModule;
-  // private didModule;
-  // private revocationModule;
   private keyringModule: Keyring;
-  get keyPairs() { return this._keyPairs }
 
-  set account(account) {
-    this._account = account;
+  /**
+   * 
+   *@param {KeyringPair} account - PolkadotJS Keyring account. if undefined, set first keyPair instance DID
+   */
+  setAccount(account: KeyringPair) {
+    this.account = account
   }
-  get account() {
-    return this._account;
+  /**
+   *  Gets the current account used to sign transactions
+   * @return {KeyringPair} PolkadotJS Keyring account
+   */
+  getAccount() {
+    return this.account;
   }
   get isConnected() {
     return this.api && this.api.isConnected || false;
   }
-  getKeyDoc(id, type, keypairId = 1) {
-    return {
-      id: id || `${this.did}#keys-1`,
-      controller: this.did,
-      type,
-      keypair: this._keyPairs[keypairId - 1],
-    };
-  }
-  constructor(conf: IConfig) {
-    this.init(conf).then(() => {
-      this.did = conf.did;
-      InfraSS58DID.validateInfraSS58DID(this.did);
 
-      this.cryptoType = conf.cryptoType ?? CRYPTO_TYPE.SR25519;
-      this.verRels = conf.verRels || new VerificationRelationship()
-      this._keyPairs = this._keyPairs ?? [];
-
-      if (conf.mnemonic) {
-        this.seed = u8aToHex(mnemonicToMiniSecret(conf.mnemonic));
-      } else if (conf.seed) {
-        this.seed = conf.seed;
-      } else {
-        this.seed = randomAsHex(INFRA_DID_BYTE_SIZE);
-      }
-
-      this._keyPairs.push(this.keyringModule.addFromUri(this.seed, undefined, this.cryptoType));
-      this.publicKey = u8aToHex(this._keyPairs[0].publicKey);
-      this.didKey = { publicKey: this.publicKey, verRels: this.verRels };
-    })
+  static async createAsync(conf: IConfig): Promise<InfraSS58DID> {
+    return await new InfraSS58DID().init(conf)
   }
 
   static async createNewSS58DIDSet(
-    cryptoType: CRYPTO_TYPE = CRYPTO_TYPE.SR25519,
+    cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.SR25519,
     verRels: VerificationRelationship =
       new VerificationRelationship(),
-  ): Promise<{ did: string; seed: HexSeed; publicKey: string, verRels: VerificationRelationship; cryptoType: CRYPTO_TYPE; didKey: DidKey; keyPair: KeyringPair; }> {
+  ): Promise<DIDSet> {
     const hexId = randomAsHex(INFRA_DID_BYTE_SIZE);
     const ss58Id = encodeAddress(hexId);
     const did = `${INFRA_DID_QUALIFIER}${ss58Id}`;
 
     const seed = u8aToHex(mnemonicToMiniSecret(mnemonicGenerate()));
-    const keyringModule = new Keyring({ type: cryptoType || 'sr25519' });
+    const keyringModule = new Keyring({ type: cryptoInfo.CRYPTO_TYPE || 'sr25519' });
     await cryptoWaitReady();
-    const keyPair: KeyringPair = keyringModule.addFromUri(seed, undefined, cryptoType);
-    const didKey: DidKey = { publicKey: u8aToHex(keyPair.publicKey), verRels };
-    return { did, didKey, keyPair, publicKey: didKey.publicKey, seed, verRels, cryptoType };
+    const keyPair: KeyringPair = keyringModule.addFromUri(seed, undefined, cryptoInfo.CRYPTO_TYPE);
+    const publicKey = PublicKey.fromKeyringPair(keyPair);
+    const didKey: DidKey = new DidKey(publicKey, verRels);
+    return { did, didKey, keyPair, publicKey, seed, verRels, cryptoInfo };
   }
-
-
-
-  async init(conf: IConfig) {
-    if (this.api) {
-      if (this.api.isConnected) {
-        throw new Error('API is already connected');
-      } else {
-        await this.disconnect();
-      }
-    }
-
-    this.address = conf.address || this.address;
-    if (this.address && (
-      this.address.indexOf('wss://') === -1 && this.address.indexOf('https://') === -1
-    )) {
-      console.warn(`WARNING: Using non-secure endpoint: ${this.address}`);
-    }
-    const isWebsocket = this.address && this.address.indexOf('http') === -1;
-    const provider = isWebsocket ? new WsProvider(this.address) : new HttpProvider(this.address);
-
-    const apiOptions = {
-      provider,
-      // @ts-ignore: TS2322
-      rpc,
-      // typesBundle: typesBundle,
-    };
-
-    this.api = await ApiPromise.create(apiOptions);
-    console.log(1)
-    await cryptoWaitReady();
-    this.keyringModule = new Keyring({ type: this.cryptoType || 'sr25519' });
-    // this.blobModule = new BlobModule(this.api, this.signAndSend.bind(this));
-    // this.didModule = new DIDModule(this.api, this.signAndSend.bind(this));
-    // this.revocationModule = new RevocationModule(this.api, this.signAndSend.bind(this));
-
-  }
-
-  async disconnect() {
-    if (this.api) {
-      if (this.api.isConnected) {
-        await this.api.disconnect();
-      }
-      delete this.api;
-      // delete this.blobModule;
-      // delete this.didModule;
-      // delete this.revocationModule;
-    }
-  }
-
-  static validateInfraSS58DID(infraSS58DID): boolean {
+  static validateInfraSS58DID(infraSS58DID: string): boolean {
     const didSplit = infraSS58DID.split(':')
     if (didSplit.length !== 4) {
       throw new Error(`invalid infraSS58DID, needs network identifier part and id part (${infraSS58DID})`)
@@ -271,37 +223,93 @@ export default class InfraSS58DID {
     return true
   }
 
-  async removeOnChain() {
-    // keypairs index: 0 -> keyid: 1
-    // await this.didModule.remove(this.did, this.did, this._keyPairs[0], 1, undefined, false);
+  private async init(conf: IConfig) {
+    if (this.api) {
+      if (this.api.isConnected) {
+        throw new Error('API is already connected');
+      } else {
+        await this.disconnect();
+      }
+    }
 
-    const targetHexDid = u8aToHex(decodeAddress(this.did.slice(INFRA_DID_QUALIFIER.length)));
-    const controllerHexDid = u8aToHex(decodeAddress(this.did.slice(INFRA_DID_QUALIFIER.length)));
-    const nonce = (await this.api.query.didModule.dids(controllerHexDid).unwrap().asOnChain.nonce.toNumber()) + 1;
-    const didRemoval = { did: targetHexDid, nonce };
-    const serializedRemoval = this.api.createType('StateChange', { 'DidRemoval': didRemoval }).toU8a();
-    const signature = { value: u8aToHex(this.keyPairs[0].sign(serializedRemoval)) }
-    const sigType = this.keyPairs[0].type.replace(/^[a-z]/, char => char.toUpperCase());
-    const didSig = { controllerHexDid, keyId: 1, sig: { [sigType]: signature.value } }
+    this.did = conf.did;
+    this.cryptoInfo = conf.cryptoInfo ?? CRYPTO_INFO.SR25519;
+    this.verRels = conf.verRels || new VerificationRelationship()
 
-    const tx = await this.api.tx.didModule.removeOnchainDid(didRemoval, didSig);
+    this.address = conf.address || this.address;
+    // check secure protocol 
+    // if (this.address && (
+    //   this.address.indexOf('wss://') === -1 && this.address.indexOf('https://') === -1
+    // )) {
+    //   console.warn(`WARNING: Using non-secure endpoint: ${this.address}`);
+    // }
+    const isWebsocket = this.address && this.address.indexOf('http') === -1;
+    const provider = isWebsocket ? new WsProvider(this.address) : new HttpProvider(this.address);
 
-    return this.signAndSend(tx, false, {});
+    const apiOptions = {
+      provider,
+      rpc: {},
+      typesBundle: typesBundle,
+    };
+
+    this.api = await ApiPromise.create(apiOptions);
+
+    await cryptoWaitReady();
+    this.keyringModule = new Keyring({ type: this.cryptoInfo.CRYPTO_TYPE || 'sr25519' });
+
+
+    this.keyPairs = this.keyPairs ?? [];
+
+    if (conf.mnemonic) {
+      this.seed = u8aToHex(mnemonicToMiniSecret(conf.mnemonic));
+    } else if (conf.seed) {
+      this.seed = conf.seed;
+    } else {
+      this.seed = randomAsHex(INFRA_DID_BYTE_SIZE);
+    }
+
+    this.keyPairs.push(this.keyringModule.addFromUri(this.seed, undefined, this.cryptoInfo.CRYPTO_TYPE));
+    this.publicKey = PublicKey.fromKeyringPair(this.keyPairs[0]);
+
+    this.didKey = new DidKey(this.publicKey, this.verRels);
+
+    await initializeWasm();
+    return this
+  }
+  private static DIDToHex(did): HexString {
+    return u8aToHex(decodeAddress(did.slice(INFRA_DID_QUALIFIER.length)));
+  }
+  private DIDToHex(did): HexString {
+    return u8aToHex(decodeAddress(did.slice(INFRA_DID_QUALIFIER.length)));
+  }
+  private async getOnchainDIDDetail(hexDid: HexString): Promise<{
+    nonce: number,
+    lastKeyId: number,
+    activeControllerKeys: number,
+    activeControllers: number
+  }> {
+    try {
+      const resp = await this.api.query.didModule.dids(hexDid)
+      if (resp.isNone) { throw new Error("did not exist at onChain") }
+      const didDetail = resp.unwrap().asOnChain;
+      const data = didDetail.data || didDetail;
+
+      return {
+        nonce: didDetail.nonce.toNumber(),
+        lastKeyId: data.lastKeyId.toNumber(),
+        activeControllerKeys: data.activeControllerKeys.toNumber(),
+        activeControllers: data.activeControllers.toNumber(),
+      };
+    } catch (e) { throw e }
   }
 
-
-
-
-
-  async signExtrinsic(extrinsic, params = {}) {
-    return extrinsic.signAsync(this._account, params);
-  }
-  async signAndSend(extrinsic, waitForFinalization = true, params = {}) {
-    const signedExtrinsic = await this.signExtrinsic(extrinsic, params);
+  private async signAndSend(extrinsic, waitForFinalization = true, params = {}) {
+    const signedExtrinsic = await extrinsic.signAsync(this.account, params)
     return this.send(signedExtrinsic, waitForFinalization);
   }
-  async send(extrinsic, waitForFinalization = true) {
-    const promise = new Promise((resolve, reject) => {
+
+  private async send(extrinsic, waitForFinalization = true) {
+    const sendPromise = new Promise((resolve, reject) => {
       try {
         let unsubFunc = () => {};
         return extrinsic
@@ -326,56 +334,597 @@ export default class InfraSS58DID {
             }
             return extrResult;
           })
-          .catch((error) => {
-            reject(error);
-          })
-          .then((unsub) => {
-            unsubFunc = unsub;
-          });
-      } catch (error) {
-        reject(error);
-      }
+          .catch((error) => { reject(error) })
+          .then((unsub) => { unsubFunc = unsub });
+      } catch (error) { reject(error) }
       return this;
     });
-    return await promise;
+    return await sendPromise;
+  }
+
+  async getAttests(hexId) {
+    const attests = await this.api.query.attest.attestations(hexId);
+    return attests.iri.isSome
+      ? u8aToString(hexToU8a(attests.iri.toString()))
+      : null;
+  }
+
+  async getDocument({ getBbsPlusSigKeys = true } = {}) {
+    const hexId = this.DIDToHex(this.did);
+    let didDetails = await this.getOnchainDIDDetail(hexId);
+    const ATTESTS_IRI = await this.getAttests(hexId);
+    const id = (this.did === hexId) ? `${INFRA_DID_QUALIFIER}${encodeAddress(hexId)}` : this.did;
+
+    const controllers = [];
+    if (didDetails.activeControllers > 0) {
+      const cnts = await this.api.query.didModule.didControllers.entries(hexId);
+      cnts.forEach(([key, value]) => {
+        if (value.isSome) {
+          const [controlled, controller] = key.toHuman();
+          if (controlled !== hexId) {
+            throw new Error(`Controlled DID ${controlled[0]} was found to be different than queried DID ${hexId}`);
+          }
+          controllers.push(controller);
+        }
+      });
+    }
+
+    const serviceEndpoints = [];
+    const sps = await this.api.query.didModule.didServiceEndpoints.entries(hexId);
+    sps.forEach(([key, value]) => {
+      if (value.isSome) {
+        const sp = value.unwrap();
+        // eslint-disable-next-line no-underscore-dangle
+        const [d, spId] = key.args;
+        // eslint-disable-next-line no-underscore-dangle
+        const d_ = u8aToHex(d);
+        if (d_ !== hexId) {
+          throw new Error(`DID ${d_} was found to be different than queried DID ${hexId}`);
+        }
+        serviceEndpoints.push([spId, sp]);
+      }
+    });
+
+    const keys = [];
+    const assertion = [];
+    const authn = [];
+    const capInv = [];
+    const keyAgr = [];
+    if (didDetails.lastKeyId > 0) {
+      const dks = await this.api.query.didModule.didKeys.entries(hexId);
+      dks.forEach(([key, value]) => {
+        if (value.isSome) {
+          const dk = value.unwrap();
+          // eslint-disable-next-line no-underscore-dangle
+          const [d, i] = key.args;
+          // eslint-disable-next-line no-underscore-dangle
+          const d_ = u8aToHex(d);
+          if (d_ !== hexId) {
+            throw new Error(`DID ${d_} was found to be different than queried DID ${hexId}`);
+          }
+          const index = i.toNumber();
+          const pk = dk.publicKey;
+          let publicKeyRaw;
+          let typ;
+          if (pk.isSr25519) {
+            typ = 'Sr25519VerificationKey2020';
+            publicKeyRaw = pk.asSr25519.value;
+          } else if (pk.isEd25519) {
+            typ = 'Ed25519VerificationKey2018';
+            publicKeyRaw = pk.asEd25519.value;
+          } else {
+            throw new Error(`Cannot parse public key ${pk}`);
+          }
+          keys.push([index, typ, publicKeyRaw]);
+          const vr = new VerificationRelationship(dk.verRels.toNumber());
+          if (vr.isAuthentication()) {
+            authn.push(index);
+          }
+          if (vr.isAssertion()) {
+            assertion.push(index);
+          }
+          if (vr.isCapabilityInvocation()) {
+            capInv.push(index);
+          }
+          if (vr.isKeyAgreement()) {
+            keyAgr.push(index);
+          }
+        }
+      });
+    }
+
+    if (getBbsPlusSigKeys === true) {
+      const { lastKeyId } = didDetails;
+      if (lastKeyId > keys.length) {
+        const possibleBbsPlusKeyIds = new Set();
+        for (let i = 1; i <= lastKeyId; i++) {
+          possibleBbsPlusKeyIds.add(i);
+        }
+        for (const [i] of keys) {
+          possibleBbsPlusKeyIds.delete(i);
+        }
+
+        const queryKeys = [];
+        for (const k of possibleBbsPlusKeyIds) {
+          queryKeys.push([hexId, k]);
+        }
+        const resp = await this.api.query.bbsPlus.bbsPlusKeys.multi(queryKeys);
+        function createPublicKeyObjFromChainResponse(pk) {
+          const pkObj = {
+            bytes: u8aToHex(pk.bytes),
+            curveType: null,
+            paramsRef: null,
+          };
+          if (pk.curveType.isBls12381) {
+            pkObj.curveType = 'Bls12381';
+          }
+          if (pk.paramsRef.isSome) {
+            const pr = pk.paramsRef.unwrap();
+            pkObj.paramsRef = [u8aToHex(pr[0]), pr[1].toNumber()];
+          } else {
+            pkObj.paramsRef = null;
+          }
+          return pkObj;
+        }
+        let currentIter = 0;
+        for (const r of resp) {
+          // The gaps in `keyId` might correspond to removed keys
+          if (r.isSome) {
+            // Don't care about signature params for now
+            const pkObj = createPublicKeyObjFromChainResponse(r.unwrap());
+            if (pkObj.curveType !== 'Bls12381') {
+              throw new Error(`Curve type should have been Bls12381 but was ${pkObj.curveType}`);
+            }
+            const keyIndex = queryKeys[currentIter][1];
+            keys.push([keyIndex, 'Bls12381G2VerificationKeyDock2022', hexToU8a(pkObj.bytes)]);
+            assertion.push(keyIndex);
+          }
+          currentIter++;
+        }
+      }
+    }
+
+    keys.sort((a, b) => a[0] - b[0]);
+    assertion.sort();
+    authn.sort();
+    capInv.sort();
+    keyAgr.sort();
+
+    const verificationMethod = keys.map(([index, typ, publicKeyRaw]) => ({
+      id: `${id}#keys-${index}`,
+      type: typ,
+      controller: id,
+      publicKeyBase58: b58.encode(publicKeyRaw),
+    }));
+    const assertionMethod = assertion.map((i) => `${id}#keys-${i}`);
+    const authentication = authn.map((i) => `${id}#keys-${i}`);
+    const capabilityInvocation = capInv.map((i) => `${id}#keys-${i}`);
+    const keyAgreement = keyAgr.map((i) => `${id}#keys-${i}`);
+    let service = [];
+    if (serviceEndpoints.length > 0) {
+      const decoder = new TextDecoder();
+      service = serviceEndpoints.map(([spId, sp]) => {
+        const spType = sp.types.toNumber();
+        if (spType !== 1) {
+          throw new Error(
+            `Only "LinkedDomains" supported as service endpoint type for now but found ${spType}`,
+          );
+        }
+        return {
+          id: decoder.decode(spId),
+          type: 'LinkedDomains',
+          serviceEndpoint: sp.origins.map((o) => decoder.decode(o)),
+        };
+      });
+    }
+    return {
+      '@context': ['https://www.w3.org/ns/did/v1'],
+      id,
+      controller: controllers.map((c) => `${INFRA_DID_QUALIFIER}${encodeAddress(c)}`),
+      publicKey: verificationMethod,
+      authentication,
+      assertionMethod,
+      keyAgreement,
+      capabilityInvocation,
+      ATTESTS_IRI,
+      service,
+    };
+  }
+
+  async disconnect() {
+    if (this.api) {
+      if (this.api.isConnected) {
+        await this.api.disconnect();
+      }
+      delete this.api;
+    }
+  }
+
+  async registerOnChain() {
+    try {
+      const hexId: unknown = this.DIDToHex(this.did)
+      const didKeys = [this.didKey].map((d) => d.toJSON());
+      const controllers = new BTreeSet(undefined, undefined, undefined)
+      controllers.add(hexId as Codec)
+      const tx = await this.api.tx.didModule.newOnchain(hexId, didKeys, controllers);
+      return this.signAndSend(tx, false, {});
+    } catch (e) { throw e }
+  }
+
+  async removeOnChain() {
+    try {
+      const hexDID = this.DIDToHex(this.did)
+      const didDetail = await this.getOnchainDIDDetail(hexDID);
+      const didRemoval = { did: hexDID, nonce: didDetail.nonce + 1 };
+
+      const stateMessage = this.api.createType('StateChange', { 'DidRemoval': didRemoval }).toU8a();
+      const controllerDIDSig = {
+        did: hexDID, // controllerHexDid
+        keyId: 1,
+        sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+      }
+
+      const tx = await this.api.tx.didModule.removeOnchainDid(didRemoval, controllerDIDSig);
+      return this.signAndSend(tx, false, {});
+    } catch (e) { throw e }
+  }
+  async addKeys(didKeys: DidKey[]) {
+    const hexDID = this.DIDToHex(this.did)
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+    const keys = didKeys.map((d) => d.toJSON());
+    const AddKeys = { did: hexDID, keys, nonce: didDetail.nonce + 1 };
+
+    const stateMessage = this.api.createType('StateChange', { AddKeys }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID, // controllerHexDid
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+
+    const tx = await this.api.tx.didModule.addKeys(AddKeys, controllerDIDSig)
+    return await this.signAndSend(tx, false, {})
+  }
+  async removeKeys(...keyIds: number[]) {
+    const hexDID = this.DIDToHex(this.did)
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+    const keys = new BTreeSet(undefined, undefined, undefined);
+    keyIds.forEach((keyId: unknown) => {
+      keys.add(keyId as Codec);
+    });
+
+    const RemoveKeys = { did: hexDID, keys, nonce: didDetail.nonce + 1 };
+    const stateMessage = this.api.createType('StateChange', { RemoveKeys }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID, // controllerHexDid
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+
+    const tx = await this.api.tx.didModule.removeKeys(RemoveKeys, controllerDIDSig)
+    return await this.signAndSend(tx, false, {})
+  }
+
+  async addController(controllerDIDs: string[]) {
+    const hexDID = this.DIDToHex(this.did)
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+    const controllers = new BTreeSet(undefined, undefined, undefined);
+    controllerDIDs.forEach((controllerDID) => {
+      const controllerHexDID: unknown = this.DIDToHex(controllerDID);
+      controllers.add(controllerHexDID as Codec);
+    });
+
+    const AddControllers = { did: hexDID, controllers, nonce: didDetail.nonce + 1 };
+    const stateMessage = this.api.createType('StateChange', { AddControllers }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+    const tx = this.api.tx.didModule.addControllers(AddControllers, controllerDIDSig);
+    return await this.signAndSend(tx, false, {});
+  }
+
+  async removeControllers(controllerDIDs: string[]) {
+    const hexDID = this.DIDToHex(this.did)
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+    const controllers = new BTreeSet(undefined, undefined, undefined);
+    controllerDIDs.forEach((controllerDID) => {
+      const controllerHexDID: unknown = this.DIDToHex(controllerDID);
+      controllers.add(controllerHexDID as Codec);
+    });
+
+    const RemoveControllers = { did: hexDID, controllers, nonce: didDetail.nonce + 1 };
+    const stateMessage = this.api.createType('StateChange', { RemoveControllers }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+    const tx = this.api.tx.didModule.removeControllers(RemoveControllers, controllerDIDSig);
+    return await this.signAndSend(tx, false, {});
+  }
+  async addServiceEndpoint(
+    endpointType?: ServiceEndpointType,
+    originsTexts: string[] = ['https://foo.example.com'],
+    endpointIdText?: string,
+  ) {
+    const encoder = new TextEncoder();
+    if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
+    if (!endpointType) {
+      endpointType = new ServiceEndpointType()
+      endpointType.setLinkedDomains()
+    }
+    const spId = u8aToHex(encoder.encode(endpointIdText));
+    const origins = originsTexts.map((u) => u8aToHex(encoder.encode(u)));
+    const hexDID = this.DIDToHex(this.did)
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+
+    const AddServiceEndpoint = {
+      did: hexDID,
+      id: spId,
+      endpoint: { types: endpointType.value, origins },
+      nonce: didDetail.nonce + 1,
+    };
+    const stateMessage = this.api.createType('StateChange', { AddServiceEndpoint }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+    const tx = this.api.tx.didModule.addServiceEndpoint(AddServiceEndpoint, controllerDIDSig);
+    return this.signAndSend(tx, false, {});
+  }
+  async removeServiceEndpoint(endpointIdText?: string) {
+    const encoder = new TextEncoder();
+    if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
+    const spId = u8aToHex(encoder.encode(endpointIdText));
+    const hexDID = this.DIDToHex(this.did)
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+
+    const RemoveServiceEndpoint = { did: hexDID, id: spId, nonce: didDetail.nonce + 1, };
+
+    const stateMessage = this.api.createType('StateChange', { RemoveServiceEndpoint }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+    const tx = this.api.tx.didModule.removeServiceEndpoint(RemoveServiceEndpoint, controllerDIDSig);
+
+
+    return this.signAndSend(tx, false, {});
+  }
+  async getServiceEndpoint(endpointIdText?: string,) {
+    const hexDID = this.DIDToHex(this.did);
+    const encoder = new TextEncoder();
+    if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
+    const spId = u8aToHex(encoder.encode(endpointIdText));
+    let resp = await this.api.query.didModule.didServiceEndpoints(hexDID, spId,);
+    if (resp.isNone) {
+      throw new Error(
+        `No service endpoint found for did ${this.did} and with id ${endpointIdText}`,
+      );
+    }
+    resp = resp.unwrap();
+    return {
+      type: new ServiceEndpointType(resp.types.toNumber()),
+      origins: resp.origins.map((origin) => u8aToHex(origin)),
+    };
+  }
+  async isController(controllerDID: string) {
+    const controlledHexId = this.DIDToHex(this.did);
+    const controllerHexId = this.DIDToHex(controllerDID);
+    const resp = await this.api.query.didModule.didControllers(
+      controlledHexId,
+      controllerHexId,
+    );
+    return resp.isSome;
+  }
+  async setClaim(priority: number, iri: string) {
+    const encoder = new TextEncoder();
+    const hexDID = this.DIDToHex(this.did);
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+    const SetAttestationClaim = {
+      attest: {
+        priority, //: encoder.encode(priority),
+        iri: u8aToHex(encoder.encode(iri)),
+      },
+      nonce: didDetail.nonce + 1,
+    };
+    const stateMessage = this.api.createType('StateChange', { SetAttestationClaim }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+    const tx = this.api.tx.attest.setClaim(SetAttestationClaim, controllerDIDSig);
+    return this.signAndSend(tx, false, {});
   }
 
 
 
-  signVC() {}
-  verifyVC() {}
+  //--------- bbs+ module
 
-  //   static async wrapper<T>(cb): Promise<Awaited<T>> {
-  //     return dock.init({ address: 'ws://localhost:9944' })
-  //       .then(cb)
-  //       .then((res: T) => { dock.disconnect(); return res })
-  //   };
+  static BBSPlus_createG1SignatureParams(numMessage: number, label?: string): BBSPlus_Params {
+    let g1SigParams = label ?
+      SignatureParamsG1.generate(numMessage, hexToU8a(label)) :
+      SignatureParamsG1.generate(numMessage)
+    return {
+      bytes: u8aToHex(g1SigParams.toBytes()),
+      curveType: 'Bls12381',
+      label
+    };
+  }
+
+
+  static BBSPlus_prepareAddPublicKey(bytes, params = undefined) {
+    let paramsRef = undefined;
+    if (params) {
+      if (!(typeof params === 'object' && params instanceof Array && params.length === 2)) {
+        throw new Error('Reference should be an array of 2 items');
+      }
+      if (typeof params[1] !== 'number') {
+        throw new Error(`Second item of reference should be a number but was ${params[1]}`);
+      }
+      const hexDID = InfraSS58DID.DIDToHex(params[0])
+      paramsRef = [hexDID, params[1]]
+    }
+    return { bytes, paramsRef, curveType: 'Bls12381' };
+  }
+
+  static BBSPlus_createPublicKeyObjFromChainResponse(pk) {
+    const pr = pk.paramsRef.unwrap();
+    return {
+      bytes: u8aToHex(pk.bytes),
+      curveType: 'Bls12381',
+      paramsRef: (pk.paramsRef.isSome) ? [u8aToHex(pr[0]), pr[1].toNumber()] : null,
+      params: null,
+    };
+  }
+
+  private BBSPlus_createParamsObjFromChainResponse(params) {
+    return {
+      bytes: u8aToHex(params.bytes),
+      curveType: 'Bls12381',
+      label: params.label.isSome ? u8aToHex(params.label.unwrap()) : null
+    };
+  }
+
+
+  private async BBSPlus_getParamsByHexDid(hexDid, counter) {
+    const resp = await this.api.query.bbsPlus.bbsPlusParams(hexDid, counter);
+    if (resp.isSome) {
+      return this.BBSPlus_createParamsObjFromChainResponse(resp.unwrap());
+    }
+    return null;
+  }
+
+  private async BBSPlus_getPublicKeyByHexDid(hexDid, keyId, withParams = false) {
+    const resp = await this.api.query.bbsPlus.bbsPlusKeys(hexDid, keyId);
+
+    if (resp.isSome) {
+      const pkObj = InfraSS58DID.BBSPlus_createPublicKeyObjFromChainResponse(resp.unwrap());
+      if (withParams) {
+        if (pkObj.paramsRef === null) {
+          throw new Error('No reference to parameters for the public key');
+        } else {
+          const params = await this.BBSPlus_getParamsByHexDid(pkObj.paramsRef[0], pkObj.paramsRef[1]);
+          if (params === null) {
+            throw new Error(`Parameters with reference (${pkObj.paramsRef[0]}, ${pkObj.paramsRef[1]}) not found on chain`);
+          }
+          pkObj.params = params;
+        }
+      }
+      return pkObj;
+    }
+    return null;
+  }
+
+
+
+  async BBSPlus_getLastParamsWritten() {
+    const hexId = this.DIDToHex(this.did);
+    const counter = (await this.api.query.bbsPlus.paramsCounter(hexId));
+    if (counter > 0) {
+      const resp = await this.api.query.bbsPlus.bbsPlusParams(hexId, counter);
+      if (resp.isSome) {
+        return this.BBSPlus_createParamsObjFromChainResponse(resp.unwrap());
+      }
+    }
+    return null;
+  }
+
+  async BBSPlus_getAllParams() {
+    const hexId = this.DIDToHex(this.did);
+
+    const params = [];
+    const counter = (await this.api.query.bbsPlus.paramsCounter(hexId));
+    if (counter > 0) {
+      for (let i = 1; i <= counter; i++) {
+        const param = await this.BBSPlus_getParamsByHexDid(hexId, i);
+        if (param !== null) {
+          params.push(param);
+        }
+      }
+    }
+    return params;
+  }
+
+  async BBSPlus_getParams(counter) {
+    const hexId = this.DIDToHex(this.did);
+    return await this.BBSPlus_getParamsByHexDid(hexId, counter);
+  }
+
+  async BBSPlus_getPublicKey(keyId, withParams = false) {
+    const hexId = this.DIDToHex(this.did);
+    return this.BBSPlus_getPublicKeyByHexDid(hexId, keyId, withParams);
+  }
+
+  async BBSPlus_addPublicKey(publicKey: PublicKey) {
+    const hexDID = this.DIDToHex(this.did);
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+
+    const AddBBSPlusPublicKey = { key: publicKey, did: hexDID, nonce: didDetail.nonce + 1 };
+    const stateMessage = this.api.createType('StateChange', { AddBBSPlusPublicKey }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+
+    const tx = await this.api.tx.bbsPlus.addPublicKey(AddBBSPlusPublicKey, controllerDIDSig);
+    return this.signAndSend(tx, false, {});
+  }
+  async BBSPlus_removePublicKey(removeKeyId) {
+    const hexDID = this.DIDToHex(this.did);
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+
+    const RemoveBBSPlusPublicKey = { keyRef: [hexDID, removeKeyId], did: hexDID, nonce: didDetail.nonce + 1 };
+    const stateMessage = this.api.createType('StateChange', { RemoveBBSPlusPublicKey }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+    const tx = await this.api.tx.bbsPlus.removePublicKey(RemoveBBSPlusPublicKey, controllerDIDSig);
+    return this.signAndSend(tx, false, {});
+  }
+
+
+  async BBSPlus_addParams(params: BBSPlus_Params) {
+
+    const hexDID = this.DIDToHex(this.did);
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+
+    const AddBBSPlusParams = { params, nonce: didDetail.nonce + 1 };
+    const stateMessage = this.api.createType('StateChange', { AddBBSPlusParams }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+    const tx = await this.api.tx.bbsPlus.addParams(AddBBSPlusParams, controllerDIDSig);
+    return this.signAndSend(tx, false, {});
+  }
+  async BBSPlus_removeParams(index) {
+    const hexDID = this.DIDToHex(this.did);
+    const didDetail = await this.getOnchainDIDDetail(hexDID);
+
+    const RemoveBBSPlusParams = { paramsRef: [hexDID, index], nonce: didDetail.nonce + 1 };
+    const stateMessage = this.api.createType('StateChange', { RemoveBBSPlusParams }).toU8a();
+    const controllerDIDSig = {
+      did: hexDID,
+      keyId: 1,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
+    }
+
+    const tx = await this.api.tx.bbsPlus.removeParams(RemoveBBSPlusParams, controllerDIDSig);
+    return this.signAndSend(tx, false, {});
+  }
+
+
+
+
+
+
 }
-
-
-export interface IInfraDID {
-  /** done*/
-  /* TODO */
-  /*! remove*/
-  /*? need check */
-  /** done: static. 신규 키 생성 ::: createNewSS58DIDAndKey*/
-  createPubKeyDIDsecp256k1(networkId: string): { did: string, publicKey: string, privateKey: string };
-  setAttributePubKeyDID(key: string, value: string): {};
-
-  changeOwnerPubKeyDID(newOwnerPubKey: string): {};
-  revokePubKeyDID(): {};
-  clearPubKeyDID(): {};
-
-  registerTrustedPubKeyDID(authorizer: string, didPubKey: string, properties: string): {};
-  updateTrustedPubKeyDID(authorizer: string, didPubKey: string, properties: string): {};
-  removeTrustedPubKeyDID(authorizer: string, didPubKey: string): {};
-
-  getTrustedPubKeyDIDByAuthorizer(authorizer: string): {};
-  getTrustedPubKeyDIDByTarget(didPubKey: string): {};
-  getTrustedPubKeyDID(authorizer: string, didPubKey: string): {};
-
-  // getJwtVcIssuer(): JwtVcIssuer;
-  signJWT(payload: undefined, expiresIn: number): {};
-  verifyJWT(jwt: undefined, resolver: undefined, audience: undefined): Promise<any>;
-}
-

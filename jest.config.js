@@ -1,8 +1,5 @@
 module.exports = {
     preset: 'ts-jest',
-    bail: true,
-    clearMocks: true,
-    testTimeout: 30000,
     testEnvironment: 'node',
     testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
     transform: {
@@ -29,14 +26,5 @@ module.exports = {
         'json',
         'node'
     ],
-    // moduleNameMapper: {
-    //     '^(\\.{1,2}/.*)\\.js$': '$1',
-    // },
-    extensionsToTreatAsEsm: ['.ts'],
-    // coverageDirectory: './coverage/',
-    // collectCoverageFrom: [
-    //     'src/**/*.{ts,tsx}',
-    //     '!src/**/*.d.ts',
-    //     '!**/node_modules/**'
-    // ]
+    extensionsToTreatAsEsm: ['.ts']
 };
