@@ -68,11 +68,12 @@ export interface DIDSet {
   didKey: DidKey;
   keyPair: KeyringPair;
 }
-export interface BBSPlus_Params {
+interface BBSPlus_PublicKey {
   bytes: HexString,
   curveType: 'Bls12381',
-  label: string
+  paramsRef?: [HexString, any],
 }
+
 export class PublicKey {
   constructor(private value: HexString, private sigType: SIG_TYPE = CRYPTO_INFO.SR25519.SIG_TYPE) {
     this.value = value;
@@ -155,7 +156,6 @@ export class ServiceEndpointType {
 }
 
 export default class InfraSS58DID {
-  private constructor() {}
   private static instance: InfraSS58DID
 
   private api;
@@ -169,24 +169,17 @@ export default class InfraSS58DID {
   private didKey: DidKey;
   private did: string;
   private keyringModule: Keyring;
-
-  /**
-   * 
-   *@param {KeyringPair} account - PolkadotJS Keyring account. if undefined, set first keyPair instance DID
-   */
-  setAccount(account: KeyringPair) {
-    this.account = account
-  }
-  /**
-   *  Gets the current account used to sign transactions
-   * @return {KeyringPair} PolkadotJS Keyring account
-   */
-  getAccount() {
-    return this.account;
-  }
   get isConnected() {
     return this.api && this.api.isConnected || false;
   }
+  setAccount(account: KeyringPair) {
+    this.account = account
+  }
+  getAccount() {
+    return this.account;
+  }
+  private constructor() {}
+
 
   static async createAsync(conf: IConfig): Promise<InfraSS58DID> {
     return await new InfraSS58DID().init(conf)
@@ -276,10 +269,10 @@ export default class InfraSS58DID {
     await initializeWasm();
     return this
   }
-  private static DIDToHex(did): HexString {
+  private static didToHex(did): HexString {
     return u8aToHex(decodeAddress(did.slice(INFRA_DID_QUALIFIER.length)));
   }
-  private DIDToHex(did): HexString {
+  private didToHex(did): HexString {
     return u8aToHex(decodeAddress(did.slice(INFRA_DID_QUALIFIER.length)));
   }
   private async getOnchainDIDDetail(hexDid: HexString): Promise<{
@@ -350,7 +343,7 @@ export default class InfraSS58DID {
   }
 
   async getDocument({ getBbsPlusSigKeys = true } = {}) {
-    const hexId = this.DIDToHex(this.did);
+    const hexId = this.didToHex(this.did);
     let didDetails = await this.getOnchainDIDDetail(hexId);
     const ATTESTS_IRI = await this.getAttests(hexId);
     const id = (this.did === hexId) ? `${INFRA_DID_QUALIFIER}${encodeAddress(hexId)}` : this.did;
@@ -542,7 +535,7 @@ export default class InfraSS58DID {
 
   async registerOnChain() {
     try {
-      const hexId: unknown = this.DIDToHex(this.did)
+      const hexId: unknown = this.didToHex(this.did)
       const didKeys = [this.didKey].map((d) => d.toJSON());
       const controllers = new BTreeSet(undefined, undefined, undefined)
       controllers.add(hexId as Codec)
@@ -553,7 +546,7 @@ export default class InfraSS58DID {
 
   async removeOnChain() {
     try {
-      const hexDID = this.DIDToHex(this.did)
+      const hexDID = this.didToHex(this.did)
       const didDetail = await this.getOnchainDIDDetail(hexDID);
       const didRemoval = { did: hexDID, nonce: didDetail.nonce + 1 };
 
@@ -569,7 +562,7 @@ export default class InfraSS58DID {
     } catch (e) { throw e }
   }
   async addKeys(didKeys: DidKey[]) {
-    const hexDID = this.DIDToHex(this.did)
+    const hexDID = this.didToHex(this.did)
     const didDetail = await this.getOnchainDIDDetail(hexDID);
     const keys = didKeys.map((d) => d.toJSON());
     const AddKeys = { did: hexDID, keys, nonce: didDetail.nonce + 1 };
@@ -585,7 +578,7 @@ export default class InfraSS58DID {
     return await this.signAndSend(tx, false, {})
   }
   async removeKeys(...keyIds: number[]) {
-    const hexDID = this.DIDToHex(this.did)
+    const hexDID = this.didToHex(this.did)
     const didDetail = await this.getOnchainDIDDetail(hexDID);
     const keys = new BTreeSet(undefined, undefined, undefined);
     keyIds.forEach((keyId: unknown) => {
@@ -605,11 +598,11 @@ export default class InfraSS58DID {
   }
 
   async addController(controllerDIDs: string[]) {
-    const hexDID = this.DIDToHex(this.did)
+    const hexDID = this.didToHex(this.did)
     const didDetail = await this.getOnchainDIDDetail(hexDID);
     const controllers = new BTreeSet(undefined, undefined, undefined);
     controllerDIDs.forEach((controllerDID) => {
-      const controllerHexDID: unknown = this.DIDToHex(controllerDID);
+      const controllerHexDID: unknown = this.didToHex(controllerDID);
       controllers.add(controllerHexDID as Codec);
     });
 
@@ -625,11 +618,11 @@ export default class InfraSS58DID {
   }
 
   async removeControllers(controllerDIDs: string[]) {
-    const hexDID = this.DIDToHex(this.did)
+    const hexDID = this.didToHex(this.did)
     const didDetail = await this.getOnchainDIDDetail(hexDID);
     const controllers = new BTreeSet(undefined, undefined, undefined);
     controllerDIDs.forEach((controllerDID) => {
-      const controllerHexDID: unknown = this.DIDToHex(controllerDID);
+      const controllerHexDID: unknown = this.didToHex(controllerDID);
       controllers.add(controllerHexDID as Codec);
     });
 
@@ -656,7 +649,7 @@ export default class InfraSS58DID {
     }
     const spId = u8aToHex(encoder.encode(endpointIdText));
     const origins = originsTexts.map((u) => u8aToHex(encoder.encode(u)));
-    const hexDID = this.DIDToHex(this.did)
+    const hexDID = this.didToHex(this.did)
     const didDetail = await this.getOnchainDIDDetail(hexDID);
 
     const AddServiceEndpoint = {
@@ -678,7 +671,7 @@ export default class InfraSS58DID {
     const encoder = new TextEncoder();
     if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
     const spId = u8aToHex(encoder.encode(endpointIdText));
-    const hexDID = this.DIDToHex(this.did)
+    const hexDID = this.didToHex(this.did)
     const didDetail = await this.getOnchainDIDDetail(hexDID);
 
     const RemoveServiceEndpoint = { did: hexDID, id: spId, nonce: didDetail.nonce + 1, };
@@ -695,7 +688,7 @@ export default class InfraSS58DID {
     return this.signAndSend(tx, false, {});
   }
   async getServiceEndpoint(endpointIdText?: string,) {
-    const hexDID = this.DIDToHex(this.did);
+    const hexDID = this.didToHex(this.did);
     const encoder = new TextEncoder();
     if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
     const spId = u8aToHex(encoder.encode(endpointIdText));
@@ -712,8 +705,8 @@ export default class InfraSS58DID {
     };
   }
   async isController(controllerDID: string) {
-    const controlledHexId = this.DIDToHex(this.did);
-    const controllerHexId = this.DIDToHex(controllerDID);
+    const controlledHexId = this.didToHex(this.did);
+    const controllerHexId = this.didToHex(controllerDID);
     const resp = await this.api.query.didModule.didControllers(
       controlledHexId,
       controllerHexId,
@@ -722,7 +715,7 @@ export default class InfraSS58DID {
   }
   async setClaim(priority: number, iri: string) {
     const encoder = new TextEncoder();
-    const hexDID = this.DIDToHex(this.did);
+    const hexDID = this.didToHex(this.did);
     const didDetail = await this.getOnchainDIDDetail(hexDID);
     const SetAttestationClaim = {
       attest: {
@@ -744,20 +737,28 @@ export default class InfraSS58DID {
 
 
   //--------- bbs+ module
-
-  static BBSPlus_createG1SignatureParams(numMessage: number, label?: string): BBSPlus_Params {
-    let g1SigParams = label ?
-      SignatureParamsG1.generate(numMessage, hexToU8a(label)) :
-      SignatureParamsG1.generate(numMessage)
-    return {
-      bytes: u8aToHex(g1SigParams.toBytes()),
-      curveType: 'Bls12381',
-      label
-    };
+  static BBSPlus_changeSigParamMessageCounter(sigParam: SignatureParamsG1, messageCounter: number): SignatureParamsG1 {
+    return sigParam.adapt(messageCounter)
+  }
+  static BBSPlus_createSigParamsWithLabel(messageCounter: number, label?: string): SignatureParamsG1 {
+    return label ?
+      SignatureParamsG1.generate(messageCounter, hexToU8a(label)) :
+      SignatureParamsG1.generate(messageCounter)
   }
 
+  async BBSPlus_createSigParamsByDID(paramCounter: number)
+    : Promise<SignatureParamsG1> {
+    const queriedParams = await this.BBSPlus_getParams(paramCounter);
+    const params1Val = SignatureParamsG1.valueFromBytes(hexToU8a(queriedParams.bytes));
+    const sigParam = await new SignatureParamsG1(params1Val, hexToU8a(queriedParams.label));
+    return sigParam;
+  }
 
-  static BBSPlus_prepareAddPublicKey(bytes, params = undefined) {
+  static BBSPlus_createG1SigPublicKey(g1SigParams: SignatureParamsG1, params = undefined): BBSPlus_PublicKey {
+    // params= [did, paramCounter]
+    let keypair = KeypairG2.generate(g1SigParams);
+    const bytes = u8aToHex(keypair.publicKey.bytes);
+
     let paramsRef = undefined;
     if (params) {
       if (!(typeof params === 'object' && params instanceof Array && params.length === 2)) {
@@ -766,44 +767,41 @@ export default class InfraSS58DID {
       if (typeof params[1] !== 'number') {
         throw new Error(`Second item of reference should be a number but was ${params[1]}`);
       }
-      const hexDID = InfraSS58DID.DIDToHex(params[0])
+      const hexDID = InfraSS58DID.didToHex(params[0])
       paramsRef = [hexDID, params[1]]
     }
     return { bytes, paramsRef, curveType: 'Bls12381' };
-  }
-
-  static BBSPlus_createPublicKeyObjFromChainResponse(pk) {
-    const pr = pk.paramsRef.unwrap();
-    return {
-      bytes: u8aToHex(pk.bytes),
-      curveType: 'Bls12381',
-      paramsRef: (pk.paramsRef.isSome) ? [u8aToHex(pr[0]), pr[1].toNumber()] : null,
-      params: null,
-    };
-  }
-
-  private BBSPlus_createParamsObjFromChainResponse(params) {
-    return {
-      bytes: u8aToHex(params.bytes),
-      curveType: 'Bls12381',
-      label: params.label.isSome ? u8aToHex(params.label.unwrap()) : null
-    };
   }
 
 
   private async BBSPlus_getParamsByHexDid(hexDid, counter) {
     const resp = await this.api.query.bbsPlus.bbsPlusParams(hexDid, counter);
     if (resp.isSome) {
-      return this.BBSPlus_createParamsObjFromChainResponse(resp.unwrap());
+      const params = resp.unwrap()
+      return {
+        bytes: u8aToHex(params.bytes),
+        curveType: 'Bls12381',
+        label: params.label.isSome ? u8aToHex(params.label.unwrap()) : null
+      }
     }
     return null;
   }
 
   private async BBSPlus_getPublicKeyByHexDid(hexDid, keyId, withParams = false) {
     const resp = await this.api.query.bbsPlus.bbsPlusKeys(hexDid, keyId);
-
     if (resp.isSome) {
-      const pkObj = InfraSS58DID.BBSPlus_createPublicKeyObjFromChainResponse(resp.unwrap());
+      const pk = resp.unwrap();
+      let paramsRef = null
+      if (pk.paramsRef.isSome) {
+        const pr = pk.paramsRef.unwrap();
+        paramsRef = [u8aToHex(pr[0]), pr[1].toNumber()]
+      }
+      const pkObj = {
+        bytes: u8aToHex(pk.bytes),
+        curveType: 'Bls12381',
+        paramsRef,
+        params: null,
+      };
       if (withParams) {
         if (pkObj.paramsRef === null) {
           throw new Error('No reference to parameters for the public key');
@@ -821,47 +819,8 @@ export default class InfraSS58DID {
   }
 
 
-
-  async BBSPlus_getLastParamsWritten() {
-    const hexId = this.DIDToHex(this.did);
-    const counter = (await this.api.query.bbsPlus.paramsCounter(hexId));
-    if (counter > 0) {
-      const resp = await this.api.query.bbsPlus.bbsPlusParams(hexId, counter);
-      if (resp.isSome) {
-        return this.BBSPlus_createParamsObjFromChainResponse(resp.unwrap());
-      }
-    }
-    return null;
-  }
-
-  async BBSPlus_getAllParams() {
-    const hexId = this.DIDToHex(this.did);
-
-    const params = [];
-    const counter = (await this.api.query.bbsPlus.paramsCounter(hexId));
-    if (counter > 0) {
-      for (let i = 1; i <= counter; i++) {
-        const param = await this.BBSPlus_getParamsByHexDid(hexId, i);
-        if (param !== null) {
-          params.push(param);
-        }
-      }
-    }
-    return params;
-  }
-
-  async BBSPlus_getParams(counter) {
-    const hexId = this.DIDToHex(this.did);
-    return await this.BBSPlus_getParamsByHexDid(hexId, counter);
-  }
-
-  async BBSPlus_getPublicKey(keyId, withParams = false) {
-    const hexId = this.DIDToHex(this.did);
-    return this.BBSPlus_getPublicKeyByHexDid(hexId, keyId, withParams);
-  }
-
-  async BBSPlus_addPublicKey(publicKey: PublicKey) {
-    const hexDID = this.DIDToHex(this.did);
+  async BBSPlus_addPublicKey(publicKey: BBSPlus_PublicKey) {
+    const hexDID = this.didToHex(this.did);
     const didDetail = await this.getOnchainDIDDetail(hexDID);
 
     const AddBBSPlusPublicKey = { key: publicKey, did: hexDID, nonce: didDetail.nonce + 1 };
@@ -876,7 +835,7 @@ export default class InfraSS58DID {
     return this.signAndSend(tx, false, {});
   }
   async BBSPlus_removePublicKey(removeKeyId) {
-    const hexDID = this.DIDToHex(this.did);
+    const hexDID = this.didToHex(this.did);
     const didDetail = await this.getOnchainDIDDetail(hexDID);
 
     const RemoveBBSPlusPublicKey = { keyRef: [hexDID, removeKeyId], did: hexDID, nonce: didDetail.nonce + 1 };
@@ -890,10 +849,18 @@ export default class InfraSS58DID {
     return this.signAndSend(tx, false, {});
   }
 
+  async BBSPlus_getPublicKey(keyId, withParams = false) {
+    const hexId = this.didToHex(this.did);
+    return this.BBSPlus_getPublicKeyByHexDid(hexId, keyId, withParams);
+  }
 
-  async BBSPlus_addParams(params: BBSPlus_Params) {
-
-    const hexDID = this.DIDToHex(this.did);
+  async BBSPlus_addParams(sigParam: SignatureParamsG1, label?: string) {
+    const params = {
+      bytes: u8aToHex(sigParam.toBytes()),
+      curveType: 'Bls12381',
+      label
+    }
+    const hexDID = this.didToHex(this.did);
     const didDetail = await this.getOnchainDIDDetail(hexDID);
 
     const AddBBSPlusParams = { params, nonce: didDetail.nonce + 1 };
@@ -907,7 +874,7 @@ export default class InfraSS58DID {
     return this.signAndSend(tx, false, {});
   }
   async BBSPlus_removeParams(index) {
-    const hexDID = this.DIDToHex(this.did);
+    const hexDID = this.didToHex(this.did);
     const didDetail = await this.getOnchainDIDDetail(hexDID);
 
     const RemoveBBSPlusParams = { paramsRef: [hexDID, index], nonce: didDetail.nonce + 1 };
@@ -922,8 +889,33 @@ export default class InfraSS58DID {
     return this.signAndSend(tx, false, {});
   }
 
+  async BBSPlus_getParams(counter) {
+    const hexId = this.didToHex(this.did);
+    return await this.BBSPlus_getParamsByHexDid(hexId, counter);
+  }
 
+  async BBSPlus_getLastParamsWritten() {
+    const hexId = this.didToHex(this.did);
+    const counter = await this.api.query.bbsPlus.paramsCounter(hexId);
+    if (counter < 1) return null
+    return await this.BBSPlus_getParamsByHexDid(hexId, counter)
+  }
 
+  async BBSPlus_getAllParams() {
+    const hexId = this.didToHex(this.did);
+
+    const params = [];
+    const counter = await this.api.query.bbsPlus.paramsCounter(hexId);
+    if (counter > 0) {
+      for (let i = 1; i <= counter; i++) {
+        const param = await this.BBSPlus_getParamsByHexDid(hexId, i);
+        if (param !== null) {
+          params.push(param);
+        }
+      }
+    }
+    return params;
+  }
 
 
 

@@ -165,35 +165,68 @@ describe('InfraSS58DID', () => {
             const keyringModule = new Keyring({ type: 'sr25519' });
             alice = keyringModule.addFromUri('//Alice');
             infraDID.setAccount(alice);
+            await infraDID.registerOnChain();
 
         })
         afterAll(async () => {
             if (infraDID.isConnected) await infraDID.disconnect();
         })
-
-        it('Register DID on chain', async () =>
-            await infraDID.registerOnChain().then(res => {
-                expect(res).toBeDefined();
-            })
-        )
-
-        it('add bbs+ params', async () => {
-            const params = InfraSS58DID.BBSPlus_createG1SignatureParams(10, 'test-param-label');
-            return await infraDID.BBSPlus_addParams(params).then(async () => {
+        it('Add bbs+ params', async () => {
+            const sigParam = InfraSS58DID.BBSPlus_createSigParamsWithLabel(10, 'test-param-label');
+            return await infraDID.BBSPlus_addParams(sigParam).then(async () => {
                 await infraDID.BBSPlus_getLastParamsWritten().then(res => {
                     expect(res).toBeDefined();
                 });
             })
         })
 
-        it('get bbs+ params', async () => {
+        it('Get bbs+ params', async () => {
             await infraDID.BBSPlus_getParams(1).then(async res1 => {
                 await infraDID.BBSPlus_getLastParamsWritten().then(res2 => {
                     expect(res1).toEqual(res2)
+                    // console.log('getParams:', res2)
                 })
             })
         })
 
+
+        it('Add bbs+ publicKey', async () => {
+            const sigParam = InfraSS58DID.BBSPlus_createSigParamsWithLabel(10)
+            const pk = InfraSS58DID.BBSPlus_createG1SigPublicKey(sigParam);
+            return await infraDID.BBSPlus_addPublicKey(pk).then(async () => {
+                await infraDID.BBSPlus_getPublicKey(2).then(res => {
+                    expect(res?.bytes).toEqual(pk.bytes);
+                });
+            })
+        })
+
+        it('Add bbs+ publicKey by did', async () => {
+            const sigParam = await infraDID.BBSPlus_createSigParamsByDID(1)
+            const pk = InfraSS58DID.BBSPlus_createG1SigPublicKey(sigParam);
+            return await infraDID.BBSPlus_addPublicKey(pk).then(async () => {
+                await infraDID.BBSPlus_getPublicKey(3).then(res => {
+                    expect(res?.bytes).toEqual(pk.bytes);
+                });
+            })
+        })
+
+
+
+        it('Remove bbs+ publicKey', async () => {
+            return await infraDID.BBSPlus_removePublicKey(3).then(async () => {
+                await infraDID.BBSPlus_getPublicKey(3).catch(e => {
+                    expect(e).toBeDefined()
+                })
+            })
+        })
+
+        it('Remove bbs+ params', async () => {
+            await infraDID.BBSPlus_removeParams(1).then(async () => {
+                await infraDID.BBSPlus_getParams(1).catch(e => {
+                    expect(e).toBeDefined()
+                })
+            })
+        })
 
         it('Remove DID on chain', async () =>
             await infraDID.removeOnChain().then(res => {
