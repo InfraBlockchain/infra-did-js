@@ -15,15 +15,16 @@ describe('InfraSS58DID', () => {
     let newDIDSet: DIDSet;
 
     describe('DID creation', () => {
-        it('should create SS25519 DID ', async () => {
-            return await InfraSS58DID.createNewSS58DIDSet(CRYPTO_INFO.SR25519)
+        it('should create SR25519 DID ', async () => {
+            return await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.SR25519)
                 .then(res => {
                     srTest = res;
+                    console.log(res)
                     expect(res.did).toBeDefined();
                 })
         })
         it('should create ED25519 DID ', async () => {
-            return await InfraSS58DID.createNewSS58DIDSet(CRYPTO_INFO.ED25519)
+            return await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.ED25519)
                 .then(res => {
                     edTest = res;
                     expect(res.did).toBeDefined();
@@ -40,19 +41,24 @@ describe('InfraSS58DID', () => {
 
     describe('DID onChain test', () => {
         beforeAll(async () => {
-            srTest = await InfraSS58DID.createNewSS58DIDSet(CRYPTO_INFO.SR25519);
-            newDIDSet = await InfraSS58DID.createNewSS58DIDSet(CRYPTO_INFO.SR25519);
+            await cryptoWaitReady();
+            const keyringModule = new Keyring({ type: 'sr25519' });
+            alice = keyringModule.addFromUri('//Alice');
+            srTest = await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.SR25519);
+            newDIDSet = await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.SR25519);
             config = {
                 address,
+                networkId: '02',
                 did: srTest.did,
+                controllerDID: srTest.did,
+                controllerKeyPair: srTest.keyPair,
+                txfeePayerAccountKeyPair: alice,
                 seed: srTest.seed,
                 cryptoInfo: srTest.cryptoInfo,
                 verRels: srTest.verRels,
             }
             infraDID = await InfraSS58DID.createAsync(config);
-            await cryptoWaitReady();
-            const keyringModule = new Keyring({ type: 'sr25519' });
-            alice = keyringModule.addFromUri('//Alice');
+
 
         })
         afterAll(async () => {
@@ -63,12 +69,9 @@ describe('InfraSS58DID', () => {
             expect(infraDID).toBeDefined();
             expect(infraDID.isConnected).toBe(true);
         })
-        it('set / get Account', () => {
-            infraDID.setAccount(alice)
-            expect(infraDID.getAccount()).toEqual(alice)
-        })
+
         it('get Error to remove not registered DID on chain', async () =>
-            await infraDID.removeOnChain().catch(e => {
+            await infraDID.unregisterOnChain().catch(e => {
                 expect(e).toBeDefined()
             })
         )
@@ -83,14 +86,14 @@ describe('InfraSS58DID', () => {
             })
         )
         it('Add keys at onChain DID', async () =>
-            await infraDID.addKeys([newDIDSet.didKey]).then(async () =>
+            await infraDID.addPublicKeyByDIDKeys([newDIDSet.didKey]).then(async () =>
                 await infraDID.getDocument().then(doc => {
                     expect(doc.publicKey.length).toBe(2);
                 })
             )
         )
         it('Remove keys at onChain DID', async () =>
-            await infraDID.removeKeys(2).then(async () =>
+            await infraDID.removePublicKeys(2).then(async () =>
                 await infraDID.getDocument().then(doc => {
                     expect(doc.publicKey.length).toBe(1);
                 })
@@ -139,7 +142,7 @@ describe('InfraSS58DID', () => {
                 })
         )
         it('Remove DID on chain', async () =>
-            await infraDID.removeOnChain().then(res => {
+            await infraDID.unregisterOnChain().then(res => {
                 expect(res).toBeDefined();
             })
         )
@@ -147,20 +150,23 @@ describe('InfraSS58DID', () => {
 
     describe('BBS+ test', () => {
         beforeAll(async () => {
-            srTest = await InfraSS58DID.createNewSS58DIDSet(CRYPTO_INFO.SR25519);
+            await cryptoWaitReady();
+            const keyringModule = new Keyring({ type: 'sr25519' });
+            alice = keyringModule.addFromUri('//Alice');
+
+            srTest = await InfraSS58DID.createNewSS58DIDSet(
+                '02', CRYPTO_INFO.SR25519);
 
             config = {
+                networkId: '02',
                 address,
                 did: srTest.did,
+                txfeePayerAccountKeyPair: alice,
                 seed: srTest.seed,
                 cryptoInfo: srTest.cryptoInfo,
                 verRels: srTest.verRels,
             }
             infraDID = await InfraSS58DID.createAsync(config);
-            await cryptoWaitReady();
-            const keyringModule = new Keyring({ type: 'sr25519' });
-            alice = keyringModule.addFromUri('//Alice');
-            infraDID.setAccount(alice);
             await infraDID.registerOnChain();
 
         })
@@ -180,28 +186,25 @@ describe('InfraSS58DID', () => {
             await infraDID.BBSPlus_getParams(1).then(async res1 => {
                 await infraDID.BBSPlus_getLastParamsWritten().then(res2 => {
                     expect(res1).toEqual(res2)
-                    // console.log('getParams:', res2)
                 })
             })
         })
 
 
         it('Add bbs+ publicKey', async () => {
-            const sigParam = InfraSS58DID.BBSPlus_createSigParamsWithLabel(10)
-            const pk = InfraSS58DID.BBSPlus_createSigPublicKey(sigParam);
-            return await infraDID.BBSPlus_addPublicKey(pk).then(async () => {
+            const testSet = InfraSS58DID.BBSPlus_createNewSigSet(10);
+            return await infraDID.BBSPlus_addPublicKey(testSet.publicKey).then(async () => {
                 await infraDID.BBSPlus_getPublicKey(2).then(res => {
-                    expect(res?.bytes).toEqual(pk.bytes);
+                    expect(res?.bytes).toEqual(testSet.publicKey.bytes);
                 });
             })
         })
 
         it('Add bbs+ publicKey by did', async () => {
-            const sigParam = await infraDID.BBSPlus_createSigParamsByDID(1)
-            const pk = InfraSS58DID.BBSPlus_createSigPublicKey(sigParam);
-            return await infraDID.BBSPlus_addPublicKey(pk).then(async () => {
+            const testSet = await infraDID.BBSPlus_createNewSigSet(1);
+            return await infraDID.BBSPlus_addPublicKey(testSet.publicKey).then(async () => {
                 await infraDID.BBSPlus_getPublicKey(3).then(res => {
-                    expect(res?.bytes).toEqual(pk.bytes);
+                    expect(res?.bytes).toEqual(testSet.publicKey.bytes);
                 });
             })
         })
@@ -225,7 +228,7 @@ describe('InfraSS58DID', () => {
         })
 
         it('Remove DID on chain', async () =>
-            await infraDID.removeOnChain().then(res => {
+            await infraDID.unregisterOnChain().then(res => {
                 expect(res).toBeDefined();
             })
         )

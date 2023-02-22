@@ -11,7 +11,6 @@ import {
   cryptoWaitReady,
   decodeAddress,
 } from '@polkadot/util-crypto';
-
 import { BTreeSet } from '@polkadot/types';
 import { Codec } from '@polkadot/types-codec/types';
 import { KeyringPair } from '@polkadot/keyring/types'; // eslint-disable-line
@@ -25,12 +24,10 @@ import typesBundle from '@docknetwork/node-types';
 // } from './polkadot/dock/utils/revocation';
 // import Schema from './polkadot/dock/modules/schema';
 
-
-const INFRA_DID_METHOD = 'infra';
-const INFRA_DID_NETWORK_ID = '02';
-const INFRA_DID_QUALIFIER = `did:${INFRA_DID_METHOD}:${INFRA_DID_NETWORK_ID}:`;
 const INFRA_DID_BYTE_SIZE = 32;
-export const ATTESTS_IRI = 'https://rdf.dock.io/alpha/2021#attestsDocumentContents';
+let INFRA_DID_QUALIFIER = `did:infra:02:`;
+const SetQualifier = (networkId) => { INFRA_DID_QUALIFIER = `did:infra:${networkId}:` };
+
 export const CRYPTO_INFO = {
   SR25519: {
     CRYPTO_TYPE: 'sr25519',
@@ -44,17 +41,21 @@ export const CRYPTO_INFO = {
   }
 } as const
 export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
-export type CRYPTO_TYPE = typeof CRYPTO_INFO.ED25519.CRYPTO_TYPE | typeof CRYPTO_INFO.SR25519.CRYPTO_TYPE
-export type KEY_TYPE = typeof CRYPTO_INFO.ED25519.KEY_TYPE | typeof CRYPTO_INFO.SR25519.KEY_TYPE
+// export type CRYPTO_TYPE = typeof CRYPTO_INFO.ED25519.CRYPTO_TYPE | typeof CRYPTO_INFO.SR25519.CRYPTO_TYPE
+// export type KEY_TYPE = typeof CRYPTO_INFO.ED25519.KEY_TYPE | typeof CRYPTO_INFO.SR25519.KEY_TYPE
 export type SIG_TYPE = typeof CRYPTO_INFO.ED25519.SIG_TYPE | typeof CRYPTO_INFO.SR25519.SIG_TYPE
 
 type HexString = `0x${string}`;
 
 export interface IConfig {
   did: string;
-  mnemonic?: string;
-  seed?: HexString;
   address: string;
+  networkId: string;
+  mnemonic?: string; //alter to seed
+  controllerDID?: string;// same role as didOwnerPrivateKey
+  controllerKeyPair?: KeyringPair; // same role as didOwnerPrivateKey
+  txfeePayerAccountKeyPair: KeyringPair, // same role as txfeePayerAccount
+  seed?: HexString;
   cryptoInfo?: CRYPTO_INFO;
   verRels?: VerificationRelationship;
 }
@@ -68,18 +69,31 @@ export interface DIDSet {
   didKey: DidKey;
   keyPair: KeyringPair;
 }
+export interface BBSPlus_SigSet {
+  sigParam: SignatureParamsG1,
+  keyPair: KeypairG2,
+  publicKey: BBSPlus_PublicKey,
+  paramCounter?: number,
+  messageCounter?: number,
+  label?: string
+}
 interface BBSPlus_PublicKey {
   bytes: HexString,
   curveType: 'Bls12381',
-  paramsRef?: [HexString, any],
+  paramsRef?: [HexString, number],
+  params?: any,
 }
-
+interface BBSPlus_Params {
+  bytes: HexString;
+  curveType: 'Bls12381',
+  label: `0x${string}`;
+}
 export class PublicKey {
   constructor(private value: HexString, private sigType: SIG_TYPE = CRYPTO_INFO.SR25519.SIG_TYPE) {
     this.value = value;
     this.sigType = sigType;
   }
-  static fromKeyringPair(pair: KeyringPair) {
+  static fromKeyringPair(pair: KeyringPair): PublicKey {
     const [k,] = Object.entries(CRYPTO_INFO).find(([k, v]) => v.CRYPTO_TYPE === pair.type);
     return new this(u8aToHex(pair.publicKey), CRYPTO_INFO[k].SIG_TYPE);
   }
@@ -111,7 +125,7 @@ export class ExtrinsicError extends Error {
     this.name = 'ExtrinsicError';
   }
 }
-export function getExtrinsicError(data, typeDef, api) {
+export function getExtrinsicError(data, typeDef, api): string {
   let errorMsg = 'Extrinsic failed submission:';
   data.forEach((error) => {
     if (error.isModule) {
@@ -132,7 +146,6 @@ export function getExtrinsicError(data, typeDef, api) {
   return errorMsg;
 }
 
-// eslint-disable-next-line no-bitwise
 export class VerificationRelationship {
   constructor(private _value = 0) {}
   get value() { return this._value }
@@ -156,8 +169,6 @@ export class ServiceEndpointType {
 }
 
 export default class InfraSS58DID {
-  private static instance: InfraSS58DID
-
   private api;
   private verRels: VerificationRelationship;
   private seed: HexString;
@@ -169,35 +180,32 @@ export default class InfraSS58DID {
   private didKey: DidKey;
   private did: string;
   private keyringModule: Keyring;
-  get isConnected() {
+  private controllerDID: string;
+  private controllerKeyPair: KeyringPair;
+  get isConnected(): boolean {
     return this.api && this.api.isConnected || false;
-  }
-  setAccount(account: KeyringPair) {
-    this.account = account
-  }
-  getAccount() {
-    return this.account;
   }
   private constructor() {}
 
 
-  static async createAsync(conf: IConfig): Promise<InfraSS58DID> {
-    return await new InfraSS58DID().init(conf)
-  }
 
+  static async getKeyPairBySeed(seed: HexString, cryptoInfo: CRYPTO_INFO): Promise<KeyringPair> {
+    const keyringModule = new Keyring({ type: cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
+    await cryptoWaitReady();
+    return keyringModule.addFromUri(seed, undefined, cryptoInfo.CRYPTO_TYPE);
+  }
   static async createNewSS58DIDSet(
+    networkId: string,
     cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.SR25519,
     verRels: VerificationRelationship =
       new VerificationRelationship(),
   ): Promise<DIDSet> {
+    SetQualifier(networkId);
     const hexId = randomAsHex(INFRA_DID_BYTE_SIZE);
     const ss58Id = encodeAddress(hexId);
     const did = `${INFRA_DID_QUALIFIER}${ss58Id}`;
-
     const seed = u8aToHex(mnemonicToMiniSecret(mnemonicGenerate()));
-    const keyringModule = new Keyring({ type: cryptoInfo.CRYPTO_TYPE || 'sr25519' });
-    await cryptoWaitReady();
-    const keyPair: KeyringPair = keyringModule.addFromUri(seed, undefined, cryptoInfo.CRYPTO_TYPE);
+    const keyPair: KeyringPair = await InfraSS58DID.getKeyPairBySeed(seed, cryptoInfo)
     const publicKey = PublicKey.fromKeyringPair(keyPair);
     const didKey: DidKey = new DidKey(publicKey, verRels);
     return { did, didKey, keyPair, publicKey, seed, verRels, cryptoInfo };
@@ -215,8 +223,14 @@ export default class InfraSS58DID {
     }
     return true
   }
+  static async createAsync(conf: IConfig): Promise<InfraSS58DID> {
+    return await new InfraSS58DID().init(conf)
+  }
+  private static didToHex(did: string): HexString {
+    return u8aToHex(decodeAddress(did.slice(INFRA_DID_QUALIFIER.length)));
+  }
 
-  private async init(conf: IConfig) {
+  private async init(conf: IConfig): Promise<InfraSS58DID> {
     if (this.api) {
       if (this.api.isConnected) {
         throw new Error('API is already connected');
@@ -224,11 +238,18 @@ export default class InfraSS58DID {
         await this.disconnect();
       }
     }
-
-    this.did = conf.did;
+    SetQualifier(conf.networkId);
+    this.account = conf.txfeePayerAccountKeyPair;
     this.cryptoInfo = conf.cryptoInfo ?? CRYPTO_INFO.SR25519;
     this.verRels = conf.verRels || new VerificationRelationship()
-
+    this.did = conf.did;
+    if (conf.mnemonic) {
+      this.seed = u8aToHex(mnemonicToMiniSecret(conf.mnemonic));
+    } else if (conf.seed) {
+      this.seed = conf.seed;
+    } else {
+      this.seed = randomAsHex(INFRA_DID_BYTE_SIZE);
+    }
     this.address = conf.address || this.address;
     // check secure protocol 
     // if (this.address && (
@@ -244,37 +265,28 @@ export default class InfraSS58DID {
       rpc: {},
       typesBundle: typesBundle,
     };
-
     this.api = await ApiPromise.create(apiOptions);
 
     await cryptoWaitReady();
-    this.keyringModule = new Keyring({ type: this.cryptoInfo.CRYPTO_TYPE || 'sr25519' });
+    this.keyringModule = new Keyring({ type: this.cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
+    this.keyPairs = [];
+    this.keyPairs.push(this.keyringModule.addFromUri(this.seed, undefined, this.cryptoInfo.CRYPTO_TYPE));
 
-
-    this.keyPairs = this.keyPairs ?? [];
-
-    if (conf.mnemonic) {
-      this.seed = u8aToHex(mnemonicToMiniSecret(conf.mnemonic));
-    } else if (conf.seed) {
-      this.seed = conf.seed;
+    if (conf.controllerDID && conf.controllerKeyPair) {
+      this.controllerDID = conf.controllerDID;
+      this.controllerKeyPair = conf.controllerKeyPair;
     } else {
-      this.seed = randomAsHex(INFRA_DID_BYTE_SIZE);
+      this.controllerDID = conf.did;
+      this.controllerKeyPair = this.keyPairs[0]
     }
 
-    this.keyPairs.push(this.keyringModule.addFromUri(this.seed, undefined, this.cryptoInfo.CRYPTO_TYPE));
     this.publicKey = PublicKey.fromKeyringPair(this.keyPairs[0]);
-
     this.didKey = new DidKey(this.publicKey, this.verRels);
 
     await initializeWasm();
     return this
   }
-  private static didToHex(did): HexString {
-    return u8aToHex(decodeAddress(did.slice(INFRA_DID_QUALIFIER.length)));
-  }
-  private didToHex(did): HexString {
-    return u8aToHex(decodeAddress(did.slice(INFRA_DID_QUALIFIER.length)));
-  }
+
   private async getOnchainDIDDetail(hexDid: HexString): Promise<{
     nonce: number,
     lastKeyId: number,
@@ -295,7 +307,18 @@ export default class InfraSS58DID {
       };
     } catch (e) { throw e }
   }
+  private async getNextNonce(hexDID: HexString): Promise<number> {
+    const detail = await this.getOnchainDIDDetail(hexDID);
+    return detail.nonce + 1;
+  }
 
+  private getControllerDIDSig(stateMessage, keyId = 1) {
+    return {
+      did: InfraSS58DID.didToHex(this.controllerDID),
+      keyId,
+      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.controllerKeyPair.sign(stateMessage)) }
+    }
+  }
   private async signAndSend(extrinsic, waitForFinalization = true, params = {}) {
     const signedExtrinsic = await extrinsic.signAsync(this.account, params)
     return this.send(signedExtrinsic, waitForFinalization);
@@ -335,17 +358,13 @@ export default class InfraSS58DID {
     return await sendPromise;
   }
 
-  async getAttests(hexId) {
-    const attests = await this.api.query.attest.attestations(hexId);
-    return attests.iri.isSome
-      ? u8aToString(hexToU8a(attests.iri.toString()))
-      : null;
-  }
 
   async getDocument({ getBbsPlusSigKeys = true } = {}) {
-    const hexId = this.didToHex(this.did);
+    const hexId = InfraSS58DID.didToHex(this.did);
     let didDetails = await this.getOnchainDIDDetail(hexId);
-    const ATTESTS_IRI = await this.getAttests(hexId);
+    const attests = await this.api.query.attest.attestations(hexId);
+    const ATTESTS_IRI = attests.iri.isSome ? u8aToString(hexToU8a(attests.iri.toString())) : null;
+
     const id = (this.did === hexId) ? `${INFRA_DID_QUALIFIER}${encodeAddress(hexId)}` : this.did;
 
     const controllers = [];
@@ -400,10 +419,10 @@ export default class InfraSS58DID {
           let publicKeyRaw;
           let typ;
           if (pk.isSr25519) {
-            typ = 'Sr25519VerificationKey2020';
+            typ = CRYPTO_INFO.SR25519.KEY_TYPE;
             publicKeyRaw = pk.asSr25519.value;
           } else if (pk.isEd25519) {
-            typ = 'Ed25519VerificationKey2018';
+            typ = CRYPTO_INFO.ED25519.KEY_TYPE;
             publicKeyRaw = pk.asEd25519.value;
           } else {
             throw new Error(`Cannot parse public key ${pk}`);
@@ -535,7 +554,7 @@ export default class InfraSS58DID {
 
   async registerOnChain() {
     try {
-      const hexId: unknown = this.didToHex(this.did)
+      const hexId: unknown = InfraSS58DID.didToHex(this.did)
       const didKeys = [this.didKey].map((d) => d.toJSON());
       const controllers = new BTreeSet(undefined, undefined, undefined)
       controllers.add(hexId as Codec)
@@ -544,95 +563,77 @@ export default class InfraSS58DID {
     } catch (e) { throw e }
   }
 
-  async removeOnChain() {
+  async unregisterOnChain() {
     try {
-      const hexDID = this.didToHex(this.did)
-      const didDetail = await this.getOnchainDIDDetail(hexDID);
-      const didRemoval = { did: hexDID, nonce: didDetail.nonce + 1 };
+      const hexDID = InfraSS58DID.didToHex(this.did)
+      const nonce = await this.getNextNonce(hexDID);
+      const DidRemoval = { did: hexDID, nonce };
 
-      const stateMessage = this.api.createType('StateChange', { 'DidRemoval': didRemoval }).toU8a();
-      const controllerDIDSig = {
-        did: hexDID, // controllerHexDid
-        keyId: 1,
-        sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-      }
+      const stateMessage = this.api.createType('StateChange', { DidRemoval }).toU8a();
+      const controllerDIDSig = this.getControllerDIDSig(stateMessage);
 
-      const tx = await this.api.tx.didModule.removeOnchainDid(didRemoval, controllerDIDSig);
+      const tx = await this.api.tx.didModule.removeOnchainDid(DidRemoval, controllerDIDSig);
       return this.signAndSend(tx, false, {});
     } catch (e) { throw e }
   }
-  async addKeys(didKeys: DidKey[]) {
-    const hexDID = this.didToHex(this.did)
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
+  async addPublicKeyByDIDKeys(didKeys: DidKey[]) {
+    const hexDID = InfraSS58DID.didToHex(this.did)
+    const nonce = await this.getNextNonce(hexDID);
     const keys = didKeys.map((d) => d.toJSON());
-    const AddKeys = { did: hexDID, keys, nonce: didDetail.nonce + 1 };
+    const AddKeys = { did: hexDID, keys, nonce };
 
     const stateMessage = this.api.createType('StateChange', { AddKeys }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID, // controllerHexDid
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
 
-    const tx = await this.api.tx.didModule.addKeys(AddKeys, controllerDIDSig)
+    const tx = await this.api.tx.didModule.addKeys(AddKeys, controllerDIDSig);
     return await this.signAndSend(tx, false, {})
   }
-  async removeKeys(...keyIds: number[]) {
-    const hexDID = this.didToHex(this.did)
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
+  async removePublicKeys(...keyIds: number[]) {
+    const hexDID = InfraSS58DID.didToHex(this.did)
+    const nonce = await this.getNextNonce(hexDID);
     const keys = new BTreeSet(undefined, undefined, undefined);
     keyIds.forEach((keyId: unknown) => {
       keys.add(keyId as Codec);
     });
 
-    const RemoveKeys = { did: hexDID, keys, nonce: didDetail.nonce + 1 };
+    const RemoveKeys = { did: hexDID, keys, nonce };
     const stateMessage = this.api.createType('StateChange', { RemoveKeys }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID, // controllerHexDid
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
 
-    const tx = await this.api.tx.didModule.removeKeys(RemoveKeys, controllerDIDSig)
+    const tx = await this.api.tx.didModule.removeKeys(RemoveKeys, controllerDIDSig);
     return await this.signAndSend(tx, false, {})
   }
 
   async addController(controllerDIDs: string[]) {
-    const hexDID = this.didToHex(this.did)
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
+    const hexDID = InfraSS58DID.didToHex(this.did)
+    const nonce = await this.getNextNonce(hexDID);
     const controllers = new BTreeSet(undefined, undefined, undefined);
     controllerDIDs.forEach((controllerDID) => {
-      const controllerHexDID: unknown = this.didToHex(controllerDID);
+      const controllerHexDID: unknown = InfraSS58DID.didToHex(controllerDID);
       controllers.add(controllerHexDID as Codec);
     });
 
-    const AddControllers = { did: hexDID, controllers, nonce: didDetail.nonce + 1 };
+    const AddControllers = { did: hexDID, controllers, nonce };
     const stateMessage = this.api.createType('StateChange', { AddControllers }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+
     const tx = this.api.tx.didModule.addControllers(AddControllers, controllerDIDSig);
     return await this.signAndSend(tx, false, {});
   }
 
   async removeControllers(controllerDIDs: string[]) {
-    const hexDID = this.didToHex(this.did)
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
+    const hexDID = InfraSS58DID.didToHex(this.did)
+    const nonce = await this.getNextNonce(hexDID);
     const controllers = new BTreeSet(undefined, undefined, undefined);
     controllerDIDs.forEach((controllerDID) => {
-      const controllerHexDID: unknown = this.didToHex(controllerDID);
+      const controllerHexDID: unknown = InfraSS58DID.didToHex(controllerDID);
       controllers.add(controllerHexDID as Codec);
     });
 
-    const RemoveControllers = { did: hexDID, controllers, nonce: didDetail.nonce + 1 };
+    const RemoveControllers = { did: hexDID, controllers, nonce };
     const stateMessage = this.api.createType('StateChange', { RemoveControllers }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+
     const tx = this.api.tx.didModule.removeControllers(RemoveControllers, controllerDIDSig);
     return await this.signAndSend(tx, false, {});
   }
@@ -642,28 +643,21 @@ export default class InfraSS58DID {
     endpointIdText?: string,
   ) {
     const encoder = new TextEncoder();
+    const hexDID = InfraSS58DID.didToHex(this.did)
+    const nonce = await this.getNextNonce(hexDID);
+
     if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
     if (!endpointType) {
       endpointType = new ServiceEndpointType()
       endpointType.setLinkedDomains()
     }
-    const spId = u8aToHex(encoder.encode(endpointIdText));
     const origins = originsTexts.map((u) => u8aToHex(encoder.encode(u)));
-    const hexDID = this.didToHex(this.did)
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
-
-    const AddServiceEndpoint = {
-      did: hexDID,
-      id: spId,
-      endpoint: { types: endpointType.value, origins },
-      nonce: didDetail.nonce + 1,
-    };
+    const endpoint = { types: endpointType.value, origins };
+    const hexID = u8aToHex(encoder.encode(endpointIdText));
+    const AddServiceEndpoint = { did: hexDID, id: hexID, endpoint, nonce };
     const stateMessage = this.api.createType('StateChange', { AddServiceEndpoint }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+
     const tx = this.api.tx.didModule.addServiceEndpoint(AddServiceEndpoint, controllerDIDSig);
     return this.signAndSend(tx, false, {});
   }
@@ -671,24 +665,21 @@ export default class InfraSS58DID {
     const encoder = new TextEncoder();
     if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
     const spId = u8aToHex(encoder.encode(endpointIdText));
-    const hexDID = this.didToHex(this.did)
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
+    const hexDID = InfraSS58DID.didToHex(this.did)
+    const nonce = await this.getNextNonce(hexDID);
 
-    const RemoveServiceEndpoint = { did: hexDID, id: spId, nonce: didDetail.nonce + 1, };
+    const RemoveServiceEndpoint = { did: hexDID, id: spId, nonce };
 
     const stateMessage = this.api.createType('StateChange', { RemoveServiceEndpoint }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+
     const tx = this.api.tx.didModule.removeServiceEndpoint(RemoveServiceEndpoint, controllerDIDSig);
 
 
     return this.signAndSend(tx, false, {});
   }
-  async getServiceEndpoint(endpointIdText?: string,) {
-    const hexDID = this.didToHex(this.did);
+  async getServiceEndpoint(endpointIdText?: string) {
+    const hexDID = InfraSS58DID.didToHex(this.did);
     const encoder = new TextEncoder();
     if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
     const spId = u8aToHex(encoder.encode(endpointIdText));
@@ -704,9 +695,9 @@ export default class InfraSS58DID {
       origins: resp.origins.map((origin) => u8aToHex(origin)),
     };
   }
-  async isController(controllerDID: string) {
-    const controlledHexId = this.didToHex(this.did);
-    const controllerHexId = this.didToHex(controllerDID);
+  async isController(controllerDID: string): Promise<boolean> {
+    const controlledHexId = InfraSS58DID.didToHex(this.did);
+    const controllerHexId = InfraSS58DID.didToHex(controllerDID);
     const resp = await this.api.query.didModule.didControllers(
       controlledHexId,
       controllerHexId,
@@ -715,28 +706,38 @@ export default class InfraSS58DID {
   }
   async setClaim(priority: number, iri: string) {
     const encoder = new TextEncoder();
-    const hexDID = this.didToHex(this.did);
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
-    const SetAttestationClaim = {
-      attest: {
-        priority, //: encoder.encode(priority),
-        iri: u8aToHex(encoder.encode(iri)),
-      },
-      nonce: didDetail.nonce + 1,
-    };
+    const hexDID = InfraSS58DID.didToHex(this.did);
+    const nonce = await this.getNextNonce(hexDID);
+    const attest = { priority, iri: u8aToHex(encoder.encode(iri)) };
+    const SetAttestationClaim = { attest, nonce };
     const stateMessage = this.api.createType('StateChange', { SetAttestationClaim }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+
     const tx = this.api.tx.attest.setClaim(SetAttestationClaim, controllerDIDSig);
     return this.signAndSend(tx, false, {});
   }
 
 
+  /*****************************************************************************
+   * 
+   * bbs+ module
+   * 
+  *****************************************************************************/
 
-  //--------- bbs+ module
+
+
+  static BBSPlus_createNewSigSet(messageCounter = 10, label?: string): BBSPlus_SigSet {
+    const sigParam = InfraSS58DID.BBSPlus_createSigParamsWithLabel(messageCounter, label)
+    const keyPair = InfraSS58DID.BBSPlus_createKeypair(sigParam)
+    const publicKey = InfraSS58DID.BBSPlus_createSigPublicKey(keyPair)
+    return { sigParam, keyPair, publicKey, messageCounter, label }
+  }
+  async BBSPlus_createNewSigSet(paramCounter = 1): Promise<BBSPlus_SigSet> {
+    const sigParam = await this.BBSPlus_createSigParamsByDID(paramCounter)
+    const keyPair = InfraSS58DID.BBSPlus_createKeypair(sigParam)
+    const publicKey = InfraSS58DID.BBSPlus_createSigPublicKey(keyPair)
+    return { sigParam, keyPair, publicKey, paramCounter }
+  }
   static BBSPlus_changeSigParamMessageCounter(sigParam: SignatureParamsG1, messageCounter: number): SignatureParamsG1 {
     return sigParam.adapt(messageCounter)
   }
@@ -750,15 +751,14 @@ export default class InfraSS58DID {
     : Promise<SignatureParamsG1> {
     const queriedParams = await this.BBSPlus_getParams(paramCounter);
     const params1Val = SignatureParamsG1.valueFromBytes(hexToU8a(queriedParams.bytes));
-    const sigParam = await new SignatureParamsG1(params1Val, hexToU8a(queriedParams.label));
-    return sigParam;
+    return await new SignatureParamsG1(params1Val, hexToU8a(queriedParams.label));
   }
+  static BBSPlus_createKeypair(sigParams: SignatureParamsG1): KeypairG2 {
+    return KeypairG2.generate(sigParams);
 
-  static BBSPlus_createSigPublicKey(g1SigParams: SignatureParamsG1, params = undefined): BBSPlus_PublicKey {
+  }
+  static BBSPlus_createSigPublicKey(keypair: KeypairG2, params = undefined): BBSPlus_PublicKey {
     // params= [did, paramCounter]
-    let keypair = KeypairG2.generate(g1SigParams);
-    const bytes = u8aToHex(keypair.publicKey.bytes);
-
     let paramsRef = undefined;
     if (params) {
       if (!(typeof params === 'object' && params instanceof Array && params.length === 2)) {
@@ -770,12 +770,16 @@ export default class InfraSS58DID {
       const hexDID = InfraSS58DID.didToHex(params[0])
       paramsRef = [hexDID, params[1]]
     }
-    return { bytes, paramsRef, curveType: 'Bls12381' };
+    return {
+      bytes: u8aToHex(keypair.publicKey.bytes),
+      paramsRef,
+      curveType: 'Bls12381'
+    };
   }
 
 
-  private async BBSPlus_getParamsByHexDid(hexDid, counter) {
-    const resp = await this.api.query.bbsPlus.bbsPlusParams(hexDid, counter);
+  private async BBSPlus_getParamsByHexDid(hexDid: HexString, paramCounter: number): Promise<BBSPlus_Params> {
+    const resp = await this.api.query.bbsPlus.bbsPlusParams(hexDid, paramCounter);
     if (resp.isSome) {
       const params = resp.unwrap()
       return {
@@ -787,7 +791,7 @@ export default class InfraSS58DID {
     return null;
   }
 
-  private async BBSPlus_getPublicKeyByHexDid(hexDid, keyId, withParams = false) {
+  private async BBSPlus_getPublicKeyByHexDid(hexDid: HexString, keyId: number, withParams = false): Promise<BBSPlus_PublicKey> {
     const resp = await this.api.query.bbsPlus.bbsPlusKeys(hexDid, keyId);
     if (resp.isSome) {
       const pk = resp.unwrap();
@@ -796,7 +800,7 @@ export default class InfraSS58DID {
         const pr = pk.paramsRef.unwrap();
         paramsRef = [u8aToHex(pr[0]), pr[1].toNumber()]
       }
-      const pkObj = {
+      const pkObj: BBSPlus_PublicKey = {
         bytes: u8aToHex(pk.bytes),
         curveType: 'Bls12381',
         paramsRef,
@@ -820,95 +824,76 @@ export default class InfraSS58DID {
 
 
   async BBSPlus_addPublicKey(publicKey: BBSPlus_PublicKey) {
-    const hexDID = this.didToHex(this.did);
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
-
-    const AddBBSPlusPublicKey = { key: publicKey, did: hexDID, nonce: didDetail.nonce + 1 };
+    const hexDID = InfraSS58DID.didToHex(this.did);
+    const nonce = await this.getNextNonce(hexDID);
+    const AddBBSPlusPublicKey = { key: publicKey, did: hexDID, nonce };
     const stateMessage = this.api.createType('StateChange', { AddBBSPlusPublicKey }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
 
     const tx = await this.api.tx.bbsPlus.addPublicKey(AddBBSPlusPublicKey, controllerDIDSig);
     return this.signAndSend(tx, false, {});
   }
-  async BBSPlus_removePublicKey(removeKeyId) {
-    const hexDID = this.didToHex(this.did);
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
-
-    const RemoveBBSPlusPublicKey = { keyRef: [hexDID, removeKeyId], did: hexDID, nonce: didDetail.nonce + 1 };
+  async BBSPlus_removePublicKey(removeKeyId: number) {
+    const hexDID = InfraSS58DID.didToHex(this.did);
+    const nonce = await this.getNextNonce(hexDID);
+    const RemoveBBSPlusPublicKey = { keyRef: [hexDID, removeKeyId], did: hexDID, nonce };
     const stateMessage = this.api.createType('StateChange', { RemoveBBSPlusPublicKey }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+
     const tx = await this.api.tx.bbsPlus.removePublicKey(RemoveBBSPlusPublicKey, controllerDIDSig);
     return this.signAndSend(tx, false, {});
   }
 
-  async BBSPlus_getPublicKey(keyId, withParams = false) {
-    const hexId = this.didToHex(this.did);
+  async BBSPlus_getPublicKey(keyId: number, withParams = false): Promise<BBSPlus_PublicKey> {
+    const hexId = InfraSS58DID.didToHex(this.did);
     return this.BBSPlus_getPublicKeyByHexDid(hexId, keyId, withParams);
   }
 
   async BBSPlus_addParams(sigParam: SignatureParamsG1, label?: string) {
+    const hexDID = InfraSS58DID.didToHex(this.did);
+    const nonce = await this.getNextNonce(hexDID);
     const params = {
       bytes: u8aToHex(sigParam.toBytes()),
       curveType: 'Bls12381',
       label
     }
-    const hexDID = this.didToHex(this.did);
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
-
-    const AddBBSPlusParams = { params, nonce: didDetail.nonce + 1 };
+    const AddBBSPlusParams = { params, nonce };
     const stateMessage = this.api.createType('StateChange', { AddBBSPlusParams }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+
     const tx = await this.api.tx.bbsPlus.addParams(AddBBSPlusParams, controllerDIDSig);
     return this.signAndSend(tx, false, {});
   }
-  async BBSPlus_removeParams(index) {
-    const hexDID = this.didToHex(this.did);
-    const didDetail = await this.getOnchainDIDDetail(hexDID);
+  async BBSPlus_removeParams(paramCounter: number) {
+    const hexDID = InfraSS58DID.didToHex(this.did);
+    const nonce = await this.getNextNonce(hexDID);
 
-    const RemoveBBSPlusParams = { paramsRef: [hexDID, index], nonce: didDetail.nonce + 1 };
+    const RemoveBBSPlusParams = { paramsRef: [hexDID, paramCounter], nonce };
     const stateMessage = this.api.createType('StateChange', { RemoveBBSPlusParams }).toU8a();
-    const controllerDIDSig = {
-      did: hexDID,
-      keyId: 1,
-      sig: { [this.cryptoInfo.SIG_TYPE]: u8aToHex(this.keyPairs[0].sign(stateMessage)) }
-    }
-
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
     const tx = await this.api.tx.bbsPlus.removeParams(RemoveBBSPlusParams, controllerDIDSig);
     return this.signAndSend(tx, false, {});
   }
 
-  async BBSPlus_getParams(counter) {
-    const hexId = this.didToHex(this.did);
-    return await this.BBSPlus_getParamsByHexDid(hexId, counter);
+  async BBSPlus_getParams(paramCounter: number): Promise<BBSPlus_Params> {
+    const hexId = InfraSS58DID.didToHex(this.did);
+    return await this.BBSPlus_getParamsByHexDid(hexId, paramCounter);
   }
 
-  async BBSPlus_getLastParamsWritten() {
-    const hexId = this.didToHex(this.did);
-    const counter = await this.api.query.bbsPlus.paramsCounter(hexId);
-    if (counter < 1) return null
-    return await this.BBSPlus_getParamsByHexDid(hexId, counter)
+  async BBSPlus_getLastParamsWritten(): Promise<BBSPlus_Params> {
+    const hexId = InfraSS58DID.didToHex(this.did);
+    const lastCounter: number = await this.api.query.bbsPlus.paramsCounter(hexId);
+    if (lastCounter < 1) return null
+    return await this.BBSPlus_getParamsByHexDid(hexId, lastCounter)
   }
 
-  async BBSPlus_getAllParams() {
-    const hexId = this.didToHex(this.did);
-
+  async BBSPlus_getAllParams(): Promise<BBSPlus_Params[]> {
+    const hexId = InfraSS58DID.didToHex(this.did);
     const params = [];
-    const counter = await this.api.query.bbsPlus.paramsCounter(hexId);
-    if (counter > 0) {
-      for (let i = 1; i <= counter; i++) {
-        const param = await this.BBSPlus_getParamsByHexDid(hexId, i);
+    const lastCounter: number = await this.api.query.bbsPlus.paramsCounter(hexId);
+    if (lastCounter > 0) {
+      for (let counter = 1; counter <= lastCounter; counter++) {
+        const param = await this.BBSPlus_getParamsByHexDid(hexId, counter);
         if (param !== null) {
           params.push(param);
         }
