@@ -327,6 +327,8 @@ export default class InfraSS58DID {
   }
 
   private async signAndSend(extrinsic, waitForFinalization = true, params = {}) {
+    // @ts-ignore
+    params.nonce = await this.api.rpc.system.accountNextIndex(this.accountKeyPair.address);
     const signedExtrinsic = await extrinsic.signAsync(this.accountKeyPair, params)
     return this.send(signedExtrinsic, waitForFinalization);
   }

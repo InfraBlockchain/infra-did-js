@@ -2,7 +2,7 @@ import InfraSS58DID, { CRYPTO_INFO, DIDSet, IConfig, Keyring, KeyringPair, crypt
 
 const failDID = "did:infra:02:thisisinvalidformofss58did"
 const address = 'ws://localhost:9944';
-
+jest.setTimeout(10000)
 describe('InfraSS58DID', () => {
     let srTest: DIDSet;
     let edTest: DIDSet;
@@ -71,7 +71,7 @@ describe('InfraSS58DID', () => {
         )
         it('Register DID on chain', async () =>
             await infraDID.registerOnChain().then(res => {
-                expect(res).toBeDefined()
+                expect(res).toBeDefined();
             })
         )
         it('Get DID document', async () =>
