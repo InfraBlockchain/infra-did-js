@@ -16,7 +16,6 @@ describe('InfraSS58DID', () => {
             return await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.SR25519)
                 .then(res => {
                     srTest = res;
-                    console.log(res)
                     expect(res.did).toBeDefined();
                 })
         })
@@ -54,7 +53,6 @@ describe('InfraSS58DID', () => {
                 verRels: srTest.verRels,
             }
             infraDID = await InfraSS58DID.createAsync(config);
-
 
         })
         afterAll(async () => {
