@@ -1,4 +1,3 @@
-import "@babel/polyfill"
 import b58 from 'bs58';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { HttpProvider } from '@polkadot/rpc-provider';
@@ -52,14 +51,13 @@ export interface IConfig {
   did: string;
   address: string;
   networkId: string;
+  seed?: HexString;
   mnemonic?: string; //alter to seed
   controllerDID?: string;// same role as didOwnerPrivateKey
   controllerKeyPair?: KeyringPair; // same role as didOwnerPrivateKey
   controllerSeed?: HexString; // alter to controllerKeyPair
   txfeePayerAccountKeyPair?: KeyringPair, // same role as txfeePayerAccount
   txfeePayerAccountSeed?: HexString, // alter to txfeePayerAccountKeyPair
-
-  seed?: HexString;
   cryptoInfo?: CRYPTO_INFO;
   verRels?: VerificationRelationship;
 }
@@ -67,6 +65,7 @@ export interface IConfig {
 export interface DIDSet {
   did: string;
   seed: HexString;
+  mnemonic: string;
   publicKey: PublicKey;
   verRels: VerificationRelationship;
   cryptoInfo: CRYPTO_INFO;
@@ -189,11 +188,17 @@ export default class InfraSS58DID {
 
   private constructor() {}
 
-  static async getKeyPairBySeed(seed: HexString, cryptoInfo: CRYPTO_INFO): Promise<KeyringPair> {
+  private static async getKeyPairFromSeed(seed: HexString, cryptoInfo: CRYPTO_INFO): Promise<KeyringPair> {
     const keyringModule = new Keyring({ type: cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
     await cryptoWaitReady();
     return keyringModule.addFromUri(seed, undefined, cryptoInfo.CRYPTO_TYPE);
   }
+  private static async getKeyPairFromAddress(addr, cryptoInfo: CRYPTO_INFO): Promise<KeyringPair> {
+    const keyringModule = new Keyring({ type: cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
+    await cryptoWaitReady();
+    return keyringModule.addFromAddress(addr);
+  }
+  private static ss58addrToDID(addr) { return `${INFRA_DID_QUALIFIER}${addr}` }
 
   static async createNewSS58DIDSet(
     networkId: string,
@@ -201,14 +206,14 @@ export default class InfraSS58DID {
     verRels = new VerificationRelationship(),
   ): Promise<DIDSet> {
     SetQualifier(networkId);
-    const hexId = randomAsHex(INFRA_DID_BYTE_SIZE);
-    const ss58Id = encodeAddress(hexId);
-    const did = `${INFRA_DID_QUALIFIER}${ss58Id}`;
-    const seed = u8aToHex(mnemonicToMiniSecret(mnemonicGenerate()));
-    const keyPair: KeyringPair = await InfraSS58DID.getKeyPairBySeed(seed, cryptoInfo)
+    const mnemonic = mnemonicGenerate()
+    const seed = u8aToHex(mnemonicToMiniSecret(mnemonic));
+    const keyPair = await InfraSS58DID.getKeyPairFromSeed(seed, cryptoInfo);
+    const did = InfraSS58DID.ss58addrToDID(keyPair.address);
     const publicKey = PublicKey.fromKeyringPair(keyPair);
     const didKey: DidKey = new DidKey(publicKey, verRels);
-    return { did, didKey, keyPair, publicKey, seed, verRels, cryptoInfo };
+
+    return { did, didKey, keyPair, publicKey, verRels, cryptoInfo, seed, mnemonic };
   }
 
   static validateInfraSS58DID(infraSS58DID: string): boolean {
@@ -244,21 +249,14 @@ export default class InfraSS58DID {
     SetQualifier(conf.networkId);
     this.cryptoInfo = conf.cryptoInfo ?? CRYPTO_INFO.SR25519;
     this.verRels = conf.verRels || new VerificationRelationship()
-    this.did = conf.did;
-    if (conf.mnemonic) {
-      this.seed = u8aToHex(mnemonicToMiniSecret(conf.mnemonic));
-    } else if (conf.seed) {
-      this.seed = conf.seed;
-    } else {
-      this.seed = randomAsHex(INFRA_DID_BYTE_SIZE);
-    }
+
+    await cryptoWaitReady();
+    this.keyringModule = new Keyring({ type: this.cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
+
     this.address = conf.address || this.address;
-    // check secure protocol 
-    // if (this.address && (
-    //   this.address.indexOf('wss://') === -1 && this.address.indexOf('https://') === -1
-    // )) {
-    //   console.warn(`WARNING: Using non-secure endpoint: ${this.address}`);
-    // }
+    if (this.address && this.address.indexOf('wss://') === -1 && this.address.indexOf('https://') === -1) {
+      console.warn(`WARNING: Using non-secure endpoint: ${this.address}`);
+    }
     const isWebsocket = this.address && this.address.indexOf('http') === -1;
     const provider = isWebsocket ? new WsProvider(this.address) : new HttpProvider(this.address);
     const apiOptions = {
@@ -267,10 +265,23 @@ export default class InfraSS58DID {
       typesBundle: typesBundle,
     };
     this.api = await ApiPromise.create(apiOptions);
-    await cryptoWaitReady();
-    this.keyringModule = new Keyring({ type: this.cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
+
+    if (conf.mnemonic) {
+      this.seed = u8aToHex(mnemonicToMiniSecret(conf.mnemonic));
+    } else if (conf.seed) {
+      this.seed = conf.seed;
+    } else {
+      throw new Error('must provided seed or mnemonic')
+    }
     this.keyPairs = [];
     this.keyPairs.push(this.keyringModule.addFromUri(this.seed, undefined, this.cryptoInfo.CRYPTO_TYPE));
+    this.did = InfraSS58DID.ss58addrToDID(this.keyPairs[0].address);
+    if (conf.did && this.did !== conf.did) {
+      throw new Error('provided DID and seed not matched. check DID and seed(mnemonic)');
+    }
+    this.publicKey = PublicKey.fromKeyringPair(this.keyPairs[0]);
+    this.didKey = new DidKey(this.publicKey, this.verRels);
+
     if (conf.txfeePayerAccountSeed) {
       this.accountKeyPair = this.keyringModule.addFromSeed(hexToU8a(conf.txfeePayerAccountSeed));
     } else if (conf.txfeePayerAccountKeyPair) {
@@ -289,8 +300,7 @@ export default class InfraSS58DID {
       this.controllerDID = conf.did;
       this.controllerKeyPair = this.keyPairs[0]
     }
-    this.publicKey = PublicKey.fromKeyringPair(this.keyPairs[0]);
-    this.didKey = new DidKey(this.publicKey, this.verRels);
+
     await initializeWasm();
     return this
   }

@@ -1,6 +1,6 @@
 import InfraSS58DID, { CRYPTO_INFO, DIDSet, IConfig, Keyring, KeyringPair, cryptoWaitReady } from '../infra-SS58'
 
-const failDID = "did:infra:02:thisisinvalidformofss58did"
+const failDID = "did:infra:space:thisisinvalidformofss58did"
 const address = 'ws://localhost:9944';
 jest.setTimeout(10000)
 describe('InfraSS58DID', () => {
@@ -13,16 +13,17 @@ describe('InfraSS58DID', () => {
 
     describe('DID creation', () => {
         it('should create SR25519 DID ', async () => {
-            return await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.SR25519)
+            return await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519)
                 .then(res => {
                     srTest = res;
                     expect(res.did).toBeDefined();
                 })
         })
         it('should create ED25519 DID ', async () => {
-            return await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.ED25519)
+            return await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519)
                 .then(res => {
                     edTest = res;
+                    console.log(edTest)
                     expect(res.did).toBeDefined();
                 })
         })
@@ -39,16 +40,22 @@ describe('InfraSS58DID', () => {
         beforeAll(async () => {
             await cryptoWaitReady();
             alice = (new Keyring({ type: 'sr25519' })).addFromUri('//Alice');
-            srTest = await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.SR25519);
-            newDIDSet = await InfraSS58DID.createNewSS58DIDSet('02', CRYPTO_INFO.SR25519);
+            srTest = await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
+            console.log(srTest)
+            newDIDSet = await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
             config = {
                 address,
-                networkId: '02',
+                networkId: 'space',
+
                 did: srTest.did,
+                seed: srTest.seed,
+                // mnemonic:srTest.mnemonic,
+
                 controllerDID: srTest.did,
                 controllerKeyPair: srTest.keyPair,
+                // controllerSeed: srTest.seed,
                 txfeePayerAccountKeyPair: alice,
-                seed: srTest.seed,
+
                 cryptoInfo: srTest.cryptoInfo,
                 verRels: srTest.verRels,
             }
@@ -149,13 +156,13 @@ describe('InfraSS58DID', () => {
             alice = keyringModule.addFromUri('//Alice');
 
             srTest = await InfraSS58DID.createNewSS58DIDSet(
-                '02', CRYPTO_INFO.SR25519);
-
+                'space', CRYPTO_INFO.SR25519);
             config = {
-                networkId: '02',
                 address,
+                networkId: 'space',
                 did: srTest.did,
                 txfeePayerAccountKeyPair: alice,
+                // mnemonic:srTest.mnemonic,
                 seed: srTest.seed,
                 cryptoInfo: srTest.cryptoInfo,
                 verRels: srTest.verRels,

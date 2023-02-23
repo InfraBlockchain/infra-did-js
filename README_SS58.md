@@ -31,7 +31,7 @@ import InfraSS58DID, {cryptoWaitReady, Keyring, CRYPTO_INFO} from 'infra-did-js/
 await cryptoWaitReady()
 const txfeePaterAccountKeyPair = (new Keyring({ type: 'sr25519' })).addFromUri('//Alice')
 const confBlockchainNetwork = {
-  networkId: '02',
+  networkId: 'space',
   address: 'wss://polkadot.infrablockchain.com',
   txfeePayerAccountKeyPair,
   // or txfeePayerAccountSeed: 'TX_FEE_PAYER_ACCOUNT_SEED'
@@ -39,6 +39,9 @@ const confBlockchainNetwork = {
 const conf = {
   ...confBlockchainNetwork,
   did: 'did:infra:02:5CRV5zBdAhBALnXiBSWZWjca3rSREBg87GJ6UY9i2A7y1rCs',
+  // seed or mnemonic must provide
+  seed: 'DID_SEED',
+  //or mnemonic:'SOME_MNEMONIC_TEXT',
   controllerDID: 'did:infra:02:5HdJprb8NhaJsGASLBKGQ1bkKkvaZDaK1FxTbJRXNShFuqgY'
   controllerSeed: 'DID_CONTROLLER_SEED',
   // or controllerKeyPair: controllerKeyPair
@@ -59,10 +62,13 @@ console.log({ DIDSet })
 ```ts
 {
   DIDSet: {
-    did: 'did:infra:02:5CVYkrck83yR9McJEf7sdwq5eZaKhHUq5KVoieHR4iiuoXz2',
+    did: 'did:infra:space:5DfJ134hMyHo6GKMHyhDQj8jvBN55ofc2cLFmNBVV6B8Qswx',
     didKey: DidKey {
-      publicKey: [PublicKey],
-      verRels: [VerificationRelationship]
+      publicKey: PublicKey {
+        value: '0x469d845dfd2481649ef6288021424a964607293901d7f36a21122ba800bc2c51',
+        sigType: 'Sr25519'
+      },
+      verRels: VerificationRelationship { _value: 0 },
     },
     keyPair: {
       address: [Getter],
@@ -74,11 +80,12 @@ console.log({ DIDSet })
       ...
     },
     publicKey: PublicKey {
-      value: '0x6a5e572022b8acaecd9b2857ac4ad4964cdfcc60dcf832eeca2d752a79b75634',
+      value: '0x469d845dfd2481649ef6288021424a964607293901d7f36a21122ba800bc2c51',
       sigType: 'Sr25519'
     },
-    seed: '0x2ee2e47383c88dc07ecf860f54e5bce9c8f7d944c0b80dcb2c87abb4c9edd55c',
+    seed: '0xcaf6a8bf54a14a47c3869aee9f077340b72ff0633ecc3bd8db5c2fcc637f4279',
     verRels: VerificationRelationship { _value: 0 },
+    mnemonic: 'minor bright cry birth day tenant elegant main pupil split adult season',
     cryptoInfo: {
       CRYPTO_TYPE: 'sr25519',
       KEY_TYPE: 'Sr25519VerificationKey2020',
