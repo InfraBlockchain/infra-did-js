@@ -11,12 +11,9 @@ import {
 import { BTreeSet } from '@polkadot/types';
 import { Codec } from '@polkadot/types-codec/types';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { initializeWasm, KeypairG2, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 import typesBundle from '@docknetwork/node-types';
+import { initializeWasm, KeypairG2, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 export { KeyringPair }
-
-let INFRA_DID_QUALIFIER = `did:infra:space:`;
-const SetQualifier = (networkId) => { INFRA_DID_QUALIFIER = `did:infra:${networkId}:` };
 
 export const CRYPTO_INFO = {
   SR25519: {
@@ -159,6 +156,7 @@ export class ServiceEndpointType {
 
 export default class InfraSS58DID {
   private api;
+  private networkId;
   private verRels: VerificationRelationship;
   private seed: HexString;
   private address: string;
@@ -187,18 +185,18 @@ export default class InfraSS58DID {
     await cryptoWaitReady();
     return keyringModule.addFromUri(uri);
   }
-  private static ss58addrToDID(addr) { return `${INFRA_DID_QUALIFIER}${addr}` }
+  private static ss58addrToDID(networkId, addr) { return `did:infra:${networkId}:${addr}` }
 
   static async createNewSS58DIDSet(
     networkId: string,
     cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.SR25519,
     verRels = new VerificationRelationship(),
   ): Promise<DIDSet> {
-    SetQualifier(networkId);
+
     const mnemonic = mnemonicGenerate()
     const seed = u8aToHex(mnemonicToMiniSecret(mnemonic));
     const keyPair = await InfraSS58DID.getKeyPairFromSeed(seed, cryptoInfo);
-    const did = InfraSS58DID.ss58addrToDID(keyPair.address);
+    const did = InfraSS58DID.ss58addrToDID(networkId, keyPair.address);
     const publicKey = PublicKey.fromKeyringPair(keyPair);
     const didKey: DidKey = new DidKey(publicKey, verRels);
 
@@ -242,7 +240,7 @@ export default class InfraSS58DID {
         await this.disconnect();
       }
     }
-    SetQualifier(conf.networkId);
+    this.networkId = conf.networkId
     this.cryptoInfo = conf.cryptoInfo ?? CRYPTO_INFO.SR25519;
     this.verRels = conf.verRels || new VerificationRelationship()
 
@@ -270,7 +268,7 @@ export default class InfraSS58DID {
       throw new Error('must provided seed or mnemonic')
     }
     this.keyPairs = [this.keyringModule.addFromUri(this.seed, undefined, this.cryptoInfo.CRYPTO_TYPE)];
-    this.did = InfraSS58DID.ss58addrToDID(this.keyPairs[0].address);
+    this.did = InfraSS58DID.ss58addrToDID(this.networkId, this.keyPairs[0].address);
     if (conf.did && this.did !== conf.did) {
       throw new Error('provided DID and seed not matched. check DID and seed(mnemonic)');
     }
