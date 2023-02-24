@@ -269,8 +269,7 @@ export default class InfraSS58DID {
     } else {
       throw new Error('must provided seed or mnemonic')
     }
-    this.keyPairs = [];
-    this.keyPairs.push(this.keyringModule.addFromUri(this.seed, undefined, this.cryptoInfo.CRYPTO_TYPE));
+    this.keyPairs = [this.keyringModule.addFromUri(this.seed, undefined, this.cryptoInfo.CRYPTO_TYPE)];
     this.did = InfraSS58DID.ss58addrToDID(this.keyPairs[0].address);
     if (conf.did && this.did !== conf.did) {
       throw new Error('provided DID and seed not matched. check DID and seed(mnemonic)');
@@ -372,6 +371,38 @@ export default class InfraSS58DID {
     return await sendPromise;
   }
 
+
+
+  async disconnect() {
+    if (this.api) {
+      if (this.api.isConnected) {
+        await this.api.disconnect();
+      }
+      delete this.api;
+    }
+  }
+
+  async registerOnChain() {
+    try {
+      const hexId = InfraSS58DID.didToHex(this.did);
+      const didKeys = [this.didKey].map((d) => d.toJSON());
+      const controllers = new BTreeSet(undefined, undefined, undefined)
+      controllers.add(InfraSS58DID.didToHex(this.controllerDID) as unknown as Codec)
+      const tx = await this.api.tx.didModule.newOnchain(hexId, didKeys, controllers);
+      return this.signAndSend(tx, false, {});
+    } catch (e) { throw e }
+  }
+  async unregisterOnChain() {
+    try {
+      const hexDID = InfraSS58DID.didToHex(this.did)
+      const nonce = await this.getNextNonce(hexDID);
+      const DidRemoval = { did: hexDID, nonce };
+      const stateMessage = this.api.createType('StateChange', { DidRemoval }).toU8a();
+      const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+      const tx = await this.api.tx.didModule.removeOnchainDid(DidRemoval, controllerDIDSig);
+      return this.signAndSend(tx, false, {});
+    } catch (e) { throw e }
+  }
   async getDocument(getBbsPlusSigKeys = true) {
     const { ss58ID, qualifier } = InfraSS58DID.splitDID(this.did)
     const offDocuments = (did) => ({
@@ -556,38 +587,7 @@ export default class InfraSS58DID {
     };
   }
 
-  async disconnect() {
-    if (this.api) {
-      if (this.api.isConnected) {
-        await this.api.disconnect();
-      }
-      delete this.api;
-    }
-  }
-
-  async registerOnChain() {
-    try {
-      const hexId: unknown = InfraSS58DID.didToHex(this.did)
-      const didKeys = [this.didKey].map((d) => d.toJSON());
-      const controllers = new BTreeSet(undefined, undefined, undefined)
-      controllers.add(hexId as Codec)
-      const tx = await this.api.tx.didModule.newOnchain(hexId, didKeys, controllers);
-      return this.signAndSend(tx, false, {});
-    } catch (e) { throw e }
-  }
-  async unregisterOnChain() {
-    try {
-      const hexDID = InfraSS58DID.didToHex(this.did)
-      const nonce = await this.getNextNonce(hexDID);
-      const DidRemoval = { did: hexDID, nonce };
-      const stateMessage = this.api.createType('StateChange', { DidRemoval }).toU8a();
-      const controllerDIDSig = this.getControllerDIDSig(stateMessage);
-      const tx = await this.api.tx.didModule.removeOnchainDid(DidRemoval, controllerDIDSig);
-      return this.signAndSend(tx, false, {});
-    } catch (e) { throw e }
-  }
-
-  async addPublicKeyByDIDKeys(...didKeys: DidKey[]) {
+  async addKeys(...didKeys: DidKey[]) {
     const hexDID = InfraSS58DID.didToHex(this.did)
     const nonce = await this.getNextNonce(hexDID);
     const keys = didKeys.map((d) => d.toJSON());
@@ -598,7 +598,7 @@ export default class InfraSS58DID {
     return await this.signAndSend(tx, false, {})
   }
 
-  async removePublicKeys(...keyIds: number[]) {
+  async removeKeys(...keyIds: number[]) {
     const hexDID = InfraSS58DID.didToHex(this.did)
     const nonce = await this.getNextNonce(hexDID);
     const keys = new BTreeSet(undefined, undefined, undefined);
@@ -716,6 +716,9 @@ export default class InfraSS58DID {
     const tx = this.api.tx.attest.setClaim(SetAttestationClaim, controllerDIDSig);
     return this.signAndSend(tx, false, {});
   }
+
+
+
 
   //****************************************************************************
   // * 

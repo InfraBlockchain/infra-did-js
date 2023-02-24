@@ -1,15 +1,15 @@
-import InfraSS58DID, { CRYPTO_INFO, DIDSet, IConfig } from '../infra-SS58'
+import InfraSS58DID, { CRYPTO_INFO } from '../infra-SS58'
 
 const failDID = "did:infra:space:thisisinvalidformofss58did"
 const address = 'ws://localhost:9944';
 jest.setTimeout(10000)
 describe('InfraSS58DID', () => {
-    let srTest: DIDSet;
-    let edTest: DIDSet;
     let infraDID: InfraSS58DID;
-    let config: IConfig;
-    let alice;
-    let newDIDSet: DIDSet;
+    let srTest;
+    let edTest;
+    let config;
+    let aliceAccount;
+    let newDIDSet;
 
     describe('DID creation', () => {
         it('should create SR25519 DID ', async () => {
@@ -38,7 +38,7 @@ describe('InfraSS58DID', () => {
 
     describe('DID onChain test', () => {
         beforeAll(async () => {
-            alice = await InfraSS58DID.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519)
+            aliceAccount = await InfraSS58DID.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519)
             srTest = await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
             newDIDSet = await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
             config = {
@@ -52,7 +52,7 @@ describe('InfraSS58DID', () => {
                 controllerDID: srTest.did,
                 controllerKeyPair: srTest.keyPair,
                 // controllerSeed: srTest.seed,
-                txfeePayerAccountKeyPair: alice,
+                txfeePayerAccountKeyPair: aliceAccount,
 
                 cryptoInfo: srTest.cryptoInfo,
                 verRels: srTest.verRels,
@@ -93,14 +93,14 @@ describe('InfraSS58DID', () => {
             })
         )
         it('Add keys at onChain DID', async () =>
-            await infraDID.addPublicKeyByDIDKeys(newDIDSet.didKey).then(async () =>
+            await infraDID.addKeys(newDIDSet.didKey).then(async () =>
                 await infraDID.getDocument().then(doc => {
                     expect(doc.verificationMethod.length).toBe(2);
                 })
             )
         )
         it('Remove keys at onChain DID', async () =>
-            await infraDID.removePublicKeys(2).then(async () =>
+            await infraDID.removeKeys(2).then(async () =>
                 await infraDID.getDocument().then(doc => {
                     expect(doc.verificationMethod.length).toBe(1);
                 })
@@ -157,7 +157,7 @@ describe('InfraSS58DID', () => {
 
     describe('BBS+ test', () => {
         beforeAll(async () => {
-            alice = await InfraSS58DID.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519)
+            aliceAccount = await InfraSS58DID.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519)
 
             srTest = await InfraSS58DID.createNewSS58DIDSet(
                 'space', CRYPTO_INFO.SR25519);
@@ -168,7 +168,7 @@ describe('InfraSS58DID', () => {
                 did: srTest.did,
                 seed: srTest.seed,
                 // mnemonic:srTest.mnemonic,
-                txfeePayerAccountKeyPair: alice,
+                txfeePayerAccountKeyPair: aliceAccount,
                 cryptoInfo: srTest.cryptoInfo,
                 verRels: srTest.verRels,
             }
