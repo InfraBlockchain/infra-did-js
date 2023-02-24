@@ -95,14 +95,14 @@ describe('InfraSS58DID', () => {
         it('Add keys at onChain DID', async () =>
             await infraDID.addPublicKeyByDIDKeys(newDIDSet.didKey).then(async () =>
                 await infraDID.getDocument().then(doc => {
-                    expect(doc.publicKey.length).toBe(2);
+                    expect(doc.verificationMethod.length).toBe(2);
                 })
             )
         )
         it('Remove keys at onChain DID', async () =>
             await infraDID.removePublicKeys(2).then(async () =>
                 await infraDID.getDocument().then(doc => {
-                    expect(doc.publicKey.length).toBe(1);
+                    expect(doc.verificationMethod.length).toBe(1);
                 })
             )
         )
@@ -138,7 +138,7 @@ describe('InfraSS58DID', () => {
             await infraDID.setClaim(100,
                 'https://rdf.dock.io/alpha/2021#attestsDocumentContent').then(async () =>
                     await infraDID.getDocument().then(doc => {
-                        expect(doc.publicKey.length).toBe(1);
+                        expect(doc.verificationMethod.length).toBe(1);
                     })
                 )
         )
