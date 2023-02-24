@@ -26,10 +26,9 @@ Feature provided by `infra-did-js/infra-SS58` library
 ## Infra SS58 DID API Configuration
 
 ```ts
-import InfraSS58DID, {cryptoWaitReady, Keyring, CRYPTO_INFO} from 'infra-did-js/infra-SS58'
+import InfraSS58DID, {CRYPTO_INFO} from 'infra-did-js/infra-SS58'
 
-await cryptoWaitReady()
-const txfeePaterAccountKeyPair = (new Keyring({ type: 'sr25519' })).addFromUri('//Alice')
+const txfeePaterAccountKeyPair = await InfraSS58DID.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519)
 const confBlockchainNetwork = {
   networkId: 'space',
   address: 'wss://polkadot.infrablockchain.com',
@@ -163,27 +162,27 @@ console.log({ didDocuments })
 {
   "didDocuments": {
     "@context": ["https://www.w3.org/ns/did/v1"],
-    "id": "did:infra:02:5FXjDqDqjDE9Ywo78K9DqVLUmn4vqQ3hpLU8NNcJbFmCPSAs",
+    "id": "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb",
     "controller": [
-      "did:infra:02:5FXjDqDqjDE9Ywo78K9DqVLUmn4vqQ3hpLU8NNcJbFmCPSAs"
+      "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb"
     ],
     "publicKey": [
       {
-        "id": "did:infra:02:5FXjDqDqjDE9Ywo78K9DqVLUmn4vqQ3hpLU8NNcJbFmCPSAs#keys-1",
+        "id": "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb#keys-1",
         "type": "Sr25519VerificationKey2020",
-        "controller": "did:infra:02:5FXjDqDqjDE9Ywo78K9DqVLUmn4vqQ3hpLU8NNcJbFmCPSAs",
-        "publicKeyBase58": "4n7uzyggznG2AnoMh9L4JwgGRbgia9qQ44wLkwcqhNEg"
+        "controller": "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb",
+        "publicKeyBase58": "8z5UyxcPoGSAUNVoczXdka3KcXCKVsAzRig7p96qmHos"
       }
     ],
     "authentication": [
-      "did:infra:02:5FXjDqDqjDE9Ywo78K9DqVLUmn4vqQ3hpLU8NNcJbFmCPSAs#keys-1"
+      "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb#keys-1"
     ],
     "assertionMethod": [
-      "did:infra:02:5FXjDqDqjDE9Ywo78K9DqVLUmn4vqQ3hpLU8NNcJbFmCPSAs#keys-1"
+      "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb#keys-1"
     ],
     "keyAgreement": [],
     "capabilityInvocation": [
-      "did:infra:02:5FXjDqDqjDE9Ywo78K9DqVLUmn4vqQ3hpLU8NNcJbFmCPSAs#keys-1"
+      "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb#keys-1"
     ],
     "ATTESTS_IRI": null,
     "service": []

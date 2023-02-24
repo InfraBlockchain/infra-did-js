@@ -3,7 +3,6 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { HttpProvider } from '@polkadot/rpc-provider';
 import { u8aToString, hexToU8a, u8aToHex } from '@polkadot/util';
 import {
-  randomAsHex,
   encodeAddress,
   decodeAddress,
   mnemonicGenerate,
@@ -12,20 +11,12 @@ import {
 } from '@polkadot/util-crypto';
 import { BTreeSet } from '@polkadot/types';
 import { Codec } from '@polkadot/types-codec/types';
-import { KeyringPair } from '@polkadot/keyring/types'; // eslint-disable-line
+import { KeyringPair } from '@polkadot/keyring/types';
 import { initializeWasm, KeypairG2, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 import typesBundle from '@docknetwork/node-types';
-export { cryptoWaitReady, Keyring, KeyringPair };
+export { KeyringPair }
 
-// import VerifiableCredential from './polkadot/dock/verifiable-credential';
-// import VerifiablePresentation from './polkadot/dock/verifiable-presentation';
-// import {
-//   createRandomRegistryId, OneOfPolicy, buildDockCredentialStatus, getDockRevIdFromCredential,
-// } from './polkadot/dock/utils/revocation';
-// import Schema from './polkadot/dock/modules/schema';
-
-const INFRA_DID_BYTE_SIZE = 32;
-let INFRA_DID_QUALIFIER = `did:infra:02:`;
+let INFRA_DID_QUALIFIER = `did:infra:space:`;
 const SetQualifier = (networkId) => { INFRA_DID_QUALIFIER = `did:infra:${networkId}:` };
 
 export const CRYPTO_INFO = {
@@ -41,8 +32,6 @@ export const CRYPTO_INFO = {
   }
 } as const
 export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
-// export type CRYPTO_TYPE = typeof CRYPTO_INFO.ED25519.CRYPTO_TYPE | typeof CRYPTO_INFO.SR25519.CRYPTO_TYPE
-// export type KEY_TYPE = typeof CRYPTO_INFO.ED25519.KEY_TYPE | typeof CRYPTO_INFO.SR25519.KEY_TYPE
 export type SIG_TYPE = typeof CRYPTO_INFO.ED25519.SIG_TYPE | typeof CRYPTO_INFO.SR25519.SIG_TYPE
 
 type HexString = `0x${string}`;
@@ -120,34 +109,35 @@ export class DidKey {
 }
 
 export class ExtrinsicError extends Error {
-  constructor(message, private method, private data, private status, private events) {
-    super(message);
+  constructor(private api, private typeDef, private method, private data, private status, private events) {
+    super(ExtrinsicError.getErrorMsg(data, typeDef, api));
     this.name = 'ExtrinsicError';
   }
-}
-export function getExtrinsicError(data, typeDef, api): string {
-  let errorMsg = 'Extrinsic failed submission:';
-  data.forEach((error) => {
-    if (error.isModule) {
-      try {
-        const decoded = api.registry.findMetaError(error.asModule);
-        const { docs, method, section } = decoded;
-        errorMsg += `\n${section}.${method}: ${docs.join(' ')}`;
-      } catch (e) {
-        errorMsg += `\nError at module index: ${error.asModule.index} Error: ${error.asModule.error}`;
+  static getErrorMsg(data, typeDef, api): string {
+    let errorMsg = 'Extrinsic failed submission:';
+    data.forEach((error) => {
+      if (error.isModule) {
+        try {
+          const decoded = api.registry.findMetaError(error.asModule);
+          const { docs, method, section } = decoded;
+          errorMsg += `\n${section}.${method}: ${docs.join(' ')}`;
+        } catch (e) {
+          errorMsg += `\nError at module index: ${error.asModule.index} Error: ${error.asModule.error}`;
+        }
+      } else {
+        const errorStr = error.toString();
+        if (errorStr !== '0') {
+          errorMsg += `\n${errorStr}`;
+        }
       }
-    } else {
-      const errorStr = error.toString();
-      if (errorStr !== '0') {
-        errorMsg += `\n${errorStr}`;
-      }
-    }
-  });
-  return errorMsg;
+    });
+    return errorMsg;
+  }
+
 }
 
 export class VerificationRelationship {
-  constructor(private _value = 0) {}
+  constructor(private _value = 0b0000) {}
   get value() { return this._value }
   setAuthentication() { this._value |= 0b0001 }
   setAssertion() { this._value |= 0b0010 }
@@ -193,10 +183,10 @@ export default class InfraSS58DID {
     await cryptoWaitReady();
     return keyringModule.addFromUri(seed, undefined, cryptoInfo.CRYPTO_TYPE);
   }
-  private static async getKeyPairFromAddress(addr, cryptoInfo: CRYPTO_INFO): Promise<KeyringPair> {
+  static async getKeyPairFromUri(uri, cryptoInfo?: CRYPTO_INFO): Promise<KeyringPair> {
     const keyringModule = new Keyring({ type: cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
     await cryptoWaitReady();
-    return keyringModule.addFromAddress(addr);
+    return keyringModule.addFromUri(uri);
   }
   private static ss58addrToDID(addr) { return `${INFRA_DID_QUALIFIER}${addr}` }
 
@@ -233,9 +223,16 @@ export default class InfraSS58DID {
   static async createAsync(conf: IConfig): Promise<InfraSS58DID> {
     return await new InfraSS58DID().init(conf)
   }
-
+  private static splitDID(did: string) {
+    const splitDID = did.split(':')
+    return {
+      ss58ID: splitDID.pop(),
+      qualifier: splitDID.join(':'),
+    }
+  }
   private static didToHex(did: string): HexString {
-    return u8aToHex(decodeAddress(did.slice(INFRA_DID_QUALIFIER.length)));
+    const { ss58ID } = InfraSS58DID.splitDID(did);
+    return u8aToHex(decodeAddress(ss58ID));
   }
 
   private async init(conf: IConfig): Promise<InfraSS58DID> {
@@ -357,8 +354,7 @@ export default class InfraSS58DID {
                 },
               } = events[i];
               if (method === 'ExtrinsicFailed' || method === 'BatchInterrupted') {
-                const errorMsg = getExtrinsicError(data, typeDef, this.api);
-                const error = new ExtrinsicError(errorMsg, method, data, status, events);
+                const error = new ExtrinsicError(this.api, typeDef, method, data, status, events);
                 reject(error);
                 return error;
               }
@@ -377,12 +373,37 @@ export default class InfraSS58DID {
     return await sendPromise;
   }
 
-  async getDocument({ getBbsPlusSigKeys = true } = {}) {
+  async getDocument(getBbsPlusSigKeys = true) {
+    const { ss58ID, qualifier } = InfraSS58DID.splitDID(this.did)
+    const offDocuments = (did) => ({
+      '@context': ['https://www.w3.org/ns/did/v1'],
+      id: did,
+      controller: [did],
+      publicKey: [
+        {
+          id: `${did}#keys-1`,
+          type: 'Sr25519VerificationKey2020',
+          controller: did,
+          publicKeyBase58: b58.encode(decodeAddress(ss58ID))
+        }
+      ],
+      authentication: [`${did}#keys-1`,],
+      assertionMethod: [`${did}#keys-1`,],
+      keyAgreement: [],
+      capabilityInvocation: [`${did}#keys-1`,],
+      ATTESTS_IRI: null,
+      service: []
+    })
     const hexId = InfraSS58DID.didToHex(this.did);
-    let didDetails = await this.getOnchainDIDDetail(hexId);
+    let didDetails
+    try {
+      didDetails = await this.getOnchainDIDDetail(hexId);
+    } catch {
+      return offDocuments(this.did);
+    }
     const attests = await this.api.query.attest.attestations(hexId);
     const ATTESTS_IRI = attests.iri.isSome ? u8aToString(hexToU8a(attests.iri.toString())) : null;
-    const id = (this.did === hexId) ? `${INFRA_DID_QUALIFIER}${encodeAddress(hexId)}` : this.did;
+    const id = (this.did === hexId) ? `${qualifier}${encodeAddress(hexId)}` : this.did;
     const controllers = [];
     if (didDetails.activeControllers > 0) {
       const cnts = await this.api.query.didModule.didControllers.entries(hexId);
@@ -428,8 +449,7 @@ export default class InfraSS58DID {
           }
           const index = i.toNumber();
           const pk = dk.publicKey;
-          let publicKeyRaw;
-          let typ;
+          let publicKeyRaw, typ;
           if (pk.isSr25519) {
             typ = CRYPTO_INFO.SR25519.KEY_TYPE;
             publicKeyRaw = pk.asSr25519.value;
@@ -441,27 +461,18 @@ export default class InfraSS58DID {
           }
           keys.push([index, typ, publicKeyRaw]);
           const vr = new VerificationRelationship(dk.verRels.toNumber());
-          if (vr.isAuthentication()) {
-            authn.push(index);
-          }
-          if (vr.isAssertion()) {
-            assertion.push(index);
-          }
-          if (vr.isCapabilityInvocation()) {
-            capInv.push(index);
-          }
-          if (vr.isKeyAgreement()) {
-            keyAgr.push(index);
-          }
+          if (vr.isAuthentication()) authn.push(index);
+          if (vr.isAssertion()) assertion.push(index);
+          if (vr.isCapabilityInvocation()) capInv.push(index);
+          if (vr.isKeyAgreement()) keyAgr.push(index);
         }
       });
     }
 
-    if (getBbsPlusSigKeys === true) {
-      const { lastKeyId } = didDetails;
-      if (lastKeyId > keys.length) {
+    if (getBbsPlusSigKeys) {
+      if (didDetails.lastKeyId > keys.length) {
         const possibleBbsPlusKeyIds = new Set();
-        for (let i = 1; i <= lastKeyId; i++) {
+        for (let i = 1; i <= didDetails.lastKeyId; i++) {
           possibleBbsPlusKeyIds.add(i);
         }
         for (const [i] of keys) {
@@ -474,21 +485,12 @@ export default class InfraSS58DID {
         }
         const resp = await this.api.query.bbsPlus.bbsPlusKeys.multi(queryKeys);
         function createPublicKeyObjFromChainResponse(pk) {
-          const pkObj = {
+          const pr = (pk.paramsRef.isSome) ? pk.paramsRef.unwrap() : null
+          return {
             bytes: u8aToHex(pk.bytes),
-            curveType: null,
-            paramsRef: null,
+            curveType: pk.curveType.isBls12381 ? 'Bls12381' : null,
+            paramsRef: pr ? [u8aToHex(pr[0]), pr[1].toNumber()] : null,
           };
-          if (pk.curveType.isBls12381) {
-            pkObj.curveType = 'Bls12381';
-          }
-          if (pk.paramsRef.isSome) {
-            const pr = pk.paramsRef.unwrap();
-            pkObj.paramsRef = [u8aToHex(pr[0]), pr[1].toNumber()];
-          } else {
-            pkObj.paramsRef = null;
-          }
-          return pkObj;
         }
         let currentIter = 0;
         for (const r of resp) {
@@ -544,7 +546,7 @@ export default class InfraSS58DID {
     return {
       '@context': ['https://www.w3.org/ns/did/v1'],
       id,
-      controller: controllers.map((c) => `${INFRA_DID_QUALIFIER}${encodeAddress(c)}`),
+      controller: controllers.map((c) => `${qualifier}${encodeAddress(c)}`),
       publicKey: verificationMethod,
       authentication,
       assertionMethod,
