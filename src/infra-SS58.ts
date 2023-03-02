@@ -1,6 +1,7 @@
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { HttpProvider } from '@polkadot/rpc-provider';
 import { u8aToString, hexToU8a, u8aToHex } from '@polkadot/util';
+import b58 from 'bs58';
 import {
   encodeAddress,
   decodeAddress,
@@ -412,6 +413,7 @@ export default class InfraSS58DID {
           id: `${did}#keys-1`,
           type: 'Sr25519VerificationKey2020',
           controller: did,
+          publicKeyBase58: b58.encode(decodeAddress(ss58ID)),
           publicKeyHex: u8aToHex(decodeAddress(ss58ID)).slice(2)
         }
       ],
@@ -548,7 +550,8 @@ export default class InfraSS58DID {
       id: `${id}#keys-${index}`,
       type: typ,
       controller: id,
-      publicKeyHex: u8aToHex(publicKeyRaw).slice(2),
+      publicKeyBase58: b58.encode(publicKeyRaw),
+      // publicKeyHex: u8aToHex(publicKeyRaw).slice(2),
     }));
     const assertionMethod = assertion.map((i) => `${id}#keys-${i}`);
     const authentication = authn.map((i) => `${id}#keys-${i}`);
