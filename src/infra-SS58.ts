@@ -1,6 +1,7 @@
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { HttpProvider } from '@polkadot/rpc-provider';
 import { u8aToString, hexToU8a, u8aToHex } from '@polkadot/util';
+import b58 from 'bs58';
 import {
   encodeAddress,
   decodeAddress,
@@ -15,7 +16,6 @@ import { KeyringPair } from '@polkadot/keyring/types';
 import typesBundle from '@docknetwork/node-types';
 import { initializeWasm, KeypairG2, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 import VerifiableCredential from './infra-ss58-vc';
-import base58 from 'bs58';
 export { KeyringPair }
 
 export const CRYPTO_INFO = {
@@ -300,8 +300,8 @@ class InfraSS58 {
           id: `${did}#keys-1`,
           type: 'Sr25519VerificationKey2020',
           controller: did,
-          // publicKeyHex: u8aToHex(decodeAddress(ss58ID)).slice(2),
-          publicKeyBase58: base58.decode(ss58ID)
+          publicKeyBase58: b58.encode(decodeAddress(ss58ID)),
+          publicKeyHex: u8aToHex(decodeAddress(ss58ID)).slice(2)
         }
       ],
       authentication: [`${did}#keys-1`,],
@@ -437,9 +437,8 @@ class InfraSS58 {
       id: `${id}#keys-${index}`,
       type: typ,
       controller: id,
+      publicKeyBase58: b58.encode(publicKeyRaw),
       // publicKeyHex: u8aToHex(publicKeyRaw).slice(2),
-      publicKeyBase58: base58.encode(publicKeyRaw)
-
     }));
     const assertionMethod = assertion.map((i) => `${id}#keys-${i}`);
     const authentication = authn.map((i) => `${id}#keys-${i}`);
