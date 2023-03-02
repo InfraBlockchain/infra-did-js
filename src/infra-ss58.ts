@@ -31,9 +31,9 @@ export const CRYPTO_INFO = {
 export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
 export type SIG_TYPE = typeof CRYPTO_INFO.ED25519.SIG_TYPE | typeof CRYPTO_INFO.SR25519.SIG_TYPE
 
-type HexString = `0x${string}`;
+export type HexString = `0x${string}`;
 
-export interface IConfig {
+export interface IConfig_SS58 {
   did: string;
   address: string;
   networkId: string;
@@ -218,7 +218,7 @@ export default class InfraSS58DID {
     return true
   }
 
-  static async createAsync(conf: IConfig): Promise<InfraSS58DID> {
+  static async createAsync(conf: IConfig_SS58): Promise<InfraSS58DID> {
     return await new InfraSS58DID().init(conf)
   }
   private static splitDID(did: string) {
@@ -233,7 +233,7 @@ export default class InfraSS58DID {
     return u8aToHex(decodeAddress(ss58ID));
   }
 
-  private async init(conf: IConfig): Promise<InfraSS58DID> {
+  private async init(conf: IConfig_SS58): Promise<InfraSS58DID> {
     if (this.api) {
       if (this.api.isConnected) {
         throw new Error('API is already connected');
