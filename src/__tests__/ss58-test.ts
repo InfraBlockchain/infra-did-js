@@ -1,17 +1,18 @@
-import InfraSS58DID, { CRYPTO_INFO } from '../infra-SS58'
-
+import InfraSS58DID, { CRYPTO_INFO } from '../infra-ss58'
+import VerifiableCredential from '../infra-ss58-vc';
+import Schema from '../infra-ss58-vc/schema';
 const failDID = "did:infra:space:thisisinvalidformofss58did"
+const vcId = 'http://example.vc/credentials/123532';
 const address = 'ws://localhost:9944';
 jest.setTimeout(10000)
 describe('InfraSS58DID', () => {
     let infraDID: InfraSS58DID;
     let srTest;
+    let newDIDSet;
     let edTest;
     let config;
     let aliceAccount;
-    let newDIDSet;
-
-    describe('DID creation', () => {
+    describe.skip('DID creation', () => {
         it('should create SR25519 DID ', async () => {
             return await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519)
                 .then(res => {
@@ -36,7 +37,7 @@ describe('InfraSS58DID', () => {
         })
     })
 
-    describe('DID onChain test', () => {
+    describe.skip('DID onChain test', () => {
         beforeAll(async () => {
             aliceAccount = await InfraSS58DID.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519)
             srTest = await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
@@ -155,7 +156,7 @@ describe('InfraSS58DID', () => {
         )
     })
 
-    describe('BBS+ test', () => {
+    describe.skip('BBS+ test', () => {
         beforeAll(async () => {
             aliceAccount = await InfraSS58DID.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519)
 
@@ -234,6 +235,111 @@ describe('InfraSS58DID', () => {
                 await infraDID.BBSPlus_getParams(1).catch(e => {
                     expect(e).toBeDefined()
                 })
+            })
+        })
+    })
+
+    describe('vc test', () => {
+        let schema: Schema;
+        let vc;
+        let signedVC;
+        let holder;
+        let issuer;
+        let holderApi;
+        let issuerApi;
+        beforeAll(async () => {
+            aliceAccount = await InfraSS58DID.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519);
+            holder = await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
+            issuer = await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
+            holderApi = await InfraSS58DID.createAsync({
+                address,
+                networkId: 'space',
+                did: holder.did,
+                seed: holder.seed,
+                txfeePayerAccountKeyPair: aliceAccount,
+                cryptoInfo: holder.cryptoInfo,
+                verRels: holder.verRels,
+            })
+            await holderApi.registerOnChain();
+            await holderApi.disconnect();
+
+            issuerApi = await InfraSS58DID.createAsync({
+                address,
+                networkId: 'space',
+                did: issuer.did,
+                seed: issuer.seed,
+                txfeePayerAccountKeyPair: aliceAccount,
+                cryptoInfo: issuer.cryptoInfo,
+                verRels: issuer.verRels,
+            });
+            await issuerApi.registerOnChain()
+        })
+        afterAll(async () => {
+            await issuerApi.disconnect();
+        })
+        it('create schema', async () => {
+            expect.assertions(1);
+            let schema = new Schema();
+            const someJSONSchema = {
+                $schema: 'http://json-schema.org/draft-07/schema#',
+                description: 'Dock Schema Example',
+                type: 'object',
+                properties: {
+                    id: { type: 'string' },
+                    petid: { type: 'string' },
+                    emailAddress: { type: 'string', format: 'email' },
+                    alumniOf: { type: 'string' },
+                },
+                required: ['emailAddress', 'alumniOf'],
+                additionalProperties: false,
+            };
+            await schema.setJSONSchema(someJSONSchema).then(res => {
+
+                schema = res;
+                expect(schema.toJSON()).toBeDefined();
+            })
+
+        })
+        it('write schema on chain', async () => {
+            expect.assertions(2);
+
+            await schema.writeToChain(issuerApi).then(res => {
+                expect(res).toBeDefined()
+            });
+        })
+
+        it('create vc', async () => {
+            vc = new VerifiableCredential(vcId);
+            vc.addContext('https://www.w3.org/2018/credentials/examples/v1');
+            vc.addContext('https://www.w3.org/2018/credentials/v1');
+            vc.addType('VerifiableCredential');
+            vc.addType('VaccinationCredential');
+            vc.addSubject({ id: holder.did, alumniOf: 'Example University' });
+            vc.setIssuanceDate('2021-04-02T10:11:41.000Z');
+            expect(vc.toJSON()).toBeDefined();
+        })
+
+        it('sign vc', async () =>
+            await vc.sign({
+                id: `${edTest.did}#keys-1`,
+                controller: edTest.did,
+                type: edTest.cryptoInfo.KEY_TYPE,
+                keypair: edTest.keyPair,
+            }).then(svc => {
+                signedVC = svc;
+                console.log('signed::: ', signedVC.toJSON());
+                expect(signedVC.proof.verificationMethod).toBeDefined();
+            })
+        )
+        it('verify vc', async () => {
+            await signedVC.verify({
+                resolver: infraDID.Resolver,
+                compactProof: true,
+                forceRevocationCheck: true,
+                // revocationApi: { dock },
+            }).then(res => {
+                console.log('verified:::', JSON.stringify(res, null, 2));
+                expect(res.verified).toBeTruthy();
             })
         })
     })

@@ -21,6 +21,7 @@
     "**/build/**/*",
     "node_modules",
     "./lib/*",
-    "./*.config.js"
+    "./*.config.js",
+    "*.json"
   ]
 }

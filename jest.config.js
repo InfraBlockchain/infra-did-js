@@ -7,8 +7,11 @@ module.exports = {
         "^.+\\.js$": "babel-jest",
     },
     testPathIgnorePatterns: ["/node_modules/"],
+    "moduleNameMapper": {
+        "axios": "axios/dist/node/axios.cjs"
+    },
     transformIgnorePatterns: [
-        '/node_modules/(?!@polkadot|@babel)',
+        '/node_modules/(?!@polkadot|@babel|axios)',
         '!node_modules/'
     ],
     globals: {
