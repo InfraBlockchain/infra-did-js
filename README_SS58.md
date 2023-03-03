@@ -112,13 +112,13 @@ await didApi.unregisterOnChain()
 ### Add Public key
 
 ```ts
-await didApi.addPublicKeyByDIDKeys(SOME_DID_KEY)
+await didApi.addKeys(SOME_DID_KEY)
 ```
 
 ### Remove Public key
 
 ```ts
-await didApi.addPublicKeyByDIDKeys(DID_KEY_IDS)
+await didApi.removeKeys(DID_KEY_IDS)
 ```
 
 ### Add Controller DID
@@ -260,7 +260,7 @@ await infraDID.BBSPlus_removeParams(PARAM_COUNTER_NUMBER)
 await infraDID.BBSPlus_addPublicKey(newSigSet.publicKey)
 ```
 
-### GET BBS+ Public Key
+### Get BBS+ Public Key
 
 ```ts
 const publicKey = await infraDID.BBSPlus_getPublicKey(KEY_ID_NUMBER)

@@ -48,14 +48,14 @@ export interface IConfig_SS58 {
   verRels?: VerificationRelationship;
 }
 
-export interface DIDSet {
+export interface DIDSet_SS58 {
   did: string;
   seed: HexString;
   mnemonic: string;
-  publicKey: PublicKey;
+  publicKey: PublicKey_SS58;
   verRels: VerificationRelationship;
   cryptoInfo: CRYPTO_INFO;
-  didKey: DidKey;
+  didKey: DidKey_SS58;
   keyPair: KeyringPair;
 }
 export interface BBSPlus_SigSet {
@@ -77,12 +77,12 @@ interface BBSPlus_Params {
   curveType: 'Bls12381',
   label: string;
 }
-export class PublicKey {
+export class PublicKey_SS58 {
   constructor(private value: HexString, private sigType: SIG_TYPE = CRYPTO_INFO.SR25519.SIG_TYPE) {
     this.value = value;
     this.sigType = sigType;
   }
-  static fromKeyringPair(pair: KeyringPair): PublicKey {
+  static fromKeyringPair(pair: KeyringPair): PublicKey_SS58 {
     const [key,] = Object.entries(CRYPTO_INFO).find(([, value]) => value.CRYPTO_TYPE === pair.type);
     return new this(u8aToHex(pair.publicKey), CRYPTO_INFO[key].SIG_TYPE);
   }
@@ -93,8 +93,8 @@ export class PublicKey {
   }
 }
 
-export class DidKey {
-  constructor(private publicKey: PublicKey, private verRels: VerificationRelationship = undefined) {
+export class DidKey_SS58 {
+  constructor(private publicKey: PublicKey_SS58, private verRels: VerificationRelationship = undefined) {
     this.verRels = verRels !== undefined ? verRels : new VerificationRelationship();
   }
   toJSON() {
@@ -164,8 +164,8 @@ export default class InfraSS58DID {
   private accountKeyPair: KeyringPair;
   private cryptoInfo: CRYPTO_INFO;
   private keyPairs: KeyringPair[];
-  private publicKey: PublicKey;
-  private didKey: DidKey;
+  private publicKey: PublicKey_SS58;
+  private didKey: DidKey_SS58;
   private did: string;
   private keyringModule: Keyring;
   private controllerDID: string;
@@ -176,46 +176,54 @@ export default class InfraSS58DID {
 
   private constructor() {}
 
-  private static async getKeyPairFromSeed(seed: HexString, cryptoInfo: CRYPTO_INFO): Promise<KeyringPair> {
+  private static async createKeyringModule(cryptoInfo: CRYPTO_INFO) {
     const keyringModule = new Keyring({ type: cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
     await cryptoWaitReady();
+    return keyringModule;
+  }
+  private static async getKeyPairFromSeed(seed: HexString | string, cryptoInfo: CRYPTO_INFO): Promise<KeyringPair> {
+    const keyringModule = await InfraSS58DID.createKeyringModule(cryptoInfo);
     return keyringModule.addFromUri(seed, undefined, cryptoInfo.CRYPTO_TYPE);
   }
-  static async getKeyPairFromUri(uri, cryptoInfo?: CRYPTO_INFO): Promise<KeyringPair> {
-    const keyringModule = new Keyring({ type: cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
-    await cryptoWaitReady();
-    return keyringModule.addFromUri(uri);
+  private static ss58addrToDID(networkId, addr) {
+    return `did:infra:${networkId}:${addr}`
   }
-  private static ss58addrToDID(networkId, addr) { return `did:infra:${networkId}:${addr}` }
 
+  static async getKeyPairFromUri(uri: string, cryptoInfo?: CRYPTO_INFO): Promise<KeyringPair> {
+    return await InfraSS58DID.getKeyPairFromSeed(uri, cryptoInfo);
+  }
   static async createNewSS58DIDSet(
     networkId: string,
     cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.SR25519,
     verRels = new VerificationRelationship(),
-  ): Promise<DIDSet> {
+  ): Promise<DIDSet_SS58> {
 
     const mnemonic = mnemonicGenerate()
     const seed = u8aToHex(mnemonicToMiniSecret(mnemonic));
     const keyPair = await InfraSS58DID.getKeyPairFromSeed(seed, cryptoInfo);
     const did = InfraSS58DID.ss58addrToDID(networkId, keyPair.address);
-    const publicKey = PublicKey.fromKeyringPair(keyPair);
-    const didKey: DidKey = new DidKey(publicKey, verRels);
+    const publicKey = PublicKey_SS58.fromKeyringPair(keyPair);
+    const didKey: DidKey_SS58 = new DidKey_SS58(publicKey, verRels);
 
     return { did, didKey, keyPair, publicKey, verRels, cryptoInfo, seed, mnemonic };
   }
 
-  static validateInfraSS58DID(infraSS58DID: string): boolean {
+  static validateInfraSS58DID(infraSS58DID: string): { result: boolean, msg: string } {
     const didSplit = infraSS58DID.split(':')
+    let result = { result: true, msg: 'valid' }
     if (didSplit.length !== 4) {
-      throw new Error(`invalid infraSS58DID, needs network identifier part and id part (${infraSS58DID})`)
+      result.result = false;
+      result.msg = `invalid infraSS58DID, needs network identifier part and id part (${infraSS58DID})`;
+      return result;
     }
 
     const regex = new RegExp(/^[5KL][1-9A-HJ-NP-Za-km-z]{47}$/);
     const matches = regex.exec(didSplit[3]);
     if (!matches) {
-      throw new Error('The identifier must be 32 bytes and valid SS58 string');
+      result.result = false;
+      result.msg = 'The identifier must be 32 bytes and valid SS58 string';
     }
-    return true
+    return result
   }
 
   static async createAsync(conf: IConfig_SS58): Promise<InfraSS58DID> {
@@ -273,8 +281,8 @@ export default class InfraSS58DID {
     if (conf.did && this.did !== conf.did) {
       throw new Error('provided DID and seed not matched. check DID and seed(mnemonic)');
     }
-    this.publicKey = PublicKey.fromKeyringPair(this.keyPairs[0]);
-    this.didKey = new DidKey(this.publicKey, this.verRels);
+    this.publicKey = PublicKey_SS58.fromKeyringPair(this.keyPairs[0]);
+    this.didKey = new DidKey_SS58(this.publicKey, this.verRels);
 
     if (conf.txfeePayerAccountSeed) {
       this.accountKeyPair = this.keyringModule.addFromSeed(hexToU8a(conf.txfeePayerAccountSeed));
@@ -382,25 +390,21 @@ export default class InfraSS58DID {
   }
 
   async registerOnChain() {
-    try {
-      const hexId = InfraSS58DID.didToHex(this.did);
-      const didKeys = [this.didKey].map((d) => d.toJSON());
-      const controllers = new BTreeSet(undefined, undefined, undefined)
-      controllers.add(InfraSS58DID.didToHex(this.controllerDID) as unknown as Codec)
-      const tx = await this.api.tx.didModule.newOnchain(hexId, didKeys, controllers);
-      return this.signAndSend(tx, false, {});
-    } catch (e) { throw e }
+    const hexId = InfraSS58DID.didToHex(this.did);
+    const didKeys = [this.didKey].map((d) => d.toJSON());
+    const controllers = new BTreeSet(undefined, undefined, undefined)
+    controllers.add(InfraSS58DID.didToHex(this.controllerDID) as unknown as Codec)
+    const tx = await this.api.tx.didModule.newOnchain(hexId, didKeys, controllers);
+    return this.signAndSend(tx, false, {});
   }
   async unregisterOnChain() {
-    try {
-      const hexDID = InfraSS58DID.didToHex(this.did)
-      const nonce = await this.getNextNonce(hexDID);
-      const DidRemoval = { did: hexDID, nonce };
-      const stateMessage = this.api.createType('StateChange', { DidRemoval }).toU8a();
-      const controllerDIDSig = this.getControllerDIDSig(stateMessage);
-      const tx = await this.api.tx.didModule.removeOnchainDid(DidRemoval, controllerDIDSig);
-      return this.signAndSend(tx, false, {});
-    } catch (e) { throw e }
+    const hexDID = InfraSS58DID.didToHex(this.did)
+    const nonce = await this.getNextNonce(hexDID);
+    const DidRemoval = { did: hexDID, nonce };
+    const stateMessage = this.api.createType('StateChange', { DidRemoval }).toU8a();
+    const controllerDIDSig = this.getControllerDIDSig(stateMessage);
+    const tx = await this.api.tx.didModule.removeOnchainDid(DidRemoval, controllerDIDSig);
+    return this.signAndSend(tx, false, {});
   }
   async getDocument(getBbsPlusSigKeys = true) {
     const { ss58ID, qualifier } = InfraSS58DID.splitDID(this.did)
@@ -588,7 +592,7 @@ export default class InfraSS58DID {
     };
   }
 
-  async addKeys(...didKeys: DidKey[]) {
+  async addKeys(...didKeys: DidKey_SS58[]) {
     const hexDID = InfraSS58DID.didToHex(this.did)
     const nonce = await this.getNextNonce(hexDID);
     const keys = didKeys.map((d) => d.toJSON());

@@ -1,25 +1,27 @@
-import InfraSS58DID, { CRYPTO_INFO } from '../infra-SS58'
+import InfraSS58DID, { CRYPTO_INFO, DIDSet_SS58, IConfig_SS58, KeyringPair } from '../infra-SS58'
 
 const failDID = "did:infra:space:thisisinvalidformofss58did"
 const address = 'ws://localhost:9944';
 jest.setTimeout(10000)
 describe('InfraSS58DID', () => {
     let infraDID: InfraSS58DID;
-    let srTest;
-    let edTest;
-    let config;
-    let aliceAccount;
-    let newDIDSet;
+    let srTest: DIDSet_SS58;
+    let edTest: DIDSet_SS58;
+    let config: IConfig_SS58;
+    let aliceAccount: KeyringPair;
+    let newDIDSet: DIDSet_SS58;
 
     describe('DID creation', () => {
         it('should create SR25519 DID ', async () => {
+            expect.assertions(1);
             return await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519)
-                .then(res => {
-                    srTest = res;
-                    expect(res.did).toBeDefined();
+                .then(didSet => {
+                    srTest = didSet;
+                    expect(didSet.did).toBeDefined();
                 })
         })
         it('should create ED25519 DID ', async () => {
+            expect.assertions(1);
             return await InfraSS58DID.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519)
                 .then(didSet => {
                     edTest = didSet;
@@ -27,10 +29,14 @@ describe('InfraSS58DID', () => {
                     expect(didSet.did).toBeDefined();
                 })
         })
-        it('get Error verify DID', () => {
-            expect(() => InfraSS58DID.validateInfraSS58DID(failDID)).toThrow();
+        it('get failed verify DID', () => {
+            expect.assertions(2);
+            const valid = InfraSS58DID.validateInfraSS58DID(failDID)
+            expect(valid.msg).toBeDefined();
+            expect(valid.result).toBeFalsy();
         })
         it('verify DID', () => {
+            expect.assertions(2);
             expect(InfraSS58DID.validateInfraSS58DID(srTest.did)).toBeTruthy();
             expect(InfraSS58DID.validateInfraSS58DID(edTest.did)).toBeTruthy();
         })
