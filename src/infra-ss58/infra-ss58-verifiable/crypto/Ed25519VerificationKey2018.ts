@@ -24,9 +24,9 @@ export default class Ed25519VerificationKey2018 {
     if (verificationMethod.publicKeyHex) {
       return new this(hexToUint8Array(verificationMethod.publicKeyHex));
     }
-    // if (verificationMethod.publicKeyBase58) {
-    //   return new this(b58.decode(verificationMethod.publicKeyBase58));
-    // }
+    if (verificationMethod.publicKeyBase58) {
+      return new this(b58.decode(verificationMethod.publicKeyBase58));
+    }
 
     if (verificationMethod.publicKeyBase64) {
       return new this(base64.decode(verificationMethod.publicKeyBase64));

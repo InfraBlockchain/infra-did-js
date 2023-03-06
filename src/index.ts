@@ -12,8 +12,19 @@ import { ec as EC } from 'elliptic-expo'
 import { Buffer } from 'buffer'
 // const EC = require('elliptic').ec
 
-// import InfraSS58DID, { CRYPTO_TYPE, VerificationRelationship } from "./infra-SS58"
-// export { InfraSS58DID, CRYPTO_TYPE, VerificationRelationship }
+import InfraSS58DID, {
+  CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
+  BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
+  DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
+  VerificationRelationship, VerifiableCredential, VerifiablePresentation
+} from "./infra-ss58"
+
+export {
+  InfraSS58DID, CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
+  BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
+  DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
+  VerificationRelationship, VerifiableCredential, VerifiablePresentation
+}
 
 const secp256k1 = new EC('secp256k1') // currently only support secp256k1 key
 
@@ -110,7 +121,7 @@ export default class InfraDID {
   }
 
   private async getNonceForPubKeyDid(): Promise<number> {
-    const pubKey = Numeric.stringToPublicKey(this.didPubKey)
+    const pubKey = Numeric.stringToPublicKey(this.didPubKey || '')
     const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1, pubKey.data.length)).toString('hex')
 
     const options = {

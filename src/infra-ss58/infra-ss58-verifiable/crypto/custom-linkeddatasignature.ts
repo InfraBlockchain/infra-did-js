@@ -83,11 +83,6 @@ export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSi
 
     let { verifier } = this;
     if (!verifier) {
-      // if (verificationMethod['sec:publicKeyHex']) {
-      //   verificationMethod.publicKeyHex = verificationMethod['sec:publicKeyHex']
-      //   delete verificationMethod['sec:publicKeyHex']
-      // }
-      console.log(verificationMethod)
       const key = await this.LDKeyClass.from(verificationMethod);
       verifier = key.verifier();
     }

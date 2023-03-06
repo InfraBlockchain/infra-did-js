@@ -13,14 +13,18 @@
     "esModuleInterop": true,
     "downlevelIteration": true,
     "resolveJsonModule": true,
+    "noUnusedLocals": false,
     "allowJs": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "outDir": "lib"
   },
+  "typeRoots": ["./types", "./node_modules"],
+  "include": ["src/**/*"],
   "exclude": [
     "**/__tests__/**/*",
     "**/build/**/*",
     "node_modules",
-    "./lib/*",
+    "lib",
     "./*.config.js",
     "*.json"
   ]
