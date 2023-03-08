@@ -12,6 +12,20 @@ import { ec as EC } from 'elliptic-expo'
 import { Buffer } from 'buffer'
 // const EC = require('elliptic').ec
 
+import InfraSS58, {
+  CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
+  BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
+  DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
+  VerificationRelationship, VerifiableCredential, VerifiablePresentation
+} from "./infra-ss58"
+
+export {
+  InfraSS58, CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
+  BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
+  DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
+  VerificationRelationship, VerifiableCredential, VerifiablePresentation
+}
+
 const secp256k1 = new EC('secp256k1') // currently only support secp256k1 key
 
 const defaultPubKeyDidSignDataPrefix = "infra-mainnet"
@@ -49,7 +63,7 @@ export default class InfraDID {
   private txfeePayerAccount?: string
   private pubKeyDidSignDataPrefix: string
 
-  constructor (conf: IConfig) {
+  constructor(conf: IConfig) {
     this.did = conf.did
     const didSplit = conf.did.split(':')
     if (didSplit.length !== 4) {
@@ -65,11 +79,11 @@ export default class InfraDID {
     }
 
     this.registryContract = conf.registryContract
-    const rpc = new JsonRpc(conf.rpcEndpoint, { fetch } );
+    const rpc = new JsonRpc(conf.rpcEndpoint, { fetch });
     this.jsonRpc = rpc
 
     const privKey = Numeric.stringToPrivateKey(conf.didOwnerPrivateKey)
-    if (privKey.type != Numeric.KeyType.k1 ) {
+    if (privKey.type != Numeric.KeyType.k1) {
       throw new Error("unsupported private key type")
     }
 
@@ -97,7 +111,7 @@ export default class InfraDID {
     }
   }
 
-  static createPubKeyDIDsecp256k1(networkId: string) : { did: string, publicKey: string, privateKey: string } {
+  static createPubKeyDIDsecp256k1(networkId: string): { did: string, publicKey: string, privateKey: string } {
     const ellipticKeyPair = secp256k1.genKeyPair();
     const publicKey = PublicKey.fromElliptic(ellipticKeyPair, Numeric.KeyType.k1, secp256k1).toString();
     const privateKey = PrivateKey.fromElliptic(ellipticKeyPair, Numeric.KeyType.k1, secp256k1).toString();
@@ -106,9 +120,9 @@ export default class InfraDID {
     return { did, publicKey, privateKey };
   }
 
-  private async getNonceForPubKeyDid() : Promise<number> {
-    const pubKey = Numeric.stringToPublicKey(this.didPubKey)
-    const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1,pubKey.data.length)).toString('hex')
+  private async getNonceForPubKeyDid(): Promise<number> {
+    const pubKey = Numeric.stringToPublicKey(this.didPubKey || '')
+    const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1, pubKey.data.length)).toString('hex')
 
     const options = {
       json: true,
@@ -130,7 +144,7 @@ export default class InfraDID {
     }
   }
 
-  private newSerialBuffer(dataLength: number) : SerialBuffer {
+  private newSerialBuffer(dataLength: number): SerialBuffer {
     const buf = new SerialBuffer({
       textEncoder: this.api.textEncoder,
       textDecoder: this.api.textDecoder,
@@ -592,7 +606,7 @@ export default class InfraDID {
 
   async getTrustedPubKeyDIDByTarget(didPubKey: string) {
     const pubKey = Numeric.stringToPublicKey(didPubKey)
-    const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1,pubKey.data.length)).toString('hex')
+    const pubkey_index_256bits = Buffer.from(pubKey.data.slice(1, pubKey.data.length)).toString('hex')
 
     const rows = await (await this.jsonRpc.get_table_rows({
       json: true,
@@ -629,7 +643,7 @@ export default class InfraDID {
     })).rows;
 
     const result = rows.filter(row => row.authorizer === authorizer && row.pk === didPubKey);
-    
+
     return result;
   }
 
@@ -664,7 +678,7 @@ export default class InfraDID {
   }
 
   async getTrustedAccountDID(authorizer: string, account: string) {
-    const authorizer_index = parseInt(encodeName(authorizer)) * Math.pow(2,64);
+    const authorizer_index = parseInt(encodeName(authorizer)) * Math.pow(2, 64);
     const account_index = parseInt(encodeName(account));
     const index_128bits = authorizer_index + account_index;
 
@@ -682,7 +696,7 @@ export default class InfraDID {
     return rows;
   }
 
-  getJwtVcIssuer() : JwtVcIssuer {
+  getJwtVcIssuer(): JwtVcIssuer {
     return {
       did: this.did,
       signer: this.jwtSigner,
@@ -690,7 +704,7 @@ export default class InfraDID {
     }
   }
 
-  async signJWT (payload, expiresIn?: number) {
+  async signJWT(payload, expiresIn?: number) {
     if (typeof this.jwtSigner !== 'function') {
       throw new Error('No signer configured')
     }
@@ -699,7 +713,7 @@ export default class InfraDID {
     return createJWT(payload, options)
   }
 
-  async verifyJWT (jwt, resolver, audience = this.did): Promise<any> {
+  async verifyJWT(jwt, resolver, audience = this.did): Promise<any> {
     return verifyJWT(jwt, { resolver, audience })
   }
 }

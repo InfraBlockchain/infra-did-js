@@ -26,31 +26,16 @@
     "prepare": "npm run build",
     "release": "semantic-release --debug"
   },
-  "jest": {
-    "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ],
-    "coverageDirectory": "./coverage/",
-    "collectCoverageFrom": [
-      "src/**/*.{ts,tsx}",
-      "!src/**/*.d.ts",
-      "!**/node_modules/**"
-    ],
-    "testEnvironment": "node"
-  },
   "devDependencies": {
+    "@babel/cli": "^7.15.4",
+    "@babel/node": "^7.15.4",
+    "@babel/preset-env": "^7.14.5",
+    "@babel/preset-typescript": "^7.18.6",
     "@types/elliptic": "^6.4.12",
     "@types/jest": "26.0.23",
+    "@types/jsonschema": "^1.1.1",
     "@types/node": "^14.14.31",
+    "babel-jest": "24.5.0",
     "codecov": "3.8.2",
     "did-jwt-vc": "^2.1.2",
     "did-resolver": "^3.1.0",
@@ -62,22 +47,43 @@
     "ts-lint": "4.5.1",
     "tslint-config-prettier": "1.18.0",
     "tslint-eslint-rules": "5.4.0",
-    "typescript": "4.2.4",
+    "typescript": "^4.5.5",
     "webpack": "^5.39.0",
     "webpack-cli": "^4.7.2"
   },
   "dependencies": {
     "@babel/core": "^7.14.6",
     "@babel/polyfill": "^7.12.1",
-    "@babel/preset-env": "^7.14.5",
+    "@docknetwork/crypto-wasm-ts": "^0.31.1",
+    "@docknetwork/node-types": "^0.15.0",
+
+    "@juanelas/base64": "^1.0.5",
+    "@polkadot/api": "^9.14.2",
+    "@polkadot/keyring": "^10.4.2",
+    "@polkadot/rpc-provider": "^9.14.2",
+    "@polkadot/util": "^10.4.2",
+    "@polkadot/util-crypto": "^10.4.2",
+    "@polkadot/wasm-util": "^6.4.1",
+    "@polkadot/wasm-bridge": "^6.4.1",
+    "@polkadot/wasm-crypto": "^6.4.1",
+    "@polkadot/wasm-crypto-wasm": "^6.4.1",
+    "@polkadot/x-textdecoder": "^10.4.2",
+    "axios": "^1.3.4",
     "babel-loader": "^8.2.2",
+    "base64url": "^3.0.1",
     "browserify": "^17.0.0",
+    "bs58": "^5.0.0",
     "buffer": "^6.0.3",
     "buffer-browserify": "^0.2.5",
     "crypto-browserify": "^3.12.0",
     "did-jwt": "^5.0.1",
     "elliptic-expo": "^6.5.3",
     "infrablockchain-js": "^22.1.2",
+    "js-sha256": "^0.9.0",
+    "json-canonicalize": "^1.0.4",
+    "jsonld": "^5.0.0",
+    "jsonld-signatures": "^9.3.1",
+    "jsonschema": "^1.4.1",
     "node-fetch": "^2.6.1",
     "stream-browserify": "^3.0.0"
   }
