@@ -27,6 +27,7 @@ describe('InfraSS58: DID', () => {
                 .then(secpDIDSet => {
                     console.log({ secpDIDSet })
                     expect(secpDIDSet.did).toBeDefined();
+
                 })
         })
         it('should create ED25519 DID ', async () => {
@@ -46,6 +47,7 @@ describe('InfraSS58: DID', () => {
             expect.assertions(2);
             expect(InfraSS58.validateInfraSS58DID(srTest.did).result).toBeTruthy();
             expect(InfraSS58.validateInfraSS58DID(edTest.did).result).toBeTruthy();
+
         })
     })
     describe('DID onChain test', () => {

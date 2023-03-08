@@ -254,7 +254,7 @@ await infraDID.bbsModule.removeParams(PARAM_COUNTER_NUMBER)
 await infraDID.bbsModule.addPublicKey(SigSet.publicKey)
 ```
 
-### GET BBS+ Public Key
+### Get BBS+ Public Key
 
 ```ts
 const publicKey = await infraDID.bbsModule.getPublicKey(KEY_ID_NUMBER)
