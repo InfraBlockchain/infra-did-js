@@ -118,6 +118,8 @@ export default class VerifiableCredential extends VerifiableHelper {
 
   toJSON() {
     const { context, status, ...rest } = this;
+    Object.keys(rest).forEach(key => rest[key] === undefined ? delete rest[key] : {});
+
     const obj = {
       '@context': this.context,
       credentialStatus: this.status,

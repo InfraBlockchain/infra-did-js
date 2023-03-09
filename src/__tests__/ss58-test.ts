@@ -25,7 +25,7 @@ describe('InfraSS58: DID', () => {
             expect.assertions(1);
             return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1)
                 .then(secpDIDSet => {
-                    console.log({ secpDIDSet })
+                    // console.log({ secpDIDSet })
                     expect(secpDIDSet.did).toBeDefined();
 
                 })
@@ -35,7 +35,7 @@ describe('InfraSS58: DID', () => {
             return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519)
                 .then(edDIDSet => {
                     edTest = edDIDSet;
-                    console.log({ edDIDSet })
+                    // console.log({ edDIDSet })
                     expect(edDIDSet.did).toBeDefined();
                 })
         })
@@ -52,6 +52,7 @@ describe('InfraSS58: DID', () => {
     })
     describe('DID onChain test', () => {
         beforeAll(async () => {
+            jest.spyOn(console, 'warn').mockImplementation(() => {});
             aliceAccount = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
             srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
             contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1);
@@ -192,6 +193,8 @@ describe('InfraSS58: DID', () => {
 
     describe('BBS+ test', () => {
         beforeAll(async () => {
+            jest.spyOn(console, 'warn').mockImplementation(() => {});
+
             aliceAccount = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
             srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
             config = {
@@ -236,7 +239,7 @@ describe('InfraSS58: DID', () => {
         it('Add BBS+ publicKey', async () => {
             expect.assertions(1);
             const sigSet = InfraSS58.BBSPlus_createNewSigSet(10);
-            console.log({ sigSet })
+            // console.log({ sigSet })
             return await infraSS58.bbsModule.addPublicKey(sigSet.publicKey).then(async () => {
                 await infraSS58.bbsModule.getPublicKey(2).then(res => {
                     expect(res?.bytes).toEqual(sigSet.publicKey.bytes);
@@ -288,6 +291,8 @@ describe('InfraSS58: Verifiable', () => {
     let registryId: HexString;
     let revokeId: HexString;
     beforeAll(async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+
         aliceAccount = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519);
         issuer = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1);
         issuerApi = await InfraSS58.createAsync({
@@ -338,7 +343,7 @@ describe('InfraSS58: Verifiable', () => {
                 additionalProperties: false,
             };
             schema = await schema.setJSONSchema(someJSONSchema)
-            console.log('default schema::', JSON.stringify(schema.toJSON(), null, 2));
+            console.log('schema::', JSON.stringify(schema.toJSON(), null, 2));
             expect(schema.toJSON()).toBeDefined();
         })
 
@@ -363,7 +368,7 @@ describe('InfraSS58: Verifiable', () => {
             const fromApi = await issuerApi.blobModule.getSchema(schema.id);
             await Schema.get(schema.id, issuerApi)
                 .then(res => {
-                    console.log('get schema::', JSON.stringify(res, null, 2))
+                    // console.log('get schema::', JSON.stringify(res, null, 2))
                     expect(res?.id).toEqual(fromApi?.id);
                 })
         })
@@ -371,7 +376,7 @@ describe('InfraSS58: Verifiable', () => {
         it('Validate JSON schema', async () => {
             expect.assertions(1);
             await Schema.validateSchema(schema.schema).then(res => {
-                console.log('validate schema::', res)
+                // console.log('validate schema::', res)
                 expect(res.valid).toBeTruthy();
             })
 
@@ -402,7 +407,7 @@ describe('InfraSS58: Verifiable', () => {
             vc.setSchema(schema.id, 'JsonSchemaValidator2018');
             vc.addSubject({ id: holder.did, alumniOf: 'Example University', email: 'test@test.com' });
             vc.setIssuanceDate('2021-04-02T10:11:41.000Z');
-            console.log('default vc', vc.toJSON());
+            // console.log('default vc json', vc.toJSON());
             expect(vc.toJSON()).toBeDefined();
         })
 
@@ -418,7 +423,7 @@ describe('InfraSS58: Verifiable', () => {
         it('Validate VC schema', async () => {
             expect.assertions(1);
             await signedVC.validateSchema(schema).then(res => {
-                console.log('validate vc schema result::', res);
+                // console.log('validate vc schema result::', res);
                 expect(res).toBeTruthy();
             })
         })
@@ -457,7 +462,7 @@ describe('InfraSS58: Verifiable', () => {
             vp.addType('CredentialManagerPresentation');
             vp.setHolder(holderApi.didModule.did);
             vp.addCredential(vc);
-            console.log('default vp', vp.toJSON());
+            // console.log('default vp', vp.toJSON());
             expect(vp.toJSON()).toBeDefined();
         })
 

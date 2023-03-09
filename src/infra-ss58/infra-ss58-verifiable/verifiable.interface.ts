@@ -527,7 +527,6 @@ export class VerifiableHelper {
         if (options.documentLoader && options.resolver) {
             throw new Error('Passing resolver and documentLoader results in resolver being ignored, please re-factor.');
         }
-
         const expanded = await jsonld.expand(credential, {
             ...options,
             documentLoader: options.documentLoader || defaultDocumentLoader(options.resolver),

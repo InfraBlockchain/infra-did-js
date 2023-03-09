@@ -221,7 +221,7 @@ export default class InfraSS58 {
     // Make it proper hex
     return `0x${r}${s}${i}`;
   }
-  getSig(sigType: SIG_TYPE, keyPair, stateMessage) {
+  protected getSig(sigType: SIG_TYPE, keyPair, stateMessage) {
     if (sigType === CRYPTO_INFO.Secp256k1.SIG_TYPE) {
       return { [sigType]: this.signPrehashed(stateMessage, keyPair) }
     } else
@@ -235,11 +235,11 @@ export default class InfraSS58 {
       sig: this.getSig(sigType, keyPair, stateMessage)
     }
   }
-  getControllerDIDSig(stateMessage: any) {
+  public getControllerDIDSig(stateMessage: any) {
     return this.getDIDSig(this.controllerDID, this.cryptoInfo.SIG_TYPE, this.controllerKeyPair, stateMessage);
 
   }
-  getSerializedBlobValue(blobValue) {
+  public getSerializedBlobValue(blobValue) {
     if (blobValue instanceof Uint8Array) {
       return [...blobValue];
     } else if (typeof blobValue === 'object') {
@@ -251,14 +251,14 @@ export default class InfraSS58 {
   }
 
 
-  async signAndSend(extrinsic, waitForFinalization = true, params = {}) {
+  public async signAndSend(extrinsic, waitForFinalization = true, params = {}) {
     // @ts-ignore
     params.nonce = await this.api.rpc.system.accountNextIndex(this.accountKeyPair.address);
     const signedExtrinsic = await extrinsic.signAsync(this.accountKeyPair, params)
     return this.send(signedExtrinsic, waitForFinalization);
   }
 
-  async send(extrinsic, waitForFinalization = true) {
+  private async send(extrinsic, waitForFinalization = true) {
     const sendPromise = new Promise((resolve, reject) => {
       try {
         let unsubFunc = () => {};
@@ -290,7 +290,7 @@ export default class InfraSS58 {
     });
     return await sendPromise;
   }
-  async disconnect() {
+  public async disconnect() {
     if (this.api) {
       if (this.api.isConnected) {
         await this.api.disconnect();
@@ -298,7 +298,7 @@ export default class InfraSS58 {
       delete this.api;
     }
   }
-  async getOnchainDIDDetail(hexDid: HexString): Promise<{
+  protected async getOnchainDIDDetail(hexDid: HexString): Promise<{
     nonce: number,
     lastKeyId: number,
     activeControllerKeys: number,
@@ -317,13 +317,13 @@ export default class InfraSS58 {
       };
     } catch (e) { throw e }
   }
-  async getNextNonce(hexDID: HexString): Promise<number> {
+  public async getNextNonce(hexDID: HexString): Promise<number> {
     return await this.getOnchainDIDDetail(hexDID).then(detail => detail.nonce + 1);
   }
   public Resolver = {
     resolve: async (didUrl) => this.getDocument(didUrl)
   }
-  async getDocument(did, getBbsPlusSigKeys = true) {
+  public async getDocument(did, getBbsPlusSigKeys = true) {
     did = did.split('#')[0];
     const { id: ss58ID, qualifier } = InfraSS58.splitDID(did);
     const publicKey = decodeAddress(ss58ID);
@@ -565,25 +565,32 @@ class InfraSS58_DID {
     return this.that.getDocument(this.did, getBbsPlusSigKeys)
   }
 
-  async registerOnChain() {
-    const hexId = InfraSS58.didToHex(this.did);
-    const didKeys = [this.didKey].map((d) => d.toJSON ? d.toJSON() : d);
+
+  async registerDIDOnChain(did: string, didKey, controllerDID?: string) {
+    const hexId = InfraSS58.didToHex(did);
+    const didKeys = [didKey].map((d) => d.toJSON ? d.toJSON() : d);
     // @ts-ignore
     const controllers = new BTreeSet();
-    controllers.add(InfraSS58.didToHex(this.that.controllerDID) as unknown as Codec)
+    controllers.add(InfraSS58.didToHex(controllerDID) as unknown as Codec)
 
     const tx = await this.that.api.tx.didModule.newOnchain(hexId, didKeys, controllers);
     return this.that.signAndSend(tx, false, {});
   }
+  async registerOnChain() {
+    return await this.registerDIDOnChain(this.did, this.didKey, this.that.controllerDID);
+  }
 
-  async unregisterOnChain() {
-    const hexDID = InfraSS58.didToHex(this.did)
+  async unregisterDIDOnChain(did, controllerDID, controllerSigType, contollerKeyPair) {
+    const hexDID = InfraSS58.didToHex(did)
     const nonce = await this.that.getNextNonce(hexDID);
     const DidRemoval = { did: hexDID, nonce };
     const stateMessage = this.that.api.createType('StateChange', { DidRemoval }).toU8a();
-    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const controllerDIDSig = this.that.getDIDSig(controllerDID, controllerSigType, contollerKeyPair, stateMessage)
     const tx = await this.that.api.tx.didModule.removeOnchainDid(DidRemoval, controllerDIDSig);
     return this.that.signAndSend(tx, false, {});
+  }
+  async unregisterOnChain() {
+    return this.unregisterDIDOnChain(this.did, this.that.controllerDID, this.that.cryptoInfo.SIG_TYPE, this.keyPairs[0]);
   }
 
   async addKeys(...didKeys: DidKey_SS58[]) {
