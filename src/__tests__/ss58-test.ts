@@ -1,6 +1,6 @@
 import InfraSS58, { CRYPTO_INFO, DIDSet, HexString, IConfig_SS58, Schema, KeyPair, VerifiableCredential, VerifiablePresentation } from '../infra-ss58'
 
-const vcId = 'http://example.vc/credentials/123532';
+const vcId = 'did:infra:space:5FDseiC76zPek2YYkuyenu4ZgxZ7PUWXt9d19HNB5CaQXt5U';
 const vpId = 'http://example.edu/credentials/2803';
 const address = 'ws://localhost:9944';
 jest.setTimeout(10000)
@@ -294,7 +294,7 @@ describe('InfraSS58: Verifiable', () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         aliceAccount = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519);
-        issuer = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1);
+        issuer = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
         issuerApi = await InfraSS58.createAsync({
             address,
             networkId: 'space',

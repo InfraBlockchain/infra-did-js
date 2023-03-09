@@ -270,7 +270,6 @@ export class VerifiableHelper {
             return keyDoc;
         }
         let Cls;
-
         switch (keyDoc.type) {
             case CRYPTO_INFO.Secp256k1.KEY_TYPE:
                 Cls = EcdsaSecp256k1Signature2019;

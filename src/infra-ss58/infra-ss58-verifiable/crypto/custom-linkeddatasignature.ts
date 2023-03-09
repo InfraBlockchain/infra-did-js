@@ -24,10 +24,11 @@ function decodeBase64UrlToString(string) {
 
 export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSignature {
   type: any;
-  alg: any;
   LDKeyClass: any;
-  verifier: any;
   signer: any;
+  verifier: any;
+  alg: any;
+
   /**
    * Creates a new CustomLinkedDataSignature instance
    * @constructor
@@ -35,6 +36,10 @@ export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSi
    */
   constructor(config) {
     super(config);
+    this.type = config.type;
+    this.LDKeyClass = config.LDKeyClass;
+    this.signer = config.signer;
+    this.verifier = config.verifier;
     this.alg = config.alg;
   }
 
