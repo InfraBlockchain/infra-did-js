@@ -1,8 +1,21 @@
-import InfraSS58, { CRYPTO_INFO, DIDSet, HexString, IConfig_SS58, Schema, KeyPair, VerifiableCredential, VerifiablePresentation } from '../infra-ss58'
+import { InfraSS58, CRYPTO_INFO, DIDSet, HexString, IConfig_SS58, Schema, KeyPair, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, BBSPlus_SigSet } from '../index';
+
 
 const vcId = 'did:infra:space:5FDseiC76zPek2YYkuyenu4ZgxZ7PUWXt9d19HNB5CaQXt5U';
 const vpId = 'http://example.edu/credentials/2803';
 const address = 'ws://localhost:9944';
+const someJSONSchema = {
+    $schema: 'http://json-schema.org/draft-07/schema#',
+    description: 'Schema Example',
+    type: 'object',
+    properties: {
+        id: { type: 'string' },
+        email: { type: 'string', format: 'email' },
+        alumniOf: { type: 'string' },
+    },
+    required: ['email', 'alumniOf'],
+    additionalProperties: false,
+};
 jest.setTimeout(10000)
 describe('InfraSS58: DID', () => {
     let infraSS58: InfraSS58;
@@ -238,8 +251,8 @@ describe('InfraSS58: DID', () => {
 
         it('Add BBS+ publicKey', async () => {
             expect.assertions(1);
-            const sigSet = InfraSS58.BBSPlus_createNewSigSet(10);
-            // console.log({ sigSet })
+            const sigSet = await InfraSS58.BBSPlus_createNewSigSet(srTest.did);
+            console.log({ sigSet })
             return await infraSS58.bbsModule.addPublicKey(sigSet.publicKey).then(async () => {
                 await infraSS58.bbsModule.getPublicKey(2).then(res => {
                     expect(res?.bytes).toEqual(sigSet.publicKey.bytes);
@@ -247,20 +260,17 @@ describe('InfraSS58: DID', () => {
             })
         })
 
-        it('Add BBS+ publicKey by did', async () => {
+        it('Get DID document(onChain)', async () => {
             expect.assertions(1);
-            const testSigSet = await infraSS58.bbsModule.createNewSigSet(1);
-            return await infraSS58.bbsModule.addPublicKey(testSigSet.publicKey).then(async () => {
-                await infraSS58.bbsModule.getPublicKey(3).then(res => {
-                    expect(res?.bytes).toEqual(testSigSet.publicKey.bytes);
-                });
+            await infraSS58.didModule.getDocument().then(didDocuments => {
+                console.log('didDocuments: ', didDocuments);
+                expect(didDocuments).toBeDefined();
             })
         })
-
         it('Remove BBS+ publicKey', async () => {
             expect.assertions(1);
-            await infraSS58.bbsModule.removePublicKey(3).then(async () => {
-                await infraSS58.bbsModule.getPublicKey(3)
+            await infraSS58.bbsModule.removePublicKey(2).then(async () => {
+                await infraSS58.bbsModule.getPublicKey(2)
                     .then(res => { expect(res).toBeNull() })
             })
         })
@@ -290,6 +300,8 @@ describe('InfraSS58: Verifiable', () => {
     let issuerApi: InfraSS58;
     let registryId: HexString;
     let revokeId: HexString;
+    let bbsPlusPresentation: BBSPlusPresentation;
+    let issuerBBSSigSet: BBSPlus_SigSet;
     beforeAll(async () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -317,6 +329,8 @@ describe('InfraSS58: Verifiable', () => {
         })
         await holderApi.didModule.registerOnChain();
         revokeId = issuerApi.revocationModule.getRevokeId(vcId);
+
+
     })
 
     afterAll(async () => {
@@ -326,22 +340,9 @@ describe('InfraSS58: Verifiable', () => {
     })
 
     describe('schema test', () => {
-
         it('create schema', async () => {
             expect.assertions(1);
             schema = new Schema('space');
-            const someJSONSchema = {
-                $schema: 'http://json-schema.org/draft-07/schema#',
-                description: 'Schema Example',
-                type: 'object',
-                properties: {
-                    id: { type: 'string' },
-                    email: { type: 'string', format: 'email' },
-                    alumniOf: { type: 'string' },
-                },
-                required: ['email', 'alumniOf'],
-                additionalProperties: false,
-            };
             schema = await schema.setJSONSchema(someJSONSchema)
             console.log('schema::', JSON.stringify(schema.toJSON(), null, 2));
             expect(schema.toJSON()).toBeDefined();
@@ -404,16 +405,15 @@ describe('InfraSS58: Verifiable', () => {
             vc.addContext('https://schema.org');
             vc.addType('VerifiableCredential');
             vc.addType('VaccinationCredential');
-            vc.setSchema(schema.id, 'JsonSchemaValidator2018');
+            vc.setSchema(schema.id);
             vc.addSubject({ id: holder.did, alumniOf: 'Example University', email: 'test@test.com' });
-            vc.setIssuanceDate('2021-04-02T10:11:41.000Z');
             // console.log('default vc json', vc.toJSON());
             expect(vc.toJSON()).toBeDefined();
         })
 
         it('Issue(Sign) VC', async () => {
             expect.assertions(1);
-            await vc.sign(issuerApi.getKeyDoc()).then(svc => {
+            await vc.sign(issuerApi.didModule.getKeyDoc()).then(svc => {
                 signedVC = svc;
                 console.log('signed VC::: ', signedVC.toJSON());
                 expect(signedVC.proof.verificationMethod).toBeDefined();
@@ -462,7 +462,6 @@ describe('InfraSS58: Verifiable', () => {
             vp.addType('CredentialManagerPresentation');
             vp.setHolder(holderApi.didModule.did);
             vp.addCredential(vc);
-            // console.log('default vp', vp.toJSON());
             expect(vp.toJSON()).toBeDefined();
         })
 
@@ -486,6 +485,55 @@ describe('InfraSS58: Verifiable', () => {
         })
 
 
+    })
+
+    describe('BBS VP test', () => {
+        beforeAll(async () => {
+            //add bbs+ pubKey
+            issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did);
+            await issuerApi.bbsModule.addPublicKey(issuerBBSSigSet.publicKey);
+            await issuerApi.didModule.getDocument().then(doc => {
+                issuerBBSSigSet.keyPair.id = doc.verificationMethod[1].id
+            });
+            //set schema
+            schema = new Schema('space');
+            schema = await schema.setJSONSchema(someJSONSchema)
+            // create credential
+            vc = new VerifiableCredential(vcId);
+            vc.addContext('https://www.w3.org/2018/credentials/examples/v1');
+            vc.addContext('https://www.w3.org/2018/credentials/v1');
+            vc.addContext('https://schema.org');
+            vc.addType('VerifiableCredential');
+            vc.addType('VaccinationCredential');
+            vc.setSchema(schema.toBBSSchema());
+            vc.setSubject({ id: holder.did, alumniOf: 'Example University', email: 'test@test.com' });
+            vc.setIssuer(issuer.did);
+
+        })
+        it('expect to reveal specified attributes', async () => {
+            expect.assertions(3)
+
+            bbsPlusPresentation = new BBSPlusPresentation();
+            // issue BBSPlusPresentation
+            const { id, type } = issuerBBSSigSet.keyPair;
+            const issuerKeyDoc = issuerApi.getKeyDoc(id, issuer.did, type, issuerBBSSigSet.keyPair);
+            const credential = await bbsPlusPresentation.issueCredential(issuerKeyDoc, vc.toJSON());
+
+            // add presentation and reveal attribute
+            const idx = await bbsPlusPresentation.addCredentialToPresent(credential, { resolver: issuerApi.Resolver });
+            await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, ['alumniOf']);
+
+            const presentation = await bbsPlusPresentation.createPresentation();
+            console.log('presentation', JSON.stringify(presentation, null, 2));
+
+            expect(presentation.spec.credentials[0].revealedAttributes).toHaveProperty('credentialSubject');
+            expect(presentation.spec.credentials[0].revealedAttributes.credentialSubject).toHaveProperty('alumniOf', 'Example University');
+
+            //verify presentation
+            const vr = await bbsPlusPresentation.verifyPresentation(presentation, { resolver: issuerApi.Resolver });
+            console.log("verify result :::", vr);
+            expect(vr.verified).toEqual(true);
+        })
     })
 
 })

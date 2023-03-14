@@ -3,7 +3,7 @@ import { validate } from 'jsonschema';
 import axios from 'axios';
 import { u8aToHex } from '@polkadot/util';
 import { decodeAddress, encodeAddress, randomAsHex } from '@polkadot/util-crypto';
-import { BLOB_QUALIFIER } from '../const'
+import { BLOB_QUALIFIER } from '../verifiable.constants'
 import JSONSchema07 from './schema-draft-07';
 
 
@@ -51,6 +51,16 @@ export default class Schema {
     toJSON() {
         const { signature, ...rest } = this;
         return { ...rest, };
+    }
+    toBBSSchema() {
+        const { properties, ...rest } = this.schema
+        return `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify({
+            properties: { credentialSubject: { properties, type: 'object', } }, ...rest
+        }))}`
+    }
+
+    toEmbeddedSchema() {
+        return `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(this.schema))}`
     }
 
     toBlob() {

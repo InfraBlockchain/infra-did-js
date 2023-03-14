@@ -1,6 +1,6 @@
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { HttpProvider } from '@polkadot/rpc-provider';
-import { u8aToString, hexToU8a, u8aToHex, stringToHex, bufferToU8a } from '@polkadot/util';
+import { u8aToString, hexToU8a, u8aToHex, stringToHex, bufferToU8a, stringToU8a } from '@polkadot/util';
 import elliptic from 'elliptic';
 import b58 from 'bs58';
 import { sha256 } from 'js-sha256';
@@ -9,23 +9,24 @@ import {
   mnemonicGenerate, mnemonicToMiniSecret,
   cryptoWaitReady, blake2AsHex, randomAsHex
 } from '@polkadot/util-crypto';
-import { initializeWasm, KeypairG2, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
+import { initializeWasm, isWasmInitialized, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 
-import { DID_QUALIFIER } from './infra-ss58-verifiable/const';
+import { DID_QUALIFIER } from './infra-ss58-verifiable/verifiable.constants';
 import {
   typesBundle, BTreeSet, Codec, ServiceEndpointType, ExtrinsicError,
   CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
   BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
   DIDSet, DidKey_SS58, PublicKey_SS58,
-  VerificationRelationship
+  VerificationRelationship,
+  CRYPTO_BBS_INFO
 } from './ss58.interface';
-import { VerifiableCredential, VerifiablePresentation, Schema } from './infra-ss58-verifiable';
+import { VerifiableCredential, VerifiablePresentation, Schema, BBSPlusPresentation } from './infra-ss58-verifiable';
 
 export {
   CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
   BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
   DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
-  VerificationRelationship, VerifiableCredential, VerifiablePresentation
+  VerificationRelationship, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation
 }
 
 const secp256k1 = new elliptic.ec('secp256k1');
@@ -52,6 +53,7 @@ export default class InfraSS58 {
   private constructor() {}
 
   static async createAsync(conf: IConfig_SS58): Promise<InfraSS58> {
+    if (!isWasmInitialized()) await initializeWasm()
     return await new InfraSS58().initApi(conf)
   }
   static async createNewSS58DIDSet(
@@ -68,25 +70,23 @@ export default class InfraSS58 {
     return { did, didKey, keyPair, publicKey, verRels, cryptoInfo, seed };
   }
 
-  static BBSPlus_createNewSigSet(messageCounter = 10, label?: string): BBSPlus_SigSet {
-    const sigParam = InfraSS58.BBSPlus_createSigParamsWithLabel(messageCounter, label)
-    const keyPair = InfraSS58.BBSPlus_createKeyPair(sigParam)
-    const publicKey = InfraSS58.BBSPlus_createSigPublicKey(keyPair)
-    return { sigParam, keyPair, publicKey, messageCounter, label }
+  static async BBSPlus_createNewSigSet(controller: string, messageCounter = 1, label?: string): Promise<BBSPlus_SigSet> {
+    if (!isWasmInitialized()) await initializeWasm()
+    const params = InfraSS58.BBSPlus_createSigParamsWithLabel(messageCounter, label)
+    const keyPair = CRYPTO_BBS_INFO.LDKeyClass.generate({ params, controller })
+    const publicKey = InfraSS58.BBSPlus_createSigPublicKey(keyPair.publicKeyBuffer)
+    return { params, publicKey, messageCounter, label, keyPair }
   }
   static BBSPlus_changeSigParamMessageCounter(sigParam: SignatureParamsG1, messageCounter: number): SignatureParamsG1 {
     return sigParam.adapt(messageCounter)
   }
   static BBSPlus_createSigParamsWithLabel(messageCounter: number, label?: string): SignatureParamsG1 {
     return label ?
-      SignatureParamsG1.generate(messageCounter, hexToU8a(label)) :
-      SignatureParamsG1.generate(messageCounter)
+      SignatureParamsG1.generate(messageCounter, stringToU8a(label)) :
+      SignatureParamsG1.generate(messageCounter, stringToU8a('DockBBS+Signature2022'))
   }
-  static BBSPlus_createKeyPair(sigParams: SignatureParamsG1): KeypairG2 {
-    return KeypairG2.generate(sigParams);
 
-  }
-  static BBSPlus_createSigPublicKey(keypair: KeypairG2, params: any = undefined): BBSPlus_PublicKey {
+  static BBSPlus_createSigPublicKey(publicKey: Uint8Array, params: any = undefined): BBSPlus_PublicKey {
     // params= [did, paramCounter]
     let paramsRef: any = undefined;
     if (params) {
@@ -100,19 +100,20 @@ export default class InfraSS58 {
       paramsRef = [hexDID, params[1]]
     }
     return {
-      bytes: u8aToHex(keypair.publicKey.bytes),
+      bytes: u8aToHex(publicKey),
       paramsRef,
-      curveType: 'Bls12381'
+      curveType: CRYPTO_BBS_INFO.CURVE_TYPE
     };
   }
-  public getKeyDoc() {
+  public getKeyDoc(id, did, type, keypair) {
     return {
-      id: `${this.didModule.did}#keys-1`,
-      controller: this.didModule.did,
-      type: this.cryptoInfo.KEY_TYPE,
-      keypair: this.didModule.keyPairs[0],
+      id: id || `${did}#keys-1`,
+      controller: did,
+      type,
+      keypair
     };
   }
+
   public getChallenge() {
     return this.didModule.challenge
   }
@@ -162,7 +163,7 @@ export default class InfraSS58 {
     this.blobModule = new InfraSS58_BLOB(this);
     this.revocationModule = new InfraSS58_Revocation(this);
 
-    await initializeWasm();
+    if (!isWasmInitialized()) await initializeWasm()
     return this;
   }
 
@@ -404,13 +405,13 @@ export default class InfraSS58 {
           const pk = dk.publicKey;
           let publicKeyRaw, typ;
           if (pk.isSr25519) {
-            typ = CRYPTO_INFO.SR25519.KEY_TYPE;
+            typ = CRYPTO_INFO.SR25519.KEY_NAME;
             publicKeyRaw = pk.asSr25519.value;
           } else if (pk.isEd25519) {
-            typ = CRYPTO_INFO.ED25519.KEY_TYPE;
+            typ = CRYPTO_INFO.ED25519.KEY_NAME;
             publicKeyRaw = pk.asEd25519.value;
           } else if (pk.isSecp256k1) {
-            typ = CRYPTO_INFO.Secp256k1.KEY_TYPE;
+            typ = CRYPTO_INFO.Secp256k1.KEY_NAME;
             publicKeyRaw = pk.asSecp256k1.value;
           } else {
             throw new Error(`Cannot parse public key ${pk}`);
@@ -444,7 +445,7 @@ export default class InfraSS58 {
           const pr = (pk.paramsRef.isSome) ? pk.paramsRef.unwrap() : null
           return {
             bytes: u8aToHex(pk.bytes),
-            curveType: pk.curveType.isBls12381 ? 'Bls12381' : null,
+            curveType: pk.curveType.isBls12381 ? CRYPTO_BBS_INFO.CURVE_TYPE : null,
             paramsRef: pr ? [u8aToHex(pr[0]), pr[1].toNumber()] : null,
           };
         }
@@ -454,11 +455,11 @@ export default class InfraSS58 {
           if (r.isSome) {
             // Don't care about signature params for now
             const pkObj = createPublicKeyObjFromChainResponse(r.unwrap());
-            if (pkObj.curveType !== 'Bls12381') {
+            if (pkObj.curveType !== CRYPTO_BBS_INFO.CURVE_TYPE) {
               throw new Error(`Curve type should have been Bls12381 but was ${pkObj.curveType}`);
             }
             const keyIndex = queryKeys[currentIter][1];
-            keys.push([keyIndex, 'Bls12381G2VerificationKeyDock2022', hexToU8a(pkObj.bytes)]);
+            keys.push([keyIndex, CRYPTO_BBS_INFO.BBSDockVerKeyName, hexToU8a(pkObj.bytes)]);
             assertion.push(keyIndex);
           }
           currentIter++;
@@ -565,7 +566,9 @@ class InfraSS58_DID {
     return this.that.getDocument(this.did, getBbsPlusSigKeys)
   }
 
-
+  public getKeyDoc() {
+    return this.that.getKeyDoc(`${this.did}#keys-1`, this.did, this.that.cryptoInfo.KEY_NAME, this.keyPairs[0])
+  }
   async registerDIDOnChain(did: string, didKey, controllerDID?: string) {
     const hexId = InfraSS58.didToHex(did);
     const didKeys = [didKey].map((d) => d.toJSON ? d.toJSON() : d);
@@ -780,13 +783,6 @@ class InfraSS58_BBS {
   constructor(private that: InfraSS58) {
     this.did = that.didModule.did
   }
-
-  async createNewSigSet(paramCounter = 1): Promise<BBSPlus_SigSet> {
-    const sigParam = await this.createSigParamsByDID(paramCounter)
-    const keyPair = InfraSS58.BBSPlus_createKeyPair(sigParam)
-    const publicKey = InfraSS58.BBSPlus_createSigPublicKey(keyPair)
-    return { sigParam, keyPair, publicKey, paramCounter }
-  }
   async createSigParamsByDID(paramCounter: number)
     : Promise<SignatureParamsG1> {
     const queriedParams = await this.getParams(paramCounter);
@@ -799,7 +795,7 @@ class InfraSS58_BBS {
       const params = resp.unwrap()
       return {
         bytes: u8aToHex(params.bytes),
-        curveType: 'Bls12381',
+        curveType: CRYPTO_BBS_INFO.CURVE_TYPE,
         label: params.label.isSome ? u8aToHex(params.label.unwrap()) : null
       }
     }
@@ -817,7 +813,7 @@ class InfraSS58_BBS {
       }
       const pkObj: BBSPlus_PublicKey = {
         bytes: u8aToHex(pk.bytes),
-        curveType: 'Bls12381',
+        curveType: CRYPTO_BBS_INFO.CURVE_TYPE,
         paramsRef,
         params: null,
       };
@@ -867,7 +863,7 @@ class InfraSS58_BBS {
     const nonce = await this.that.getNextNonce(hexDID);
     const params = {
       bytes: u8aToHex(sigParam.toBytes()),
-      curveType: 'Bls12381',
+      curveType: CRYPTO_BBS_INFO.CURVE_TYPE,
       label
     }
     const AddBBSPlusParams = { params, nonce };

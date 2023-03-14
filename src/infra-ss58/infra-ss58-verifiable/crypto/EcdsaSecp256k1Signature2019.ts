@@ -1,9 +1,7 @@
 import { sha256 } from 'js-sha256';
-import { EcdsaSecp256k1SigName, EcdsaSecp256k1VerKeyName } from './constants';
-import EcdsaSecp256k1VerificationKey2019 from './EcdsaSecp256k1VerificationKey2019';
 import CustomLinkedDataSignature from './custom-linkeddatasignature';
-
-const SUITE_CONTEXT_URL = 'https://www.w3.org/2018/credentials/v1';
+import { CRYPTO_INFO } from '../../ss58.interface';
+import { DEFAULT_CONTEXT_V1_URL } from '../verifiable.constants';
 
 export default class EcdsaSecp256k1Signature2019 extends CustomLinkedDataSignature {
   requiredKeyType: string;
@@ -16,14 +14,14 @@ export default class EcdsaSecp256k1Signature2019 extends CustomLinkedDataSignatu
     keypair, verificationMethod, verifier, signer,
   }: any = {}) {
     super({
-      type: EcdsaSecp256k1SigName,
-      LDKeyClass: EcdsaSecp256k1VerificationKey2019,
-      contextUrl: SUITE_CONTEXT_URL,
+      type: CRYPTO_INFO.Secp256k1.SIG_NAME,
+      LDKeyClass: CRYPTO_INFO.Secp256k1.LDKeyClass,
+      contextUrl: DEFAULT_CONTEXT_V1_URL,
       alg: 'ES256K',
-      signer: signer || EcdsaSecp256k1Signature2019.signerFactory(keypair, verificationMethod),
+      signer: signer || CRYPTO_INFO.Secp256k1.SIG_CLS.signerFactory(keypair, verificationMethod),
       verifier,
     });
-    this.requiredKeyType = EcdsaSecp256k1VerKeyName;
+    this.requiredKeyType = CRYPTO_INFO.Secp256k1.KEY_NAME;
   }
 
   /**

@@ -26,6 +26,7 @@ Feature provided by `infra-did-js/infra-ss58` library
 - Create, register Schema
 - Create/issue/verify/revoke/unrevoke Verifiable Credential
 - Create/sign/verify VerifiablePresentation
+- issue/verify BBSPlusPresentation
 
 ## Infra SS58 DID API Configuration
 
@@ -93,7 +94,6 @@ console.log({ DIDSet })
         seed: '0x8b727f8418fdf7a01e76fc8a8e96d7e6c6b172fe9ae0e445e259ab38f911bf90'
       }
     }
-}
 ```
 
 ## Infra SS58 DID Format Validation
@@ -200,10 +200,7 @@ console.log({ didDocuments })
 ### BBS+ SigSet Creation
 
 ```ts
-const newSigSet = InfraSS58.BBSPlus_createNewSigSet(MESSAGE_COUNTER_NUMBER)
-const newSigSetByDID = await infraSS58.bbsModule.createNewSigSet(
-  PARAM_COUNTER_NUMBER
-)
+const newSigSet = await InfraSS58.BBSPlus_createNewSigSet(did)
 console.log({ newSigSet })
 ```
 
@@ -414,7 +411,7 @@ vc.addContext('https://www.w3.org/2018/credentials/v1')
 vc.addContext('https://schema.org')
 vc.addType('VerifiableCredential')
 vc.addType('VaccinationCredential')
-vc.setSchema(schemaId, 'JsonSchemaValidator2018')
+vc.setSchema(schemaId)
 vc.addSubject({
   id: HOLDER_DID,
   alumniOf: 'Example University',
@@ -451,7 +448,7 @@ console.log(vc.toJSON())
 ### Issue(Sign) Verifiable Credential
 
 ```ts
-const signedVC = await vc.sign(issuerInfraApi.getKeyDoc())
+const signedVC = await vc.sign(issuerInfraApi.didModule.getKeyDoc())
 console.log(signedVC.toJSON())
 ```
 
@@ -775,4 +772,79 @@ console.log(verifyResult)
   ],
   "verified": true
 }
+```
+
+## BBSPlusPresentation
+
+### Prepare(add bbsPubkey, schema, credential)
+
+```ts
+//add bbs+ pubKey and add keyPair ID
+issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did)
+await issuerApi.bbsModule.addPublicKey(issuerBBSSigSet.publicKey)
+await issuerApi.didModule.getDocument().then((doc) => {
+  issuerBBSSigSet.keyPair.id = doc.verificationMethod[1].id
+})
+
+// create credential
+vc = new VerifiableCredential(vcId)
+vc.addContext('https://www.w3.org/2018/credentials/examples/v1')
+vc.addContext('https://www.w3.org/2018/credentials/v1')
+vc.addContext('https://schema.org')
+vc.addType('VerifiableCredential')
+vc.addType('VaccinationCredential')
+
+// Different ways than Verifiable Credential
+vc.setSchema(schema.toBBSSchema()) // Use toBBSSchema for schema,
+// Use setSubject because BBSPlusPresentation does not allow arrays.
+vc.setSubject({
+  id: holder.did,
+  alumniOf: 'Example University',
+  email: 'test@test.com'
+})
+vc.setIssuer(issuer.did)
+
+bbsPlusPresentation = new BBSPlusPresentation()
+```
+
+### Sign/Issue BBSPlus Credential
+
+```ts
+// Sign / Issue BBSPlusPresentation
+const { id, type } = issuerBBSSigSet.keyPair
+const issuerKeyDoc = issuerApi.getKeyDoc(
+  id,
+  issuer.did,
+  type,
+  issuerBBSSigSet.keyPair //use bbs's keypair
+)
+const credential = await bbsPlusPresentation.issueCredential(
+  issuerKeyDoc,
+  vc.toJSON()
+)
+```
+
+### Create bbsPlusPresentation
+
+```ts
+// add presentation and reveal attribute
+const idx = await bbsPlusPresentation.addCredentialToPresent(credential, {
+  resolver: issuerApi.Resolver
+})
+await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, [
+  'alumniOf'
+])
+
+const presentation = await bbsPlusPresentation.createPresentation()
+```
+
+### Verify BBSPlusPresentation
+
+```ts
+const verifyResult = await bbsPlusPresentation.verifyPresentation(
+  presentation,
+  {
+    resolver: issuerApi.Resolver
+  }
+)
 ```

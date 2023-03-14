@@ -18,9 +18,6 @@ function decodeBase64Url(string) {
   return new Uint8Array(buffer.buffer, buffer.offset, buffer.length);
 }
 
-function decodeBase64UrlToString(string) {
-  return base64url.decode(string);
-}
 
 export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSignature {
   type: any;
@@ -43,16 +40,6 @@ export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSi
     this.alg = config.alg;
   }
 
-  /**
-   * Verifies the proof signature against the given data.
-   *
-   * @param {object} options - The options to use.
-   * @param {Uint8Array} options.verifyData - Canonicalized hashed data.
-   * @param {object} options.verificationMethod - Key object.
-   * @param {object} options.proof - The proof to be verified.
-   *
-   * @returns {Promise<boolean>} Resolves with the verification result.
-   */
   async verifySignature({ verifyData, verificationMethod, proof }) {
     let signatureBytes;
     let data = verifyData;
@@ -65,7 +52,7 @@ export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSi
 
       let header;
       try {
-        header = JSON.parse(decodeBase64UrlToString(encodedHeader));
+        header = JSON.parse(base64url.decode(encodedHeader));
       } catch (e) {
         throw new Error(`Could not parse JWS header; ${e}`);
       }
@@ -94,19 +81,6 @@ export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSi
     return verifier.verify({ data, signature: signatureBytes });
   }
 
-  /**
-   * Adds a signature (proofValue) field to the proof object. Called by
-   * LinkedDataSignature.createProof().
-   *
-   * @param {object} options - The options to use.
-   * @param {Uint8Array} options.verifyData - Data to be signed (extracted
-   *   from document, according to the suite's spec).
-   * @param {object} options.proof - Proof object (containing the proofPurpose,
-   *   verificationMethod, etc).
-   *
-   * @returns {Promise<object>} Resolves with the proof containing the signature
-   *   value.
-   */
   async sign({ verifyData, proof }) {
     if (!(this.signer && typeof this.signer.sign === 'function')) {
       throw new Error('A signer API has not been specified.');
@@ -134,11 +108,6 @@ export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSi
     return MULTIBASE_BASE58BTC_HEADER + base58btc.encode(signatureBytes);
   }
 
-  /**
-   * Json-ld signs prefix signatures with a specific character. Removes that character
-   * @param proofValue
-   * @returns {*|string}
-   */
   static fromJsigProofValue(proofValue) {
     if (proofValue[0] !== MULTIBASE_BASE58BTC_HEADER) {
       throw new Error('Only base58btc multibase encoding is supported.');

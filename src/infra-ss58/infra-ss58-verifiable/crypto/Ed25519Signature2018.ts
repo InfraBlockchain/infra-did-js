@@ -1,35 +1,24 @@
-import { Ed25519SigName, Ed25519VerKeyName } from './constants';
-import Ed25519VerificationKey2018 from './Ed25519VerificationKey2018';
+import { CRYPTO_INFO } from '../../ss58.interface';
+import { DEFAULT_CONTEXT_V1_URL } from '../verifiable.constants';
 import CustomLinkedDataSignature from './custom-linkeddatasignature';
-
-const SUITE_CONTEXT_URL = 'https://www.w3.org/2018/credentials/v1';
 
 export default class Ed25519Signature2018 extends CustomLinkedDataSignature {
   requiredKeyType: string;
-  /**
-   * Creates a new Ed25519Signature2018 instance
-   * @constructor
-   * @param {object} config - Configuration options
-   */
+
   constructor({
     keypair, verificationMethod, verifier, signer,
   }: any = {}) {
     super({
-      type: Ed25519SigName,
-      LDKeyClass: Ed25519VerificationKey2018,
-      contextUrl: SUITE_CONTEXT_URL,
+      type: CRYPTO_INFO.ED25519.SIG_NAME,
+      LDKeyClass: CRYPTO_INFO.ED25519.LDKeyClass,
+      contextUrl: DEFAULT_CONTEXT_V1_URL,
       alg: 'EdDSA',
-      signer: signer || Ed25519Signature2018.signerFactory(keypair, verificationMethod),
+      signer: signer || CRYPTO_INFO.ED25519.SIG_CLS.signerFactory(keypair, verificationMethod),
       verifier,
     });
-    this.requiredKeyType = Ed25519VerKeyName;
+    this.requiredKeyType = CRYPTO_INFO.ED25519.KEY_NAME;
   }
 
-  /**
-   * Generate object with `sign` method
-   * @param keypair
-   * @returns {object}
-   */
   static signerFactory(keypair, verificationMethod) {
     return {
       id: verificationMethod,

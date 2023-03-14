@@ -6,19 +6,14 @@ import b58 from 'bs58';
 import { blake2AsHex, } from '@polkadot/util-crypto';
 import { BBSPlusPublicKeyG2 } from '@docknetwork/crypto-wasm-ts';
 import { Presentation } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials/presentation';
-import {
-    EcdsaSecp256k1Signature2019, Sr25519Signature2020, Ed25519Signature2018,
-    Bls12381BBSSignatureDock2022, Bls12381BBSSignatureProofDock2022, Bls12381BBSDockVerKeyName
-} from './crypto';
 import cachedUris from './contexts';
 import {
     REV_REG_TYPE, DEFAULT_CONTEXT_V1_URL,
     EXPANDED_STATUS_PROPERTY, EXPANDED_SUBJECT_PROPERTY, EXPANDED_SCHEMA_PROPERTY,
     CREDENTIAL_ID, CREDENTIAL_CONTEXT, CREDENTIAL_TYPE,
-    REV_REG_QUALIFIER,
-    BLOB_QUALIFIER,
-} from './const'
-import { CRYPTO_INFO } from '../ss58.interface';
+    REV_REG_QUALIFIER, BLOB_QUALIFIER,
+} from './verifiable.constants'
+import { CRYPTO_BBS_INFO, CRYPTO_INFO } from '../ss58.interface';
 
 const jsonld: any = jsonldjs;
 const { AuthenticationProofPurpose, AssertionProofPurpose } = jsigs.purposes;
@@ -61,42 +56,23 @@ export function defaultDocumentLoader(resolver: any = null) {
 
 export class VerifiableHelper {
     constructor() {}
-    private isHexWithByteSize(value) {
-        if (this.isString(value)) {
-            const match = value.match(/^0x([0-9a-f]+$)/i);
-            if (match && match.length > 1) {
-                return match[1].length === 64;
-            }
+    private isHexWithByteSize(value: string) {
+        const match = value.match(/^0x([0-9a-f]+$)/i);
+        if (match && match.length > 1) {
+            return match[1].length === 64;
         }
-        return false;
     }
 
     private hasRevocation(status) {
         const id = status[CREDENTIAL_ID];
-        const ss58DID = id.split('#')[0].split(':').pop();
-
-        if (status
-            && (
-                jsonld.getValues(status, CREDENTIAL_TYPE).includes(REV_REG_TYPE)
-                || jsonld.getValues(status, CREDENTIAL_TYPE).includes(`/${REV_REG_TYPE}`)
-            )
+        return (status
             && id.startsWith(REV_REG_QUALIFIER)
-            && this.isHexWithByteSize(ss58DID)) {
-            return true;
-        }
-
-        return false;
+            && this.isHexWithByteSize(id.split('#')[0].split(':').pop())
+            && jsonld.getValues(status, CREDENTIAL_TYPE)
+                .some(v => [REV_REG_TYPE, `/${REV_REG_TYPE}`].includes(v))
+        )
     }
 
-    private getId(obj) {
-        if (!obj) {
-            return undefined;
-        }
-        if (typeof obj === 'string') {
-            return obj;
-        }
-        return obj.id;
-    }
     private checkCredentialJSONLD(credential) {
         if (!jsonld.getValues(credential, 'type').includes('VerifiableCredential')) {
             throw new Error('"type" must include `VerifiableCredential`.');
@@ -108,7 +84,7 @@ export class VerifiableHelper {
             throw new Error('"issuer" property can only have one value.');
         }
         jsonld.getValues(credential, 'evidence').forEach((evidence) => {
-            const evidenceId = this.getId(evidence);
+            const evidenceId = evidence?.id ?? evidence;
             if (evidenceId && !evidenceId.includes(':')) {
                 throw new Error(`"evidence" id must be a URL: ${evidence}`);
             }
@@ -124,7 +100,7 @@ export class VerifiableHelper {
         if (!credential.credentialSubject) {
             throw new Error('"credentialSubject" property is required.');
         }
-        const issuer = this.getId(credential.issuer);
+        const issuer = credential.issuer?.id ?? credential.issuer;
         if (!issuer) {
             throw new Error(`"issuer" must be an object with ID property or a string. Got: ${credential.issuer}`);
         } else if (!issuer.includes(':')) {
@@ -164,10 +140,7 @@ export class VerifiableHelper {
 
         // Ensure first context is 'https://www.w3.org/2018/credentials/v1'
         if (context[0] !== DEFAULT_CONTEXT_V1_URL) {
-            throw new Error(
-                `"${DEFAULT_CONTEXT_V1_URL}" needs to be first in the `
-                + 'list of contexts.',
-            );
+            throw new Error(`"${DEFAULT_CONTEXT_V1_URL}" needs to be first in the list of contexts.`);
         }
 
         // Ensure VerifiablePresentation exists in types
@@ -204,11 +177,9 @@ export class VerifiableHelper {
                     const { document } = await documentLoader(schemaUri);
                     schemaObj = document;
                 }
-
                 if (!schemaObj) {
                     throw new Error(`Could not load schema URI: ${schemaUri}`);
                 }
-
                 await this.validateCredentialSchema(credential, schemaObj, context, documentLoader)
                     .catch(e => { throw new Error(`Schema validation failed: ${e}`) })
             }
@@ -229,10 +200,6 @@ export class VerifiableHelper {
     protected isObject(value) {
         return value && typeof value === 'object' && value.constructor === Object;
     }
-    protected isString(value) {
-        return typeof value === 'string' || value instanceof String;
-    }
-
 
     protected ensureObjectWithKey(value, key, name) {
         if (!this.isObject(value)) {
@@ -243,23 +210,16 @@ export class VerifiableHelper {
         }
     }
 
-    protected ensureString(value) {
-        if (!this.isString(value)) {
-            throw new Error(`${value} needs to be a string.`);
-        }
-    }
-
-    protected ensureURI(uri) {
-        this.ensureString(uri);
+    protected ensureURI(uri: string) {
         const pattern = new RegExp('^\\w+:\\/?\\/?[^\\s]+$');
         if (!pattern.test(uri)) {
             throw new Error(`${uri} needs to be a valid URI.`);
         }
     }
 
-    protected getUniqueElementsFromArray(a, filterCallback) {
+    protected getUniqueElementsFromArray(array, filterCallback) {
         const seen = new Set();
-        return a.filter((item) => {
+        return array.filter((item) => {
             const k = filterCallback(item);
             return seen.has(k) ? false : seen.add(k);
         });
@@ -269,19 +229,20 @@ export class VerifiableHelper {
         if (keyDoc.verificationMethod) {
             return keyDoc;
         }
+
         let Cls;
         switch (keyDoc.type) {
-            case CRYPTO_INFO.Secp256k1.KEY_TYPE:
-                Cls = EcdsaSecp256k1Signature2019;
+            case CRYPTO_INFO.Secp256k1.KEY_NAME:
+                Cls = CRYPTO_INFO.Secp256k1.SIG_CLS;
                 break;
-            case CRYPTO_INFO.ED25519.KEY_TYPE:
-                Cls = Ed25519Signature2018;
+            case CRYPTO_INFO.ED25519.KEY_NAME:
+                Cls = CRYPTO_INFO.ED25519.SIG_CLS;
                 break;
-            case CRYPTO_INFO.SR25519.KEY_TYPE:
-                Cls = Sr25519Signature2020;
+            case CRYPTO_INFO.SR25519.KEY_NAME:
+                Cls = CRYPTO_INFO.SR25519.SIG_CLS;
                 break;
-            case Bls12381BBSDockVerKeyName:
-                Cls = Bls12381BBSSignatureDock2022;
+            case CRYPTO_BBS_INFO.BBSDockVerKeyName:
+                Cls = CRYPTO_BBS_INFO.SIG_CLS;
                 break;
             default:
                 throw new Error(`Unknown key type ${keyDoc.type}.`);
@@ -367,7 +328,14 @@ export class VerifiableHelper {
         }
         const result = await jsigs.verify(credential, {
             purpose: purpose || new CredentialIssuancePurpose(this.expandJSONLD, { controller }),
-            suite: [new Ed25519Signature2018(), new EcdsaSecp256k1Signature2019(), new Sr25519Signature2020(), new Bls12381BBSSignatureDock2022(), new Bls12381BBSSignatureProofDock2022(), ...suite],
+            suite: [
+                new CRYPTO_INFO.Secp256k1.SIG_CLS(),
+                new CRYPTO_INFO.ED25519.SIG_CLS(),
+                new CRYPTO_INFO.SR25519.SIG_CLS(),
+                new CRYPTO_BBS_INFO.SIG_CLS(),
+                new CRYPTO_BBS_INFO.PROOF_CLS(),
+                // new Ed25519Signature2018(), new EcdsaSecp256k1Signature2019(), new Sr25519Signature2020(), new Bls12381BBSSignatureDock2022(), new Bls12381BBSSignatureProofDock2022(), 
+                ...suite],
             documentLoader: docLoader,
             compactProof,
         });
@@ -408,21 +376,18 @@ export class VerifiableHelper {
     }
     private async verifyBBSPlusPresentation(presentation, options: any = {}) {
         const documentLoader = options.documentLoader || defaultDocumentLoader(options.resolver);
-
         const keyDocuments = await Promise.all(presentation.spec.credentials.map((c, idx) => {
             const { proof } = c.revealedAttributes;
             if (!proof) {
                 throw new Error(`Presentation credential does not reveal its proof for index ${idx}`);
             }
-            return Bls12381BBSSignatureDock2022.getVerificationMethod({ proof, documentLoader });
+            return CRYPTO_BBS_INFO.SIG_CLS.getVerificationMethod({ proof, documentLoader });
         }));
-
         const recreatedPres = Presentation.fromJSON(presentation);
         const pks = keyDocuments.map((keyDocument) => {
             const pkRaw = b58.decode(keyDocument.publicKeyBase58);
             return new BBSPlusPublicKeyG2(pkRaw);
         });
-
         return recreatedPres.verify(pks);
     }
     private async verifyPresentationCredentials(presentation, options = {}) {
@@ -459,10 +424,12 @@ export class VerifiableHelper {
         if (!presentation) {
             throw new TypeError('"presentation" property is required');
         }
+
         if (typeof presentation.version === 'string' && typeof presentation.proof === 'string' &&
             typeof presentation.spec !== 'undefined' && typeof presentation.spec.credentials !== 'undefined') {
             return this.verifyBBSPlusPresentation(presentation, options);
         }
+
         this.checkPresentation(presentation);
         const {
             challenge,
@@ -477,7 +444,12 @@ export class VerifiableHelper {
             documentLoader: options.documentLoader || defaultDocumentLoader(resolver),
             ...options,
             resolver: null,
-            suite: [new Ed25519Signature2018(), new EcdsaSecp256k1Signature2019(), new Sr25519Signature2020(), ...suite],
+            suite: [
+                new CRYPTO_INFO.Secp256k1.SIG_CLS(),
+                new CRYPTO_INFO.ED25519.SIG_CLS(),
+                new CRYPTO_INFO.SR25519.SIG_CLS(),
+                // new Ed25519Signature2018(), new EcdsaSecp256k1Signature2019(), new Sr25519Signature2020(),
+                ...suite],
         };
 
         // TODO: verify proof then credentials

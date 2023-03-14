@@ -2,14 +2,11 @@ import { BBSPlusPublicKeyG2, } from '@docknetwork/crypto-wasm-ts';
 import { Presentation } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials/presentation';
 import b58 from 'bs58';
 
-import Bls12381BBSSignatureDock2022 from './Bls12381BBSSignatureDock2022';
-import { Bls12381BBSSigDockSigName, Bls12381BBSSigProofDockSigName } from './constants';
-
-import Bls12381G2KeyPairDock2022 from './Bls12381G2KeyPairDock2022';
 import CustomLinkedDataSignature from './custom-linkeddatasignature';
-import { hexToUint8Array } from 'infrablockchain-js/dist/infrablockchain-js-serialize';
+import { hexToU8a } from '@polkadot/util';
+import { CRYPTO_BBS_INFO } from '../../ss58.interface';
+import { DEFAULT_CONTEXT_V1_URL } from '../verifiable.constants';
 
-const SUITE_CONTEXT_URL = 'https://www.w3.org/2018/credentials/v1';
 
 /*
  * Converts a derived BBS+ proof credential to the native presentation format
@@ -36,7 +33,7 @@ export function convertToPresentation(document) {
           schema: JSON.stringify(credentialSchema),
           revealedAttributes: {
             proof: {
-              type: Bls12381BBSSigDockSigName,
+              type: CRYPTO_BBS_INFO.BBSSigDockSigName,
               verificationMethod: proof.verificationMethod,
             },
             '@context': JSON.stringify(context),
@@ -52,27 +49,22 @@ export function convertToPresentation(document) {
   };
 }
 
-/**
- * A BBS+ signature suite for use with derived BBS+ credentials aka BBS+ presentations
- */
+
 export default class Bls12381BBSSignatureProofDock2022 extends CustomLinkedDataSignature {
   private proof: { '@context': (string | { sec: string; proof: { '@id': string; '@type': string; '@container': string; }; })[]; type: string; };
   verificationMethod: any;
-  static proofType: string[];
-  /**
-   * Default constructor
-   * @param options {SignatureSuiteOptions} options for constructing the signature suite
-   */
+  proofType: string[];
+
   constructor(options = {}) {
     const {
       verificationMethod,
     }: any = options;
 
     super({
-      type: Bls12381BBSSigProofDockSigName,
-      LDKeyClass: Bls12381G2KeyPairDock2022,
-      contextUrl: SUITE_CONTEXT_URL,
-      alg: Bls12381BBSSigProofDockSigName,
+      type: CRYPTO_BBS_INFO.BBSSigProofDockSigName,
+      LDKeyClass: CRYPTO_BBS_INFO.LDKeyClass,
+      contextUrl: DEFAULT_CONTEXT_V1_URL,
+      alg: CRYPTO_BBS_INFO.BBSSigProofDockSigName,
     });
 
     this.proof = {
@@ -87,8 +79,13 @@ export default class Bls12381BBSSignatureProofDock2022 extends CustomLinkedDataS
         },
         'https://ld.dock.io/security/bbs/v1',
       ],
-      type: Bls12381BBSSigProofDockSigName,
+      type: CRYPTO_BBS_INFO.BBSSigProofDockSigName,
     };
+    this.proofType = [
+      CRYPTO_BBS_INFO.BBSSigProofDockSigName,
+      `sec:${CRYPTO_BBS_INFO.BBSSigProofDockSigName}`,
+      `https://w3id.org/security#${CRYPTO_BBS_INFO.BBSSigProofDockSigName}`,
+    ];
 
     this.verificationMethod = verificationMethod;
   }
@@ -108,7 +105,7 @@ export default class Bls12381BBSSignatureProofDock2022 extends CustomLinkedDataS
 
       const pks = [verificationMethod].map((keyDocument) => {
         const pkRaw = b58.decode(keyDocument.publicKeyBase58);
-        const pkRawHex = hexToUint8Array(keyDocument.publicKeyHex);
+        const pkRawHex = hexToU8a(keyDocument.publicKeyHex);
 
         return new BBSPlusPublicKeyG2(pkRaw || pkRawHex);
       });
@@ -130,7 +127,7 @@ export default class Bls12381BBSSignatureProofDock2022 extends CustomLinkedDataS
    * @param expansionMap {function}
    */
   async getVerificationMethod({ proof, documentLoader }: any) {
-    return Bls12381BBSSignatureDock2022.getVerificationMethod({ proof, documentLoader });
+    return CRYPTO_BBS_INFO.SIG_CLS.getVerificationMethod({ proof, documentLoader });
   }
 
   ensureSuiteContext() {
@@ -138,8 +135,3 @@ export default class Bls12381BBSSignatureProofDock2022 extends CustomLinkedDataS
   }
 }
 
-Bls12381BBSSignatureProofDock2022.proofType = [
-  Bls12381BBSSigProofDockSigName,
-  `sec:${Bls12381BBSSigProofDockSigName}`,
-  `https://w3id.org/security#${Bls12381BBSSigProofDockSigName}`,
-];

@@ -1,8 +1,9 @@
 
 import { VerifiableHelper } from './verifiable.interface';
 
-import { DEFAULT_CONTEXT_V1_URL, DEFAULT_VP_TYPE } from './const';
+import { DEFAULT_CONTEXT_V1_URL, DEFAULT_VP_TYPE } from './verifiable.constants';
 import VerifiableCredential from './verifiable-credential';
+import InfraSS58 from '..';
 
 export default class VerifiablePresentation extends VerifiableHelper {
   proof: any;
@@ -79,8 +80,7 @@ export default class VerifiablePresentation extends VerifiableHelper {
     return this;
   }
 
-  addType(type) {
-    this.ensureString(type);
+  addType(type: string) {
     this.type = [...new Set([...this.type, type])];
     return this;
   }
@@ -111,10 +111,10 @@ export default class VerifiablePresentation extends VerifiableHelper {
     };
   }
 
-  async sign(infraApi, domain, compactProof = true) {
+  async sign(infraApi: InfraSS58, domain, compactProof = true) {
     const signedVP = await this.signPresentation(
       this.toJSON(),
-      infraApi.getKeyDoc(),
+      infraApi.didModule.getKeyDoc(),
       infraApi.getChallenge(),
       domain,
       infraApi.Resolver,
@@ -124,7 +124,7 @@ export default class VerifiablePresentation extends VerifiableHelper {
     return this;
   }
 
-  async verify(infraApi, challenge, domain, compactProof = true, forceRevocationCheck = true, suite: any = []) {
+  async verify(infraApi: InfraSS58, challenge, domain, compactProof = true, forceRevocationCheck = true, suite: any = []) {
     if (!this.proof) {
       throw new Error('The current VerifiablePresentation has no proof.');
     }

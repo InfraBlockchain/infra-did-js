@@ -1,4 +1,4 @@
-import { DEFAULT_VC_TYPE, DEFAULT_CONTEXT_V1_URL, } from './const'
+import { DEFAULT_VC_TYPE, DEFAULT_CONTEXT_V1_URL, } from './verifiable.constants'
 import { VerifiableHelper } from './verifiable.interface';
 
 export default class VerifiableCredential extends VerifiableHelper {
@@ -39,7 +39,7 @@ export default class VerifiableCredential extends VerifiableHelper {
     return this;
   }
 
-  setSchema(id, type) {
+  setSchema(id, type = 'JsonSchemaValidator2018') {
     this.ensureURI(id);
     this.credentialSchema = {
       id, type,
@@ -72,8 +72,7 @@ export default class VerifiableCredential extends VerifiableHelper {
     return this;
   }
 
-  addType(type) {
-    this.ensureString(type);
+  addType(type: string) {
     this.type = [...new Set([...this.type, type])];
     return this;
   }

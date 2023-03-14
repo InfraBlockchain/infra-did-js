@@ -2,9 +2,8 @@ import b58 from 'bs58';
 import * as base64 from '@juanelas/base64';
 import { u8aToU8a } from '@polkadot/util';
 import { sr25519Verify } from '@polkadot/util-crypto/sr25519';
-import { Sr25519VerKeyName } from './constants';
 import { hexToUint8Array } from 'infrablockchain-js/dist/infrablockchain-js-serialize';
-
+import { CRYPTO_INFO } from '../../ss58.interface';
 export default class Sr25519VerificationKey2020 {
   publicKey: Uint8Array;
   constructor(publicKey) {
@@ -17,8 +16,8 @@ export default class Sr25519VerificationKey2020 {
    * @returns {Sr25519VerificationKey2020}
    */
   static from(verificationMethod) {
-    if (!verificationMethod.type || verificationMethod.type.indexOf(Sr25519VerKeyName) === -1) {
-      throw new Error(`verification method should have type ${Sr25519VerKeyName} - got: ${verificationMethod.type}`);
+    if (!verificationMethod.type || verificationMethod.type.indexOf(CRYPTO_INFO.SR25519.KEY_NAME) === -1) {
+      throw new Error(`verification method should have type ${CRYPTO_INFO.SR25519.KEY_NAME} - got: ${verificationMethod.type}`);
     }
     if (verificationMethod.publicKeyHex) {
       return new this(hexToUint8Array(verificationMethod.publicKeyHex));
@@ -31,7 +30,7 @@ export default class Sr25519VerificationKey2020 {
       return new this(base64.decode(verificationMethod.publicKeyBase64));
     }
 
-    throw new Error(`Unsupported signature encoding for ${Sr25519VerKeyName}`);
+    throw new Error(`Unsupported signature encoding for ${CRYPTO_INFO.SR25519.KEY_NAME}`);
   }
 
   /**

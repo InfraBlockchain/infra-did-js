@@ -3,11 +3,10 @@ import * as base64 from '@juanelas/base64';
 import { u8aToU8a } from '@polkadot/util';
 import { sha256 } from 'js-sha256';
 import elliptic from 'elliptic';
-import { EcdsaSecp256k1VerKeyName } from './constants';
 import { hexToUint8Array } from 'infrablockchain-js/dist/infrablockchain-js-serialize';
-
 const EC = elliptic.ec;
 const secp256k1Curve = new EC('secp256k1');
+import { CRYPTO_INFO } from '../../ss58.interface';
 
 export default class EcdsaSecp256k1VerificationKey2019 {
   publicKey: Uint8Array;
@@ -21,8 +20,8 @@ export default class EcdsaSecp256k1VerificationKey2019 {
    * @returns {EcdsaSecp256k1VerificationKey2019}
    */
   static from(verificationMethod) {
-    if (!verificationMethod.type || verificationMethod.type.indexOf(EcdsaSecp256k1VerKeyName) === -1) {
-      throw new Error(`verification method should have type ${EcdsaSecp256k1VerKeyName} - got: ${verificationMethod.type}`);
+    if (!verificationMethod.type || verificationMethod.type.indexOf(CRYPTO_INFO.Secp256k1.KEY_NAME) === -1) {
+      throw new Error(`verification method should have type ${CRYPTO_INFO.Secp256k1.KEY_NAME} - got: ${verificationMethod.type}`);
     }
 
     if (verificationMethod.publicKeyHex) {
@@ -37,7 +36,7 @@ export default class EcdsaSecp256k1VerificationKey2019 {
       return new this(base64.decode(verificationMethod.publicKeyBase64));
     }
 
-    throw new Error(`Unsupported signature encoding for ${EcdsaSecp256k1VerKeyName}`);
+    throw new Error(`Unsupported signature encoding for ${CRYPTO_INFO.Secp256k1.KEY_NAME}`);
   }
 
   /**

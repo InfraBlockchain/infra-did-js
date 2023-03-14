@@ -3,26 +3,47 @@ import { BTreeSet } from '@polkadot/types';
 import { Codec } from '@polkadot/types-codec/types';
 import { KeyringPair } from '@polkadot/keyring/types';
 import typesBundle from '@docknetwork/node-types';
-import { KeypairG2, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
+import { SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 import elliptic from 'elliptic';
+import { Bls12381BBSSignatureDock2022, Bls12381G2KeyPairDock2022, EcdsaSecp256k1Signature2019, EcdsaSecp256k1VerificationKey2019, Ed25519Signature2018, Ed25519VerificationKey2018, Sr25519Signature2020, Sr25519VerificationKey2020, Bls12381BBSSignatureProofDock2022 } from './infra-ss58-verifiable/crypto';
+
 export { KeyringPair, Codec, typesBundle, BTreeSet };
 
 export const CRYPTO_INFO = {
   SR25519: {
     CRYPTO_TYPE: 'sr25519',
-    KEY_TYPE: 'Sr25519VerificationKey2020',
+    KEY_NAME: 'Sr25519VerificationKey2020',
     SIG_TYPE: 'Sr25519',
+    SIG_NAME: 'Sr25519Signature2020',
+    SIG_CLS: Sr25519Signature2020,
+    LDKeyClass: Sr25519VerificationKey2020,
   },
   ED25519: {
     CRYPTO_TYPE: 'ed25519',
-    KEY_TYPE: 'Ed25519VerificationKey2018',
-    SIG_TYPE: 'Ed25519'
+    KEY_NAME: 'Ed25519VerificationKey2018',
+    SIG_TYPE: 'Ed25519',
+    SIG_NAME: 'Ed25519Signature2018',
+    SIG_CLS: Ed25519Signature2018,
+    LDKeyClass: Ed25519VerificationKey2018,
   },
   Secp256k1: {
     CRYPTO_TYPE: 'ecdsa',
-    KEY_TYPE: 'EcdsaSecp256k1VerificationKey2019',
-    SIG_TYPE: 'Secp256k1'
+    KEY_NAME: 'EcdsaSecp256k1VerificationKey2019',
+    SIG_TYPE: 'Secp256k1',
+    SIG_NAME: 'EcdsaSecp256k1Signature2019',
+    SIG_CLS: EcdsaSecp256k1Signature2019,
+    LDKeyClass: EcdsaSecp256k1VerificationKey2019,
   }
+} as const
+
+export const CRYPTO_BBS_INFO = {
+  CURVE_TYPE: 'Bls12381',
+  BBSSigDockSigName: 'Bls12381BBS+SignatureDock2022',
+  BBSSigProofDockSigName: 'Bls12381BBS+SignatureProofDock2022',
+  BBSDockVerKeyName: 'Bls12381G2VerificationKeyDock2022',
+  SIG_CLS: Bls12381BBSSignatureDock2022,
+  PROOF_CLS: Bls12381BBSSignatureProofDock2022,
+  LDKeyClass: Bls12381G2KeyPairDock2022,
 } as const
 
 export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
@@ -55,22 +76,21 @@ export interface DIDSet {
   seed: HexString;
 }
 export interface BBSPlus_SigSet {
-  sigParam: SignatureParamsG1,
-  keyPair: KeypairG2,
+  params: SignatureParamsG1,
   publicKey: BBSPlus_PublicKey,
-  paramCounter?: number,
   messageCounter?: number,
-  label?: string
+  keyPair: Bls12381G2KeyPairDock2022,
+  label?: any
 }
 export interface BBSPlus_PublicKey {
   bytes: HexString,
-  curveType: 'Bls12381',
+  curveType: typeof CRYPTO_BBS_INFO.CURVE_TYPE,
   paramsRef?: [HexString, number],
   params?: any,
 }
 export interface BBSPlus_Params {
   bytes: HexString;
-  curveType: 'Bls12381',
+  curveType: typeof CRYPTO_BBS_INFO.CURVE_TYPE,
   label: string | null;
 }
 export class PublicKey_SS58 {

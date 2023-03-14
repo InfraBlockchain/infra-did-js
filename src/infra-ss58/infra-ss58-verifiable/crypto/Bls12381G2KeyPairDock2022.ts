@@ -1,4 +1,4 @@
-import { u8aToU8a } from '@polkadot/util';
+import { hexToU8a, u8aToU8a } from '@polkadot/util';
 import b58 from 'bs58';
 
 import {
@@ -9,12 +9,8 @@ import {
   getSigParamsOfRequiredSize,
 } from '@docknetwork/crypto-wasm-ts';
 
-import {
-  SIGNATURE_PARAMS_LABEL_BYTES,
-} from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
-
-import { Bls12381BBSDockVerKeyName } from './constants';
-import { hexToUint8Array } from 'infrablockchain-js/dist/infrablockchain-js-serialize';
+import { SIGNATURE_PARAMS_LABEL_BYTES, } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
+import { CRYPTO_BBS_INFO } from '../../ss58.interface';
 
 const signerFactory = (key) => {
   if (!key.id) {
@@ -81,7 +77,7 @@ export default class Bls12381G2KeyPairDock2022 {
   privateKeyBuffer: any;
   publicKeyBuffer: any;
   constructor(options) {
-    this.type = Bls12381BBSDockVerKeyName;
+    this.type = CRYPTO_BBS_INFO.BBSDockVerKeyName;
     this.id = options.id;
     this.controller = options.controller;
 
@@ -93,9 +89,9 @@ export default class Bls12381G2KeyPairDock2022 {
     } else {
       this.privateKeyBuffer = (options.privateKeyBase58
         ? b58.decode(options.privateKeyBase58)
-        : hexToUint8Array(options.privateKeyHex)) ?? undefined
+        : hexToU8a(options.privateKeyHex)) ?? undefined
 
-      this.publicKeyBuffer = options.publicKeyBase58 ? b58.decode(options.publicKeyBase58) : hexToUint8Array(options.publicKeyHex);
+      this.publicKeyBuffer = options.publicKeyBase58 ? b58.decode(options.publicKeyBase58) : hexToU8a(options.publicKeyHex);
 
     }
   }
