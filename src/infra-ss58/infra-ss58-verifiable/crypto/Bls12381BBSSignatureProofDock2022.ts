@@ -1,11 +1,11 @@
 import { BBSPlusPublicKeyG2, } from '@docknetwork/crypto-wasm-ts';
 import { Presentation } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials/presentation';
 import b58 from 'bs58';
-
 import CustomLinkedDataSignature from './custom-linkeddatasignature';
 import { hexToU8a } from '@polkadot/util';
-import { CRYPTO_BBS_INFO } from '../../ss58.interface';
 import { DEFAULT_CONTEXT_V1_URL } from '../verifiable.constants';
+import Bls12381G2KeyPairDock2022 from './Bls12381G2KeyPairDock2022';
+import Bls12381BBSSignatureDock2022 from './Bls12381BBSSignatureDock2022';
 
 
 /*
@@ -33,7 +33,7 @@ export function convertToPresentation(document) {
           schema: JSON.stringify(credentialSchema),
           revealedAttributes: {
             proof: {
-              type: CRYPTO_BBS_INFO.BBSSigDockSigName,
+              type: 'Bls12381BBS+SignatureDock2022',
               verificationMethod: proof.verificationMethod,
             },
             '@context': JSON.stringify(context),
@@ -61,10 +61,10 @@ export default class Bls12381BBSSignatureProofDock2022 extends CustomLinkedDataS
     }: any = options;
 
     super({
-      type: CRYPTO_BBS_INFO.BBSSigProofDockSigName,
-      LDKeyClass: CRYPTO_BBS_INFO.LDKeyClass,
+      type: 'Bls12381BBS+SignatureProofDock2022',
+      LDKeyClass: Bls12381G2KeyPairDock2022,
       contextUrl: DEFAULT_CONTEXT_V1_URL,
-      alg: CRYPTO_BBS_INFO.BBSSigProofDockSigName,
+      alg: 'Bls12381BBS+SignatureProofDock2022',
     });
 
     this.proof = {
@@ -79,12 +79,12 @@ export default class Bls12381BBSSignatureProofDock2022 extends CustomLinkedDataS
         },
         'https://ld.dock.io/security/bbs/v1',
       ],
-      type: CRYPTO_BBS_INFO.BBSSigProofDockSigName,
+      type: 'Bls12381BBS+SignatureProofDock2022',
     };
     this.proofType = [
-      CRYPTO_BBS_INFO.BBSSigProofDockSigName,
-      `sec:${CRYPTO_BBS_INFO.BBSSigProofDockSigName}`,
-      `https://w3id.org/security#${CRYPTO_BBS_INFO.BBSSigProofDockSigName}`,
+      'Bls12381BBS+SignatureProofDock2022',
+      `sec:${'Bls12381BBS+SignatureProofDock2022'}`,
+      `https://w3id.org/security#${'Bls12381BBS+SignatureProofDock2022'}`,
     ];
 
     this.verificationMethod = verificationMethod;
@@ -127,7 +127,7 @@ export default class Bls12381BBSSignatureProofDock2022 extends CustomLinkedDataS
    * @param expansionMap {function}
    */
   async getVerificationMethod({ proof, documentLoader }: any) {
-    return CRYPTO_BBS_INFO.SIG_CLS.getVerificationMethod({ proof, documentLoader });
+    return Bls12381BBSSignatureDock2022.getVerificationMethod({ proof, documentLoader });
   }
 
   ensureSuiteContext() {

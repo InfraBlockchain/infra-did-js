@@ -2,7 +2,6 @@ import b58 from 'bs58';
 import * as base64 from '@juanelas/base64';
 import { u8aToHex, u8aToU8a, hexToU8a } from '@polkadot/util';
 import { signatureVerify } from '@polkadot/util-crypto/signature';
-import { CRYPTO_INFO } from '../../ss58.interface';
 export default class Ed25519VerificationKey2018 {
   publicKey: Uint8Array;
   constructor(publicKey) {
@@ -10,8 +9,8 @@ export default class Ed25519VerificationKey2018 {
   }
 
   static from(verificationMethod) {
-    if (!verificationMethod.type || verificationMethod.type.indexOf(CRYPTO_INFO.ED25519.KEY_NAME) === -1) {
-      throw new Error(`verification method should have type ${CRYPTO_INFO.ED25519.KEY_NAME} - got: ${verificationMethod.type}`);
+    if (!verificationMethod.type || verificationMethod.type.indexOf('Ed25519VerificationKey2018') === -1) {
+      throw new Error(`verification method should have type ${'Ed25519VerificationKey2018'} - got: ${verificationMethod.type}`);
     }
 
     if (verificationMethod.publicKeyHex) {
@@ -24,7 +23,7 @@ export default class Ed25519VerificationKey2018 {
     if (verificationMethod.publicKeyBase64) {
       return new this(base64.decode(verificationMethod.publicKeyBase64));
     }
-    throw new Error(`Unsupported signature encoding for ${CRYPTO_INFO.ED25519.KEY_NAME}`);
+    throw new Error(`Unsupported signature encoding for ${'Ed25519VerificationKey2018'}`);
   }
 
   /**

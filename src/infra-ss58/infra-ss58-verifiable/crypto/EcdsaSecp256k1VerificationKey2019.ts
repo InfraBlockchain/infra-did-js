@@ -1,12 +1,10 @@
 import b58 from 'bs58';
 import * as base64 from '@juanelas/base64';
-import { u8aToU8a } from '@polkadot/util';
+import { u8aToU8a, hexToU8a } from '@polkadot/util';
 import { sha256 } from 'js-sha256';
 import elliptic from 'elliptic';
-import { hexToUint8Array } from 'infrablockchain-js/dist/infrablockchain-js-serialize';
 const EC = elliptic.ec;
 const secp256k1Curve = new EC('secp256k1');
-import { CRYPTO_INFO } from '../../ss58.interface';
 
 export default class EcdsaSecp256k1VerificationKey2019 {
   publicKey: Uint8Array;
@@ -20,12 +18,12 @@ export default class EcdsaSecp256k1VerificationKey2019 {
    * @returns {EcdsaSecp256k1VerificationKey2019}
    */
   static from(verificationMethod) {
-    if (!verificationMethod.type || verificationMethod.type.indexOf(CRYPTO_INFO.Secp256k1.KEY_NAME) === -1) {
-      throw new Error(`verification method should have type ${CRYPTO_INFO.Secp256k1.KEY_NAME} - got: ${verificationMethod.type}`);
+    if (!verificationMethod.type || verificationMethod.type.indexOf('EcdsaSecp256k1VerificationKey2019') === -1) {
+      throw new Error(`verification method should have type ${'EcdsaSecp256k1VerificationKey2019'} - got: ${verificationMethod.type}`);
     }
 
     if (verificationMethod.publicKeyHex) {
-      return new this(hexToUint8Array(verificationMethod.publicKeyHex));
+      return new this(hexToU8a(verificationMethod.publicKeyHex));
     }
 
     if (verificationMethod.publicKeyBase58) {
@@ -36,7 +34,7 @@ export default class EcdsaSecp256k1VerificationKey2019 {
       return new this(base64.decode(verificationMethod.publicKeyBase64));
     }
 
-    throw new Error(`Unsupported signature encoding for ${CRYPTO_INFO.Secp256k1.KEY_NAME}`);
+    throw new Error(`Unsupported signature encoding for ${'EcdsaSecp256k1VerificationKey2019'}`);
   }
 
   /**

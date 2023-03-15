@@ -1,6 +1,5 @@
 import { InfraSS58, CRYPTO_INFO, DIDSet, HexString, IConfig_SS58, Schema, KeyPair, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, BBSPlus_SigSet } from '../index';
 
-
 const vcId = 'did:infra:space:5FDseiC76zPek2YYkuyenu4ZgxZ7PUWXt9d19HNB5CaQXt5U';
 const vpId = 'http://example.edu/credentials/2803';
 const address = 'ws://localhost:9944';
@@ -16,14 +15,14 @@ const someJSONSchema = {
     required: ['email', 'alumniOf'],
     additionalProperties: false,
 };
-jest.setTimeout(10000)
+jest.setTimeout(30000)
 describe('InfraSS58: DID', () => {
     let infraSS58: InfraSS58;
     let srTest: DIDSet;
     let contDIDSet: DIDSet;
     let edTest: DIDSet;
     let config: IConfig_SS58;
-    let aliceAccount: KeyPair;
+    let txfeePayerAccountKeyPair: KeyPair;
     describe('DID creation', () => {
         it('should create SR25519 DID ', async () => {
             expect.assertions(1);
@@ -63,10 +62,11 @@ describe('InfraSS58: DID', () => {
 
         })
     })
+
     describe('DID onChain test', () => {
         beforeAll(async () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
-            aliceAccount = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
+            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
             srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
             contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1);
             config = {
@@ -75,7 +75,7 @@ describe('InfraSS58: DID', () => {
 
                 did: srTest.did,
                 // seed or keyPair required
-                seed: srTest.seed,
+                // seed: srTest.seed,
                 keyPair: srTest.keyPair,
                 // publicKey: srTest.publicKey,
                 cryptoInfo: srTest.cryptoInfo,
@@ -85,14 +85,14 @@ describe('InfraSS58: DID', () => {
                 controllerKeyPair: srTest.keyPair,
                 // controllerSeed: srTest.seed,
 
-                txfeePayerAccountKeyPair: aliceAccount,
+                txfeePayerAccountKeyPair,
                 // txfeePayerAccountSeed: "someSeed",
             }
             infraSS58 = await InfraSS58.createAsync(config);
 
         })
         afterAll(async () => {
-            if (infraSS58.isConnected) await infraSS58.disconnect();
+            await infraSS58.disconnect();
         })
 
         it('create SS58 DID instance', () => {
@@ -208,7 +208,7 @@ describe('InfraSS58: DID', () => {
         beforeAll(async () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-            aliceAccount = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
+            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
             srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
             config = {
                 address,
@@ -216,7 +216,7 @@ describe('InfraSS58: DID', () => {
                 did: srTest.did,
                 seed: srTest.seed,
                 keyPair: srTest.keyPair,
-                txfeePayerAccountKeyPair: aliceAccount,
+                txfeePayerAccountKeyPair,
                 cryptoInfo: srTest.cryptoInfo,
                 verRels: srTest.verRels,
             }
@@ -285,10 +285,99 @@ describe('InfraSS58: DID', () => {
         })
     })
 
+    describe('Trusted Entity test', () => {
+        let authorizerId: HexString;
+
+        beforeAll(async () => {
+            jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
+            srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
+            edTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
+            config = {
+                address,
+                networkId: 'space',
+                did: srTest.did,
+                seed: srTest.seed,
+                keyPair: srTest.keyPair,
+                txfeePayerAccountKeyPair,
+                cryptoInfo: srTest.cryptoInfo,
+                verRels: srTest.verRels,
+            }
+            infraSS58 = await InfraSS58.createAsync(config);
+            await infraSS58.didModule.registerOnChain();
+
+            authorizerId = infraSS58.trustModule.createNewAuthorizerId();
+            console.log({ authorizerId });
+            // add owner did if want
+            // infraSS58.trustModule.addPolicyOwner("some did");
+        })
+        afterAll(async () => {
+            if (infraSS58.isConnected) {
+                await infraSS58.didModule.unregisterOnChain();
+                await infraSS58.disconnect();
+            }
+        })
+        it('Add new authorizer ', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.registerAuthorizer(authorizerId).then(res => {
+                expect(res).toBeDefined();
+            });
+        })
+        it('Get authorizer', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.getAuthorizer(authorizerId).then(res => {
+                expect(res).toBeDefined();
+            });
+        })
+        it('Add issuer', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.addIssuer(authorizerId, edTest.did).then(res => {
+                expect(res).toBeDefined();
+            });
+        })
+        it('Get issuer', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.getIssuers(authorizerId, edTest.did).then(issuer => {
+                expect(issuer).toBeDefined();
+            });
+        })
+        it('Remove issuer', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.removeIssuer(authorizerId, edTest.did).then(res => {
+                expect(res).toBeDefined();
+            });
+        })
+
+        it('Add verifier', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.addVerifier(authorizerId, edTest.did).then(res => {
+                expect(res).toBeDefined();
+            });
+        })
+        it('Get verifier', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.getVerifiers(authorizerId, edTest.did).then(verifier => {
+                expect(verifier).toBeDefined();
+            });
+        })
+        it('Remove verifier', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.removeVerifier(authorizerId, edTest.did).then(res => {
+                expect(res).toBeDefined();
+            });
+        })
+        it('Remove authorizer ', async () => {
+            expect.assertions(1);
+            await infraSS58.trustModule.unregisterAuthorizer(authorizerId).then(res => {
+                expect(res).toBeDefined();
+            });
+        })
+    })
 })
 
 describe('InfraSS58: Verifiable', () => {
-    let aliceAccount: KeyPair;
+    let txfeePayerAccountKeyPair: KeyPair;
     let schema: Schema;
     let vc: VerifiableCredential;
     let signedVC: VerifiableCredential;
@@ -305,14 +394,14 @@ describe('InfraSS58: Verifiable', () => {
     beforeAll(async () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        aliceAccount = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519);
+        txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519);
         issuer = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
         issuerApi = await InfraSS58.createAsync({
             address,
             networkId: 'space',
             did: issuer.did,
             seed: issuer.seed,
-            txfeePayerAccountKeyPair: aliceAccount,
+            txfeePayerAccountKeyPair,
             cryptoInfo: issuer.cryptoInfo,
             verRels: issuer.verRels,
         });
@@ -323,19 +412,21 @@ describe('InfraSS58: Verifiable', () => {
             networkId: 'space',
             did: holder.did,
             keyPair: holder.keyPair,
-            txfeePayerAccountKeyPair: aliceAccount,
+            txfeePayerAccountKeyPair,
             cryptoInfo: holder.cryptoInfo,
             verRels: holder.verRels,
         })
         await holderApi.didModule.registerOnChain();
-        revokeId = issuerApi.revocationModule.getRevokeId(vcId);
+        revokeId = issuerApi.registryModule.getRevokeId(vcId);
 
 
     })
 
     afterAll(async () => {
+        await holderApi.didModule.unregisterOnChain();
         await holderApi.disconnect();
-        await issuerApi.revocationModule.removeRegistryWithOneOfPolicy(registryId);
+        await issuerApi.registryModule.unregisterRegistry(registryId);
+        await issuerApi.didModule.unregisterOnChain();
         await issuerApi.disconnect();
     })
 
@@ -388,15 +479,20 @@ describe('InfraSS58: Verifiable', () => {
 
         it('add new Registry ', async () => {
             expect.assertions(1);
-            registryId = issuerApi.revocationModule.createNewRegistryId();
+            registryId = issuerApi.registryModule.createNewRegistryId();
             console.log({ registryId });
             // add owner did if want
             // issuerApi.revocationModule.addPolicyOwner("some did");
-            await issuerApi.revocationModule.newRegistry(registryId).then(res => {
+            await issuerApi.registryModule.registerRegistry(registryId).then(res => {
                 expect(res).toBeDefined();
             });
         })
-
+        it('get Registry ', async () => {
+            expect.assertions(1);
+            await issuerApi.registryModule.getRegistry(registryId).then(res => {
+                expect(res).toBeDefined();
+            });
+        })
         it('Create VC', async () => {
             expect.assertions(1);
             vc = new VerifiableCredential(vcId);
@@ -438,16 +534,16 @@ describe('InfraSS58: Verifiable', () => {
 
         it('Revoke VC', async () => {
             expect.assertions(4);
-            await issuerApi.revocationModule.getRevocationRegistry(registryId).then(res => {
+            await issuerApi.registryModule.getRegistry(registryId).then(res => {
                 expect(res).toBeDefined();
             })
-            let isRevoked = await issuerApi.revocationModule.getIsRevoked(registryId, revokeId);
+            let isRevoked = await issuerApi.registryModule.getIsRevoked(registryId, revokeId);
             expect(isRevoked).toBeFalsy();
-            await issuerApi.revocationModule.revokeCredentialWithOneOfPolicy(registryId, revokeId);
-            isRevoked = await issuerApi.revocationModule.getIsRevoked(registryId, revokeId);
+            await issuerApi.registryModule.revokeCredential(registryId, revokeId);
+            isRevoked = await issuerApi.registryModule.getIsRevoked(registryId, revokeId);
             expect(isRevoked).toBeTruthy();
-            await issuerApi.revocationModule.unrevokeCredentialWithOneOfPolicy(registryId, revokeId);
-            isRevoked = await issuerApi.revocationModule.getIsRevoked(registryId, revokeId);
+            await issuerApi.registryModule.unrevokeCredential(registryId, revokeId);
+            isRevoked = await issuerApi.registryModule.getIsRevoked(registryId, revokeId);
             expect(isRevoked).toBeFalsy();
         })
     })
@@ -487,7 +583,7 @@ describe('InfraSS58: Verifiable', () => {
 
     })
 
-    describe('BBS VP test', () => {
+    describe('BBS+ VP test', () => {
         beforeAll(async () => {
             //add bbs+ pubKey
             issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did);
@@ -514,25 +610,27 @@ describe('InfraSS58: Verifiable', () => {
             expect.assertions(3)
 
             bbsPlusPresentation = new BBSPlusPresentation();
-            // issue BBSPlusPresentation
+
+            // Issue BBSPlus Credential
             const { id, type } = issuerBBSSigSet.keyPair;
             const issuerKeyDoc = issuerApi.getKeyDoc(id, issuer.did, type, issuerBBSSigSet.keyPair);
-            const credential = await bbsPlusPresentation.issueCredential(issuerKeyDoc, vc.toJSON());
+            const issuedVC = await bbsPlusPresentation.issueCredential(issuerKeyDoc, vc.toJSON());
 
-            // add presentation and reveal attribute
-            const idx = await bbsPlusPresentation.addCredentialToPresent(credential, { resolver: issuerApi.Resolver });
+            // Add Presentation and reveal Attribute
+            const idx = await bbsPlusPresentation.addCredentialToPresent(issuedVC, { resolver: issuerApi.Resolver });
             await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, ['alumniOf']);
 
+            // Issue BBSPlus Presentation
             const presentation = await bbsPlusPresentation.createPresentation();
             console.log('presentation', JSON.stringify(presentation, null, 2));
 
             expect(presentation.spec.credentials[0].revealedAttributes).toHaveProperty('credentialSubject');
             expect(presentation.spec.credentials[0].revealedAttributes.credentialSubject).toHaveProperty('alumniOf', 'Example University');
 
-            //verify presentation
+            // Verify Presentation
             const vr = await bbsPlusPresentation.verifyPresentation(presentation, { resolver: issuerApi.Resolver });
             console.log("verify result :::", vr);
-            expect(vr.verified).toEqual(true);
+            expect(vr.verified).toBeTruthy();
         })
     })
 

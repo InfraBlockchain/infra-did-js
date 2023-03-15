@@ -3,8 +3,8 @@ import { initializeWasm, SignatureG1, BBSPlusSecretKey, getSigParamsOfRequiredSi
 import jsonld from 'jsonld';
 import { SECURITY_CONTEXT_URL } from 'jsonld-signatures';
 import CustomLinkedDataSignature from './custom-linkeddatasignature';
-import { CRYPTO_BBS_INFO } from '../../ss58.interface';
 import { DEFAULT_CONTEXT_V1_URL } from '../verifiable.constants';
+import Bls12381G2KeyPairDock2022 from './Bls12381G2KeyPairDock2022';
 
 export const DEFAULT_PARSING_OPTS = {
   useDefaults: false,
@@ -29,11 +29,11 @@ export default class Bls12381BBSSignatureDock2022 extends CustomLinkedDataSignat
     } = options;
 
     super({
-      type: CRYPTO_BBS_INFO.BBSSigDockSigName,//Bls12381BBSSigDockSigName,
-      LDKeyClass: CRYPTO_BBS_INFO.LDKeyClass,
+      type: 'Bls12381BBS+SignatureDock2022',
+      LDKeyClass: Bls12381G2KeyPairDock2022,
       contextUrl: DEFAULT_CONTEXT_V1_URL,
-      alg: CRYPTO_BBS_INFO.BBSSigDockSigName,
-      signer: signer || CRYPTO_BBS_INFO.SIG_CLS.signerFactory(keypair, verificationMethod),
+      alg: 'Bls12381BBS+SignatureDock2022',
+      signer: signer || Bls12381BBSSignatureDock2022.signerFactory(keypair, verificationMethod),
       verifier,
     });
 
@@ -49,12 +49,12 @@ export default class Bls12381BBSSignatureDock2022 extends CustomLinkedDataSignat
         },
         'https://ld.dock.io/security/bbs/v1',
       ],
-      type: CRYPTO_BBS_INFO.BBSSigDockSigName,
+      type: 'Bls12381BBS+SignatureDock2022',
     };
     this.proofType = [
-      CRYPTO_BBS_INFO.BBSSigDockSigName,
-      `sec:${CRYPTO_BBS_INFO.BBSSigDockSigName}`,
-      `https://w3id.org/security#${CRYPTO_BBS_INFO.BBSSigDockSigName}`,
+      'Bls12381BBS+SignatureDock2022',
+      `sec:${'Bls12381BBS+SignatureDock2022'}`,
+      `https://w3id.org/security#${'Bls12381BBS+SignatureDock2022'}`,
     ];
     this.verificationMethod = verificationMethod;
     if (keypair) {

@@ -16,17 +16,20 @@ Feature provided by `infra-did-js/infra-ss58` library
 
 - Infra SS58 DID Creation(SR25519, ED25519, Secp257K1)
 - Register/Unregister DID on chain
-- Update/Remove DID attributes (service endpoint, controller DID, public key)
-- Set attestations claim
-- Get Documents of DID(resolve)
-- BBS+ KeyPair & public key Creation
-- Add/Remove/Get BBS+ public key
-- Add/Remove/Get BBS+ Params
-- Register/Unregister registry on chain
-- Create, register Schema
-- Create/issue/verify/revoke/unrevoke Verifiable Credential
-- Create/sign/verify VerifiablePresentation
-- issue/verify BBSPlusPresentation
+- Update/Remove DID attributes (Service Endpoint, Controller DID, Public Key)
+- Set Attestations Claim
+- Get Documents of DID(Resolve)
+- BBS+ Key Pair & Public Key Creation
+- Add/Get/Remove BBS+ Params
+- Add/Get/Remove BBS+ Public Key
+- Register/Get/Unregister Authorizer on chain
+- Add/Get/Remove Trusted Entity(Issuer, Verifier)
+- Register/Get/Unregister Registry on chain
+- Create/Register/Get Schema
+- Create/Issue/Verify Verifiable Credential
+- Revoke/Unrevoke/Check Verifiable Credential
+- Create/Sign/Verify VerifiablePresentation
+- Issue/Verify BBSPlusCredential and BBSPlusPresentation
 
 ## Infra SS58 DID API Configuration
 
@@ -104,46 +107,41 @@ InfraSS58.validateInfraSS58(SOME_DID_STRING).result
 
 ## OnCain DID
 
-### Infra SS58 DID Register / unRegister OnChain
+### Register / Unregister Infra SS58 DID OnChain
 
 ```ts
+// Register DID
 await infraApi.didModule.registerOnchain()
+// Unregister DID
 await infraApi.didModule.unregisterOnChain()
 ```
 
-### Add keys
+### Add/Remove keys
 
 ```ts
+// Add keys
 await infraApi.didModule.addKeys(SOME_DID_KEY)
-```
-
-### Remove keys
-
-```ts
+// Remove Keys
 await infraApi.didModule.removeKeys(DID_KEY_IDS)
 ```
 
-### Add Controller DID
+### Add/Remove Controller DID
 
 ```ts
+// Add Controller DID
 await infraApi.didModule.addControllers(CONTROLLER_DIDS)
-```
-
-### Remove Controller DID
-
-```ts
+// Remove Controller DID
 await infraApi.didModule.removeControllers(CONTROLLER_DIDS)
 ```
 
-### Add Service Endpoint
+### Add/Get/Remove Service Endpoint
 
 ```ts
+// Add Service Endpoint
 await infraApi.didModule.addServiceEndpoint(SOME_SERVICE_ENDPOINT_URLS)
-```
-
-### Remove Service Endpoint
-
-```ts
+// Get Service Endpoint
+await infraApi.didModule.getServiceEndpoint()
+// Remove Service Endpoint
 await infraApi.didModule.removeServiceEndpoint()
 ```
 
@@ -156,7 +154,7 @@ await infraApi.didModule.setClaim(PRIORITY_NUMBER, CLAIM_IRI)
 ### Resolve DID Document(Temporary)
 
 ```ts
-const didDocuments = await infraDID.didModule.getDocument()
+const didDocuments = await infraDID.didModule.getDocument() // get self.document
 // or
 const didDocuments2 = await infraDID.getDocument(SOME_DID)
 
@@ -222,40 +220,34 @@ console.log({ newSigSet })
     };
 ```
 
-### Add BBS+ Params
+### Add/Get/Remove BBS+ Params
 
 ```ts
+// Create Sig Param
 const sigParam = InfraSS58.BBSPlus_createSigParamsWithLabel(
   MESSAGE_COUNTER_NUMBER,
   'some-param-label'
 )
+// Add BBS+ Params
 await infraSS58.bbsModule.addParams(sigParam)
-```
-
-### Get BBS+ Params
-
-```ts
+// Get BBS+ Params
 const param = await infraDID.bbsModule.getParams(PARAM_COUNTER_NUMBER)
+// Get BBS+ Last Params
 const lastParam = await infraDID.bbsModule.getLastParamsWritten()
-```
-
-### Remove BBS+ Params
-
-```ts
+// Remove BBS+ {arams
 await infraDID.bbsModule.removeParams(PARAM_COUNTER_NUMBER)
 ```
 
-### Add BBS+ Public Key
+### Add/Get/Remove BBS+ Public Key
 
 ```ts
+// Add BBS+ Public Key
 await infraDID.bbsModule.addPublicKey(SigSet.publicKey)
-```
-
-### Get BBS+ Public Key
-
-```ts
+// Get BBS+ Public Key
 const publicKey = await infraDID.bbsModule.getPublicKey(KEY_ID_NUMBER)
 console.log({ publicKey })
+// Remove BBS+ Public Key
+await infraDID.bbsModule.removePublicKey(KEY_ID_NUMBER)
 ```
 
 ```json
@@ -268,15 +260,48 @@ console.log({ publicKey })
 }
 ```
 
-### Remove BBS+ Public Key
+## Trusted Entity
+
+### Add/Get/Remove Authorizer
 
 ```ts
-await infraDID.bbsModule.removePublicKey(KEY_ID_NUMBER)
+// Create Authorizer id
+const authorizerId = infraSS58.trustModule.createNewAuthorizerId()
+// Add Owner DID if want
+infraSS58.trustModule.addPolicyOwner('some did')
+// Add new Authorizer
+await infraSS58.trustModule.registerAuthorizer(authorizerId)
+// Get Authorizer
+await infraSS58.trustModule.getAuthorizer(authorizerId)
+// Remove Authorizer
+await infraSS58.trustModule.unregisterAuthorizer(authorizerId)
+```
+
+### Add/Get/Remove Issuer
+
+```ts
+// Add Issuer
+await infraSS58.trustModule.addIssuer(authorizerId, issuerDID)
+// Get Issuer
+await infraSS58.trustModule.getIssuers(authorizerId, issuerDID)
+// Remove Issuer
+await infraSS58.trustModule.removeIssuer(authorizerId, issuerDID)
+```
+
+### Add/Get/Remove Verifier
+
+```ts
+// Add Issuer
+await infraSS58.trustModule.addVerifier(authorizerId, verifierDID)
+// Get Issuer
+await infraSS58.trustModule.getVerifiers(authorizerId, verifierDID)
+// Remove Issuer
+await infraSS58.trustModule.removeVerifier(authorizerId, verifierDID)
 ```
 
 ## Schema
 
-### Create schema
+### Create Schema
 
 ```ts
 let schema = new Schema(newtworkId)
@@ -321,23 +346,21 @@ console.log(schema.toJSON())
 }
 ```
 
-### Register schema on chain
+### Register/Get Schema on chain
 
 ```ts
+// Register Schema
 await infraApi.blobModule.writeSchemaOnChainByBlob(schema.toBlob())
 // or
 await schema.writeToChain(infraApi)
-```
 
-### Read schema on chain
-
-```ts
+// Get Schema
 await infraApi.blobModule.getSchema(schemaId)
 // or
 await Schema.get(schemaId, infraApi)
 ```
 
-### Validate schema
+### Validate Schema
 
 ```ts
 const validationResult = await Schema.validateSchema(schema.schema)
@@ -391,15 +414,17 @@ console.log(validationResult)
 
 ## Verifiable Credential
 
-### Add new registry
+### Register/Get/Unregister Registry
 
 ```ts
-// create registry id
-const registryId = issuerApi.revocationModule.createNewRegistryId()
-// add new registry
-await issuerApi.revocationModule.newRegistry(registryId)
-// get registry
-await issuerApi.revocationModule.getRevocationRegistry(registryId)
+// Create new Registry id
+const registryId = issuerApi.registryModule.createNewRegistryId()
+// Register Registry
+await issuerApi.registryModule.registerRegistry(registryId)
+// Get Registry
+await issuerApi.registryModule.getRegistry(registryId)
+// Unregister Registry
+await issuerApi.registryModule.unregisterRegistry(registryId)
 ```
 
 ### Create Verifiable Credential
@@ -484,7 +509,7 @@ console.log(signedVC.toJSON())
 }
 ```
 
-### Validate Credential schema
+### Validate Credential Schema
 
 ```ts
 const result: boolean = await signedVC.validateSchema(schema)
@@ -544,22 +569,16 @@ console.log(verifyResult)
 }
 ```
 
-### Revoke/Unrevoke/ Verifiable Credential
+### Revoke/Unrevoke/Check Verifiable Credential
 
 ```ts
-const revokeId = issuerApi.revocationModule.getRevokeId(VC_ID)
-// revoke vc
-await issuerApi.revocationModule.revokeCredentialWithOneOfPolicy(
-  registryId,
-  revokeId
-)
-// unrevoke vc
-await issuerApi.revocationModule.unrevokeCredentialWithOneOfPolicy(
-  registryId,
-  revokeId
-)
-//chack revoke state
-const isRevoked: boolean = await issuerApi.revocationModule.getIsRevoked(
+const revokeId = issuerApi.registryModule.getRevokeId(VC_ID)
+// Revoke VC
+await issuerApi.registryModule.revokeCredential(registryId, revokeId)
+// Unrevoke VC
+await issuerApi.registryModule.unrevokeCredential(registryId, revokeId)
+// Check Revoke state
+const isRevoked: boolean = await issuerApi.registryModule.getIsRevoked(
   registryId,
   revokeId
 )
@@ -776,17 +795,17 @@ console.log(verifyResult)
 
 ## BBSPlusPresentation
 
-### Prepare(add bbsPubkey, schema, credential)
+### Prepare(add BBS+ Public Key, Schema, Verifiable Credential)
 
 ```ts
-//add bbs+ pubKey and add keyPair ID
+// Add BBS+ Public Key and Key Pair ID
 issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did)
 await issuerApi.bbsModule.addPublicKey(issuerBBSSigSet.publicKey)
 await issuerApi.didModule.getDocument().then((doc) => {
   issuerBBSSigSet.keyPair.id = doc.verificationMethod[1].id
 })
 
-// create credential
+// Create Verifiable Credential
 vc = new VerifiableCredential(vcId)
 vc.addContext('https://www.w3.org/2018/credentials/examples/v1')
 vc.addContext('https://www.w3.org/2018/credentials/v1')
@@ -794,7 +813,7 @@ vc.addContext('https://schema.org')
 vc.addType('VerifiableCredential')
 vc.addType('VaccinationCredential')
 
-// Different ways than Verifiable Credential
+// Different parts than normal Verifiable Credential
 vc.setSchema(schema.toBBSSchema()) // Use toBBSSchema for schema,
 // Use setSubject because BBSPlusPresentation does not allow arrays.
 vc.setSubject({
@@ -807,30 +826,33 @@ vc.setIssuer(issuer.did)
 bbsPlusPresentation = new BBSPlusPresentation()
 ```
 
-### Sign/Issue BBSPlus Credential
+### Sign/Issue BBSPlusCredential
 
 ```ts
-// Sign / Issue BBSPlusPresentation
+// Sign / Issue BBSPlusCredential
 const { id, type } = issuerBBSSigSet.keyPair
 const issuerKeyDoc = issuerApi.getKeyDoc(
   id,
   issuer.did,
   type,
-  issuerBBSSigSet.keyPair //use bbs's keypair
+  issuerBBSSigSet.keyPair //use BBS+ keypair
 )
-const credential = await bbsPlusPresentation.issueCredential(
+const bbsPlusCredential = await bbsPlusPresentation.issueCredential(
   issuerKeyDoc,
   vc.toJSON()
 )
 ```
 
-### Create bbsPlusPresentation
+### Create BBSPlusPresentation
 
 ```ts
-// add presentation and reveal attribute
-const idx = await bbsPlusPresentation.addCredentialToPresent(credential, {
-  resolver: issuerApi.Resolver
-})
+// Add Presentation and reveal Attribute
+const idx = await bbsPlusPresentation.addCredentialToPresent(
+  bbsPlusCredential,
+  {
+    resolver: issuerApi.Resolver
+  }
+)
 await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, [
   'alumniOf'
 ])
