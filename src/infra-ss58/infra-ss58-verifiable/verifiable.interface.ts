@@ -334,7 +334,6 @@ export class VerifiableHelper {
                 new CRYPTO_INFO.SR25519.SIG_CLS(),
                 new CRYPTO_BBS_INFO.SIG_CLS(),
                 new CRYPTO_BBS_INFO.PROOF_CLS(),
-                // new Ed25519Signature2018(), new EcdsaSecp256k1Signature2019(), new Sr25519Signature2020(), new Bls12381BBSSignatureDock2022(), new Bls12381BBSSignatureProofDock2022(), 
                 ...suite],
             documentLoader: docLoader,
             compactProof,

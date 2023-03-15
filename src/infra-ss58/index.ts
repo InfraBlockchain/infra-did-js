@@ -47,9 +47,9 @@ export default class InfraSS58 {
   didModule: InfraSS58_DID;
   bbsModule: InfraSS58_BBS;
   blobModule: InfraSS58_BLOB;
-  revocationModule: InfraSS58_Revocation;
-  infraDidResolver
-  didResolver
+  registryModule: InfraSS58_Revocation;
+  trustModule: InfraSS58_TrustedEntity;
+
   private constructor() {}
 
   static async createAsync(conf: IConfig_SS58): Promise<InfraSS58> {
@@ -161,8 +161,8 @@ export default class InfraSS58 {
     this.didModule = await InfraSS58_DID.createAsync(conf, this);
     this.bbsModule = new InfraSS58_BBS(this);
     this.blobModule = new InfraSS58_BLOB(this);
-    this.revocationModule = new InfraSS58_Revocation(this);
-
+    this.registryModule = new InfraSS58_Revocation(this);
+    this.trustModule = new InfraSS58_TrustedEntity(this);
     if (!isWasmInitialized()) await initializeWasm()
     return this;
   }
@@ -925,57 +925,52 @@ class InfraSS58_Revocation {
   public getRevokeId(vcId) {
     return blake2AsHex(vcId, 256);
   }
-  public async newRegistry(id: HexString, addOnly = false) {
+  public async registerRegistry(id: HexString, addOnly = false) {
     if (!this.policyOwner || this.policyOwner.length < 1) { this.addPolicyOwner() }
     const addReg = { id, newRegistry: { policy: this.getPolicyOwner(), addOnly } };
     const tx = this.that.api.tx.revoke.newRegistry(addReg);
     return this.that.signAndSend(tx, false, {});
   }
 
-  public async revokeCredentialWithOneOfPolicy(registryId, revId) {
-    const { did, keyPairs } = this.that.didModule
-    const { cryptoInfo } = this.that
-    const hexDid = InfraSS58.didToHex(did);
-    const nonce = await this.that.getNextNonce(hexDid);
-
-    const Revoke = { data: { registryId, revokeIds: [revId], }, nonce, };
-    const serializedRevoke = this.that.api.createType('StateChange', { Revoke }).toU8a();
-    const didSig = this.that.getDIDSig(did, cryptoInfo.SIG_TYPE, keyPairs[0], serializedRevoke, 1);
-    const revoke = { registryId, revokeIds: [revId] };
-    const tx = this.that.api.tx.revoke.revoke(revoke, [[didSig, nonce]]);
-    return this.that.signAndSend(tx, false, {});
-  }
-
-  public async unrevokeCredentialWithOneOfPolicy(registryId, revId) {
-    const { did, keyPairs } = this.that.didModule
-    const { cryptoInfo } = this.that
-    const hexDid = InfraSS58.didToHex(did);
-    const nonce = await this.that.getNextNonce(hexDid);
-
-    const UnRevoke = { data: { registryId, revokeIds: [revId], }, nonce, };
-    const serializedRevoke = this.that.api.createType('StateChange', { UnRevoke }).toU8a();
-    const didSig = this.that.getDIDSig(did, cryptoInfo.SIG_TYPE, keyPairs[0], serializedRevoke, 1);
-    const unrevoke = { registryId, revokeIds: [revId] };
-    const tx = this.that.api.tx.revoke.unrevoke(unrevoke, [[didSig, nonce]]);
-    return this.that.signAndSend(tx, false, {});
-  }
-
-  public async removeRegistryWithOneOfPolicy(registryId) {
-    const { did, keyPairs } = this.that.didModule
-    const { cryptoInfo } = this.that
+  public async revokeCredential(registryId, revId) {
     const hexDid = InfraSS58.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
-    const RemoveRegistry = {
-      data: { registryId },
-      nonce,
-    };
-    const serializedRemove = this.that.api.createType('StateChange', { RemoveRegistry }).toU8a();
-    const didSig = this.that.getDIDSig(did, cryptoInfo.SIG_TYPE, keyPairs[0], serializedRemove, 1);
-    const removal = { registryId };
-    const tx = this.that.api.tx.revoke.removeRegistry(removal, [[didSig, nonce]]);
+
+    const revoke = { registryId, revokeIds: [revId] };
+    const Revoke = { data: revoke, nonce, };
+    const stateMessage = this.that.api.createType('StateChange', { Revoke }).toU8a();
+    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const proof = [[controllerDIDSig, nonce]];
+    const tx = this.that.api.tx.revoke.revoke(revoke, proof);
     return this.that.signAndSend(tx, false, {});
   }
-  public async getRevocationRegistry(registryID) {
+
+  public async unrevokeCredential(registryId, revId) {
+    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const nonce = await this.that.getNextNonce(hexDid);
+
+    const unrevoke = { registryId, revokeIds: [revId] };
+    const UnRevoke = { data: unrevoke, nonce, };
+    const stateMessage = this.that.api.createType('StateChange', { UnRevoke }).toU8a();
+    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const proof = [[controllerDIDSig, nonce]];
+    const tx = this.that.api.tx.revoke.unrevoke(unrevoke, proof);
+    return this.that.signAndSend(tx, false, {});
+  }
+
+  public async unregisterRegistry(registryId) {
+    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const nonce = await this.that.getNextNonce(hexDid);
+
+    const removal = { registryId };
+    const RemoveRegistry = { data: removal, nonce, };
+    const stateMessage = this.that.api.createType('StateChange', { RemoveRegistry }).toU8a();
+    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const proof = [[controllerDIDSig, nonce]];
+    const tx = this.that.api.tx.revoke.removeRegistry(removal, proof);
+    return this.that.signAndSend(tx, false, {});
+  }
+  public async getRegistry(registryID) {
     const resp = await this.that.api.query.revoke.registries(registryID);
     if (resp.isNone) {
       throw new Error(`Could not find revocation registry: ${registryID}`);
@@ -994,5 +989,131 @@ class InfraSS58_Revocation {
   public addPolicyOwner(ownerDID?: string) {
     ownerDID ??= this.that.didModule.did
     this.policyOwner.push(InfraSS58.didToHex(ownerDID))
+  }
+}
+
+class InfraSS58_TrustedEntity {
+  private owners: string[];
+
+
+  constructor(private that: InfraSS58) {
+    this.owners = [];
+  }
+  public createNewAuthorizerId(): HexString {
+    return randomAsHex(32);
+  }
+  public getRevokeId(vcId) {
+    return blake2AsHex(vcId, 256);
+  }
+  public async registerAuthorizer(id: HexString, addOnly = false) {
+    if (!this.owners || this.owners.length < 1) { this.addPolicyOwner() }
+    const addAuthorizer = { id, newAuthorizer: { policy: this.getPolicyowner(), addOnly } };
+    const tx = this.that.api.tx.trustedEntity.newAuthorizer(addAuthorizer);
+    return this.that.signAndSend(tx, false, {});
+  }
+
+
+  public async unregisterAuthorizer(authorizerId) {
+    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const nonce = await this.that.getNextNonce(hexDid);
+    const removal = { authorizerId };
+    const RemoveAuthorizer = { data: removal, nonce, };
+    const stateMessage = this.that.api.createType('StateChange', { RemoveAuthorizer }).toU8a();
+    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const proof = [[controllerDIDSig, nonce]]
+    const tx = this.that.api.tx.trustedEntity.removeAuthorizer(removal, proof);
+    return this.that.signAndSend(tx, false, {});
+  }
+
+  public async addIssuer(authorizerId, issuerDID = this.that.didModule.did) {
+    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const nonce = await this.that.getNextNonce(hexDid);
+    // @ts-ignore
+    const entityIds = new BTreeSet();
+    entityIds.add(InfraSS58.didToHex(issuerDID) as unknown as Codec)
+    const entity = { authorizerId, entityIds };
+    const AddIssuer = { data: entity, nonce, };
+    const stateMessage = this.that.api.createType('StateChange', { AddIssuer }).toU8a();
+    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const proof = [[controllerDIDSig, nonce]]
+    const tx = this.that.api.tx.trustedEntity.addIssuer(entity, proof);
+    return this.that.signAndSend(tx, false, {});
+  }
+
+  public async removeIssuer(authorizerId, issuerDID = this.that.didModule.did) {
+    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const nonce = await this.that.getNextNonce(hexDid);
+    // @ts-ignore
+    const entityIds = new BTreeSet();
+    entityIds.add(InfraSS58.didToHex(issuerDID) as unknown as Codec)
+    const entity = { authorizerId, entityIds };
+    const RemoveIssuer = { data: entity, nonce, };
+    const stateMessage = this.that.api.createType('StateChange', { RemoveIssuer }).toU8a();
+    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const proof = [[controllerDIDSig, nonce]]
+    const tx = this.that.api.tx.trustedEntity.removeIssuer(entity, proof);
+    return this.that.signAndSend(tx, false, {});
+  }
+
+  public async addVerifier(authorizerId, verifierDID = this.that.didModule.did) {
+    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const nonce = await this.that.getNextNonce(hexDid);
+    // @ts-ignore
+    const entityIds = new BTreeSet();
+    entityIds.add(InfraSS58.didToHex(verifierDID) as unknown as Codec)
+    const entity = { authorizerId, entityIds };
+    const AddVerifier = { data: entity, nonce, };
+    const stateMessage = this.that.api.createType('StateChange', { AddVerifier }).toU8a();
+    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const proof = [[controllerDIDSig, nonce]]
+    const tx = this.that.api.tx.trustedEntity.addVerifier(entity, proof);
+    return this.that.signAndSend(tx, false, {});
+  }
+
+  public async removeVerifier(authorizerId, verifierDID = this.that.didModule.did) {
+    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const nonce = await this.that.getNextNonce(hexDid);
+    // @ts-ignore
+    const entityIds = new BTreeSet();
+    entityIds.add(InfraSS58.didToHex(verifierDID) as unknown as Codec)
+    const entity = { authorizerId, entityIds };
+    const RemoveVerifier = { data: entity, nonce, };
+    const stateMessage = this.that.api.createType('StateChange', { RemoveVerifier }).toU8a();
+    const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
+    const proof = [[controllerDIDSig, nonce]]
+    const tx = this.that.api.tx.trustedEntity.removeVerifier(entity, proof);
+    return this.that.signAndSend(tx, false, {});
+  }
+
+  public async getAuthorizer(authorizerId) {
+    const resp = await this.that.api.query.trustedEntity.authorizers(authorizerId);
+    if (resp.isNone) {
+      throw new Error(`Could not find Authorizer: ${authorizerId}`);
+    }
+    return resp.unwrap();
+  }
+  public async getIssuers(authorizerId, issuerId) {
+    const resp = await this.that.api.query.trustedEntity.issuers(authorizerId, InfraSS58.didToHex(issuerId));
+    if (resp.isNone) {
+      throw new Error(`Could not find issuers: ${issuerId}`);
+    }
+    return resp.unwrap();
+  }
+  public async getVerifiers(authorizerId, verifierId) {
+    const resp = await this.that.api.query.trustedEntity.verifiers(authorizerId, InfraSS58.didToHex(verifierId));
+    if (resp.isNone) {
+      throw new Error(`Could not find issuers: ${verifierId}`);
+    }
+    return resp.unwrap();
+  }
+
+  public getPolicyowner() {
+    return {
+      OneOf: this.owners.sort(),
+    }
+  }
+  public addPolicyOwner(ownerDID?: string) {
+    ownerDID ??= this.that.didModule.did
+    this.owners.push(InfraSS58.didToHex(ownerDID))
   }
 }

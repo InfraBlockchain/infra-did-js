@@ -8,9 +8,8 @@ import {
   BBSPlusSecretKey,
   getSigParamsOfRequiredSize,
 } from '@docknetwork/crypto-wasm-ts';
-
 import { SIGNATURE_PARAMS_LABEL_BYTES, } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
-import { CRYPTO_BBS_INFO } from '../../ss58.interface';
+
 
 const signerFactory = (key) => {
   if (!key.id) {
@@ -77,7 +76,7 @@ export default class Bls12381G2KeyPairDock2022 {
   privateKeyBuffer: any;
   publicKeyBuffer: any;
   constructor(options) {
-    this.type = CRYPTO_BBS_INFO.BBSDockVerKeyName;
+    this.type = 'Bls12381G2VerificationKeyDock2022';
     this.id = options.id;
     this.controller = options.controller;
 

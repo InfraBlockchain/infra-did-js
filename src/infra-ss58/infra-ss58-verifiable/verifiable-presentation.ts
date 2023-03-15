@@ -135,7 +135,7 @@ export default class VerifiablePresentation extends VerifiableHelper {
       resolver: infraApi.Resolver,
       compactProof,
       forceRevocationCheck,
-      revocationModule: infraApi.revocationModule,
+      revocationModule: infraApi.registryModule,
       blobModule: infraApi.blobModule,
       suite,
     });

@@ -1,5 +1,5 @@
-import { CRYPTO_INFO } from '../../ss58.interface';
 import { DEFAULT_CONTEXT_V1_URL } from '../verifiable.constants';
+import Sr25519VerificationKey2020 from './Sr25519VerificationKey2020';
 import CustomLinkedDataSignature from './custom-linkeddatasignature';
 
 export default class Sr25519Signature2020 extends CustomLinkedDataSignature {
@@ -13,14 +13,14 @@ export default class Sr25519Signature2020 extends CustomLinkedDataSignature {
     keypair, verificationMethod, verifier, signer,
   }: any = {}) {
     super({
-      type: CRYPTO_INFO.SR25519.SIG_NAME,//Sr25519SigName,
-      LDKeyClass: CRYPTO_INFO.SR25519.LDKeyClass,
+      type: 'Sr25519Signature2020',
+      LDKeyClass: Sr25519VerificationKey2020,
       contextUrl: DEFAULT_CONTEXT_V1_URL,
       alg: 'EdDSA',
-      signer: signer || CRYPTO_INFO.SR25519.SIG_CLS.signerFactory(keypair, verificationMethod),
+      signer: signer || Sr25519Signature2020.signerFactory(keypair, verificationMethod),
       verifier,
     });
-    this.requiredKeyType = CRYPTO_INFO.SR25519.KEY_NAME;
+    this.requiredKeyType = 'Sr25519VerificationKey2020';
   }
 
   /**
