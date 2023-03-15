@@ -1,4 +1,25 @@
+---
+marp: true
+theme: gaia
+paginate: true
+---
+
+<!-- Documents written in marpit-markdown. -->
+
+<style>
+section::after {
+    font-size: 16px;
+    content: attr(data-marpit-pagination) ' / ' attr(data-marpit-pagination-total);
+}
+</style>
+
+<!-- _class: lead -->
+
 # Infra SS58 DID Javascript Library
+
+---
+
+## Reference
 
 - Infra DID Method Spec
 
@@ -12,7 +33,9 @@
 
   - https://github.com/InfraBlockchain/infra-did-substrate
 
-Feature provided by `infra-did-js/infra-ss58` library
+---
+
+## Feature(1/3)
 
 - Infra SS58 DID Creation(SR25519, ED25519, Secp257K1)
 - DID Module
@@ -20,6 +43,11 @@ Feature provided by `infra-did-js/infra-ss58` library
   - Update/Remove DID attributes (Service Endpoint, Controller DID, Public Key)
   - Set Attestations Claim
   - Get Documents of DID(Resolve)
+
+---
+
+## Feature(2/3)
+
 - BBS+ Module
   - BBS+ Key Pair & Public Key Creation
   - Add/Get/Remove BBS+ Params
@@ -29,6 +57,11 @@ Feature provided by `infra-did-js/infra-ss58` library
   - Add/Get/Remove Trusted Entity(Issuer, Verifier)
 - Registry Module
   - Register/Get/Unregister Registry on chain
+
+---
+
+## Feature(3/3)
+
 - Verifiable Classes
   - Create/Register/Get Schema
   - Create/Issue/Verify Verifiable Credential
@@ -36,21 +69,20 @@ Feature provided by `infra-did-js/infra-ss58` library
   - Create/Sign/Verify VerifiablePresentation
   - Issue/Verify BBSPlusCredential and BBSPlusPresentation
 
+---
+
 ## Infra SS58 DID API Configuration
 
 ```ts
 import  {InfraSS58, CRYPTO_INFO} from 'infra-did-js';
 
 const txfeePaterAccountKeyPair = await InfraSS58.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519);
-const confBlockchainNetwork = {
+const conf = {
   networkId: 'space',
   address: 'wss://polkadot.infrablockchain.com',
   // seed or keyPair required
   txfeePayerAccountKeyPair,
   // or txfeePayerAccountSeed: 'TX_FEE_PAYER_ACCOUNT_SEED'
-};
-const conf = {
-  ...confBlockchainNetwork,
   did: 'did:infra:space:5CRV5zBdAhBALnXiBSWZWjca3rSREBg87GJ6UY9i2A7y1rCs',
   // seed or keyPair required
   seed: 'DID_SEED',
@@ -59,8 +91,11 @@ const conf = {
   controllerSeed: 'DID_CONTROLLER_SEED',
   // or controllerKeyPair: controllerKeyPair
 };
+
 const infraApi = await InfraSS58.createAsync(conf);
 ```
+
+---
 
 ## Infra SS58 DID Creation
 
@@ -72,37 +107,44 @@ DIDSet = await InfraSS58.createNewSS58DIDSet(
 console.log({ DIDSet })
 ```
 
-```ts
+---
+
+```json
 {
-  DIDSet: {
-        did: 'did:infra:space:5FxjYbTe26dwcHKjBHxHUp14wqs1fU4iyTyKB5ff6uxcfCNy',
-        didKey: DidKey_SS58 {
-          publicKey: [PublicKey_SS58],
-          verRels: [VerificationRelationship]
-        },
-        keyPair: {
-          address: [Getter],
-          addressRaw: [Getter],
-          isLocked: [Getter],
-          meta: [Getter],
-          publicKey: [Getter],
-          type: [Getter],
-          // -- snip --
-        },
-        publicKey: PublicKey_SS58 {
-          value: '0xac63251df26461e78f5f82f7271db9e4c82a02d8f9e43c001096821f8a54ee58',
-          sigType: 'Sr25519'
-        },
-        verRels: VerificationRelationship { _value: 0 },
-        cryptoInfo: {
-          CRYPTO_TYPE: 'sr25519',
-          KEY_TYPE: 'Sr25519VerificationKey2020',
-          SIG_TYPE: 'Sr25519'
-        },
-        seed: '0x8b727f8418fdf7a01e76fc8a8e96d7e6c6b172fe9ae0e445e259ab38f911bf90'
-      }
-    }
+  "DIDSet":{
+    "did":"did:infra:space:5FxjYbTe26dwcHKjBHxHUp14wqs1fU4iyTyKB5ff6uxcfCNy",
+    "didKey":{
+      "publicKey":{
+        "value":"0xac63251df26461e78f5f82f7271db9e4c82a02d8f9e43c001096821f8a54ee58",
+        "sigType":"Sr25519"
+      },
+      "verRels":{ "_value":0 },
+    },
+    "keyPair":{
+      "address":Getter(),
+      "addressRaw":Getter(),
+      "isLocked":Getter(),
+      "meta":Getter(),
+      "publicKey":Getter(),
+      "type":Getter()
+      // -- snip --
+    },
+    "publicKey":{
+      "value":"0xac63251df26461e78f5f82f7271db9e4c82a02d8f9e43c001096821f8a54ee58",
+      "sigType":"Sr25519"
+    },
+    "verRels":{ "_value":0 },
+    "cryptoInfo":{
+      "CRYPTO_TYPE":"sr25519",
+      "KEY_TYPE":"Sr25519VerificationKey2020",
+      "SIG_TYPE":"Sr25519"
+    },
+    "seed":"0x8b727f8418fdf7a01e76fc8a8e96d7e6c6b172fe9ae0e445e259ab38f911bf90"
+  }
+}
 ```
+
+---
 
 ## Infra SS58 DID Format Validation
 
@@ -110,7 +152,15 @@ console.log({ DIDSet })
 InfraSS58.validateInfraSS58(SOME_DID_STRING).result
 ```
 
+---
+
+<!-- _class: lead -->
+
 ## DID Module
+
+<!--footer: "DID Module" -->
+
+---
 
 ### Register / Unregister Infra SS58 DID OnChain
 
@@ -121,6 +171,8 @@ await infraApi.didModule.registerOnchain()
 await infraApi.didModule.unregisterOnChain()
 ```
 
+---
+
 ### Add/Remove keys
 
 ```ts
@@ -130,6 +182,8 @@ await infraApi.didModule.addKeys(SOME_DID_KEY)
 await infraApi.didModule.removeKeys(DID_KEY_IDS)
 ```
 
+---
+
 ### Add/Remove Controller DID
 
 ```ts
@@ -138,6 +192,8 @@ await infraApi.didModule.addControllers(CONTROLLER_DIDS)
 // Remove Controller DID
 await infraApi.didModule.removeControllers(CONTROLLER_DIDS)
 ```
+
+---
 
 ### Add/Get/Remove Service Endpoint
 
@@ -150,21 +206,28 @@ await infraApi.didModule.getServiceEndpoint()
 await infraApi.didModule.removeServiceEndpoint()
 ```
 
+---
+
 ### Set Attestation Claim
 
 ```ts
 await infraApi.didModule.setClaim(PRIORITY_NUMBER, CLAIM_IRI)
 ```
 
-### Resolve DID Document(Temporary)
+---
+
+### Resolve DID Document
 
 ```ts
-const didDocuments = await infraDID.didModule.getDocument() // get self.document
-// or
+// get self.document
+const didDocuments = await infraDID.didModule.getDocument()
+// or get some did document
 const didDocuments2 = await infraDID.getDocument(SOME_DID)
 
 console.log({ didDocuments })
 ```
+
+---
 
 ```json
 {
@@ -198,7 +261,15 @@ console.log({ didDocuments })
 };
 ```
 
+---
+
+<!-- _class: lead -->
+
 ## BBS+ Module
+
+<!--footer: "BBS+ Module" -->
+
+---
 
 ### BBS+ SigSet Creation
 
@@ -225,6 +296,8 @@ console.log({ newSigSet })
     };
 ```
 
+---
+
 ### Add/Get/Remove BBS+ Params
 
 ```ts
@@ -242,6 +315,8 @@ const lastParam = await infraDID.bbsModule.getLastParamsWritten()
 // Remove BBS+ {arams
 await infraDID.bbsModule.removeParams(PARAM_COUNTER_NUMBER)
 ```
+
+---
 
 ### Add/Get/Remove BBS+ Public Key
 
@@ -265,7 +340,15 @@ await infraDID.bbsModule.removePublicKey(KEY_ID_NUMBER)
 }
 ```
 
+---
+
+<!-- _class: lead -->
+
 ## Trusted Entity Module
+
+<!--footer: "Trusted Entity Module" -->
+
+---
 
 ### Add/Get/Remove Authorizer
 
@@ -282,6 +365,8 @@ await infraSS58.trustModule.getAuthorizer(authorizerId)
 await infraSS58.trustModule.unregisterAuthorizer(authorizerId)
 ```
 
+---
+
 ### Add/Get/Remove Issuer
 
 ```ts
@@ -292,6 +377,8 @@ await infraSS58.trustModule.getIssuers(authorizerId, issuerDID)
 // Remove Issuer
 await infraSS58.trustModule.removeIssuer(authorizerId, issuerDID)
 ```
+
+---
 
 ### Add/Get/Remove Verifier
 
@@ -304,7 +391,15 @@ await infraSS58.trustModule.getVerifiers(authorizerId, verifierDID)
 await infraSS58.trustModule.removeVerifier(authorizerId, verifierDID)
 ```
 
+---
+
+<!-- _class: lead -->
+
 ## Schema Class
+
+<!--footer: "Schema Class" -->
+
+---
 
 ### Create Schema
 
@@ -325,6 +420,8 @@ const someJSONSchema = {
 schema = await schema.setJSONSchema(someJSONSchema)
 console.log(schema.toJSON())
 ```
+
+---
 
 ```json
 {
@@ -351,6 +448,8 @@ console.log(schema.toJSON())
 }
 ```
 
+---
+
 ### Register/Get Schema on chain
 
 ```ts
@@ -365,12 +464,16 @@ await infraApi.blobModule.getSchema(schemaId)
 await Schema.get(schemaId, infraApi)
 ```
 
+---
+
 ### Validate Schema
 
 ```ts
 const validationResult = await Schema.validateSchema(schema.schema)
 console.log(validationResult)
 ```
+
+---
 
 ```json
 {
@@ -417,7 +520,15 @@ console.log(validationResult)
 }
 ```
 
+---
+
+<!-- _class: lead -->
+
 ## Verifiable Credential Class
+
+<!--footer: "Verifiable Credential Class" -->
+
+---
 
 ### Register/Get/Unregister Registry
 
@@ -431,6 +542,8 @@ await issuerApi.registryModule.getRegistry(registryId)
 // Unregister Registry
 await issuerApi.registryModule.unregisterRegistry(registryId)
 ```
+
+---
 
 ### Create Verifiable Credential
 
@@ -450,6 +563,8 @@ vc.addSubject({
 vc.setIssuanceDate('2021-04-02T10:11:41.000Z')
 console.log(vc.toJSON())
 ```
+
+---
 
 ```json
 {
@@ -475,12 +590,16 @@ console.log(vc.toJSON())
 }
 ```
 
+---
+
 ### Issue(Sign) Verifiable Credential
 
 ```ts
 const signedVC = await vc.sign(issuerInfraApi.didModule.getKeyDoc())
 console.log(signedVC.toJSON())
 ```
+
+---
 
 ```json
 {
@@ -514,11 +633,15 @@ console.log(signedVC.toJSON())
 }
 ```
 
+---
+
 ### Validate Credential Schema
 
 ```ts
 const result: boolean = await signedVC.validateSchema(schema)
 ```
+
+---
 
 ### Verify Verifiable Credential
 
@@ -526,6 +649,8 @@ const result: boolean = await signedVC.validateSchema(schema)
 const verifyResult = await signedVC.verify(issuerApi)
 console.log(verifyResult)
 ```
+
+---
 
 ```json
 {
@@ -574,6 +699,8 @@ console.log(verifyResult)
 }
 ```
 
+---
+
 ### Revoke/Unrevoke/Check Verifiable Credential
 
 ```ts
@@ -589,7 +716,15 @@ const isRevoked: boolean = await issuerApi.registryModule.getIsRevoked(
 )
 ```
 
+---
+
+<!-- _class: lead -->
+
 ## Verifiable Presentation Class
+
+<!--footer: "Verifiable Presentation Class" -->
+
+---
 
 ### Create Verifiable Presentation
 
@@ -601,6 +736,8 @@ vp.setHolder(HOLDER_DID)
 vp.addCredential(vc)
 console.log(vp.toJSON())
 ```
+
+---
 
 ```json
 {
@@ -627,12 +764,16 @@ console.log(vp.toJSON())
 }
 ```
 
+---
+
 ### Sign Verifiable Presentation
 
 ```ts
 const signedVP = await vp.sign(holderInfraApi, DOMAIN_URL)
 console.log(signedVP)
 ```
+
+---
 
 ```json
 {
@@ -667,12 +808,16 @@ console.log(signedVP)
 }
 ```
 
+---
+
 ### Verify Verifiable Presentation
 
 ```ts
 const verifyResult = await signedVP.verify(verifierInfraApi, DOMAIN_URL)
 console.log(verifyResult)
 ```
+
+---
 
 ```json
 {
@@ -798,9 +943,17 @@ console.log(verifyResult)
 }
 ```
 
+---
+
+<!-- _class: lead -->
+
 ## BBSPlusPresentation Class
 
-### Prepare(add BBS+ Public Key, Schema, Verifiable Credential)
+<!--footer: "BBSPlusPresentation Class" -->
+
+---
+
+### Prepare(add BBS+ Public Key, Schema, Credential)
 
 ```ts
 // Add BBS+ Public Key and Key Pair ID
@@ -809,7 +962,6 @@ await issuerApi.bbsModule.addPublicKey(issuerBBSSigSet.publicKey)
 await issuerApi.didModule.getDocument().then((doc) => {
   issuerBBSSigSet.keyPair.id = doc.verificationMethod[1].id
 })
-
 // Create Verifiable Credential
 vc = new VerifiableCredential(vcId)
 vc.addContext('https://www.w3.org/2018/credentials/examples/v1')
@@ -817,7 +969,6 @@ vc.addContext('https://www.w3.org/2018/credentials/v1')
 vc.addContext('https://schema.org')
 vc.addType('VerifiableCredential')
 vc.addType('VaccinationCredential')
-
 // Different parts than normal Verifiable Credential
 vc.setSchema(schema.toBBSSchema()) // Use toBBSSchema for schema,
 // Use setSubject because BBSPlusPresentation does not allow arrays.
@@ -827,9 +978,10 @@ vc.setSubject({
   email: 'test@test.com'
 })
 vc.setIssuer(issuer.did)
-
 bbsPlusPresentation = new BBSPlusPresentation()
 ```
+
+---
 
 ### Sign/Issue BBSPlusCredential
 
@@ -848,6 +1000,8 @@ const bbsPlusCredential = await bbsPlusPresentation.issueCredential(
 )
 ```
 
+---
+
 ### Create BBSPlusPresentation
 
 ```ts
@@ -865,6 +1019,8 @@ await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, [
 const presentation = await bbsPlusPresentation.createPresentation()
 ```
 
+---
+
 ### Verify BBSPlusPresentation
 
 ```ts
@@ -875,3 +1031,11 @@ const verifyResult = await bbsPlusPresentation.verifyPresentation(
   }
 )
 ```
+
+---
+
+<!-- _class: lead -->
+
+# End of Document
+
+<!--footer: "" -->
