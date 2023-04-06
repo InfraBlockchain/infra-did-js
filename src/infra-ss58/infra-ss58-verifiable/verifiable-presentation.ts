@@ -111,11 +111,11 @@ export default class VerifiablePresentation extends VerifiableHelper {
     };
   }
 
-  async sign(infraApi: InfraSS58, domain, compactProof = true) {
+  async sign(infraApi: InfraSS58, challenge, domain, compactProof = true) {
     const signedVP = await this.signPresentation(
       this.toJSON(),
       infraApi.didModule.getKeyDoc(),
-      infraApi.getChallenge(),
+      challenge,
       domain,
       infraApi.Resolver,
       compactProof,

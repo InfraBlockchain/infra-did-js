@@ -863,6 +863,36 @@ await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, [
 ])
 
 const presentation = await bbsPlusPresentation.createPresentation()
+console.log({ presentation })
+```
+
+```json
+{
+  "version": "0.0.1",
+  "nonce": null,
+  "spec": {
+    "credentials": [
+      {
+        "version": "0.1.0",
+        "schema": "{\"id\":\"data:application/json;charset=utf-8,%7B%22properties%22%3A%7B%22credentialSubject%22%3A%7B%22properties%22%3A%7B%22id%22%3A%7B%22type%22%3A%22string%22%7D%2C%22email%22%3A%7B%22type%22%3A%22string%22%2C%22format%22%3A%22email%22%7D%2C%22alumniOf%22%3A%7B%22type%22%3A%22string%22%7D%7D%2C%22type%22%3A%22object%22%7D%2C%22cryptoVersion%22%3A%7B%22type%22%3A%22string%22%7D%2C%22credentialSchema%22%3A%7B%22type%22%3A%22string%22%7D%2C%22%40context%22%3A%7B%22type%22%3A%22string%22%7D%2C%22id%22%3A%7B%22type%22%3A%22string%22%7D%2C%22issuanceDate%22%3A%7B%22type%22%3A%22string%22%7D%2C%22issuer%22%3A%7B%22type%22%3A%22string%22%7D%2C%22proof%22%3A%7B%22type%22%3A%22object%22%2C%22properties%22%3A%7B%22%40context%22%3A%7B%22type%22%3A%22array%22%2C%22items%22%3A%5B%7B%22type%22%3A%22object%22%2C%22properties%22%3A%7B%22sec%22%3A%7B%22type%22%3A%22string%22%7D%2C%22proof%22%3A%7B%22type%22%3A%22object%22%2C%22properties%22%3A%7B%22%40id%22%3A%7B%22type%22%3A%22string%22%7D%2C%22%40type%22%3A%7B%22type%22%3A%22string%22%7D%2C%22%40container%22%3A%7B%22type%22%3A%22string%22%7D%7D%7D%7D%7D%2C%7B%22type%22%3A%22string%22%7D%5D%7D%2C%22type%22%3A%7B%22type%22%3A%22string%22%7D%2C%22created%22%3A%7B%22type%22%3A%22string%22%7D%2C%22verificationMethod%22%3A%7B%22type%22%3A%22string%22%7D%2C%22proofPurpose%22%3A%7B%22type%22%3A%22string%22%7D%7D%7D%2C%22type%22%3A%7B%22type%22%3A%22string%22%7D%7D%2C%22%24schema%22%3A%22http%3A%2F%2Fjson-schema.org%2Fdraft-07%2Fschema%23%22%2C%22description%22%3A%22Schema%20Example%22%2C%22type%22%3A%22object%22%2C%22required%22%3A%5B%22email%22%2C%22alumniOf%22%5D%2C%22additionalProperties%22%3Afalse%7D\",\"type\":\"JsonSchemaValidator2018\",\"parsingOptions\":{\"useDefaults\":false,\"defaultMinimumInteger\":-4294967295,\"defaultDecimalPlaces\":0},\"version\":\"0.0.1\"}",
+        "revealedAttributes": {
+          "@context": "[\"https://www.w3.org/2018/credentials/v1\",\"https://www.w3.org/2018/credentials/examples/v1\",\"https://schema.org\"]",
+          "type": "[\"VerifiableCredential\",\"VaccinationCredential\"]",
+          "proof": {
+            "type": "Bls12381BBS+SignatureDock2022",
+            "verificationMethod": "did:infra:space:5EAFA4cfWyj6G7xxDWhAdCDcCTdh1tWenFzFaduTH8Mq2eCd#keys-2"
+          },
+          "credentialSubject": {
+            "alumniOf": "Example University"
+          }
+        }
+      }
+    ],
+    "attributeEqualities": []
+  },
+  "attributeCiphertexts": {},
+  "proof": "2c4gy3tNNxy6T6LGDmq1H7ko976sBiHwCyff1w3qQTTcnSy5SG9a2FdTr4y1hGwzo5aSSbrkTYRFBLVc8UT1oQyzxL8ajy1W2Ah4x4RRrP6qfobc4oyHF25dbWuAJiPvHKL4JFMTb2mjw2Fv6RpjGf98dY9RB67C5tYySu5rxZPKu39jfSc2qs8vUakoDQASm6BgzWJ8sC23A8jsGnn4bWhNZQsjQAL5ZsKGHkKso9UcxWtDfFyy3VuBQqsa4gg2eveUeFVoEW63FCpkHTdaBZwVomxuaRTjtyxy1JyFutiY7jhoQC77xDY1jqWAfw7HV7EbwSC6dxqVBNxVgBQgrC1GDY7MpYHpPnCRQJWGSUeB793vvcQ5oaSWqMVEV2n4BVS5cv6mUSuvG57bSb1gY3q3QxcyFkKNF4rpca5GeqLboQq5e9UrjJy64kLjYqHi2aLbiK9ui8TQW6NMcoKqRaYo3QgqsFGSsyLcwyaNBAN6eNGmGBUq1G9xHhQ6sFDLepebJ28fkLrRvhpRCbwkCwauy52hUjp11wvQjooHACXRmU73cxBWCLEVh5u46sqdRWq2e3Lpiioin5daQiF3XyFySL4kMwLvyrV3PJth53Jyr45vFwGVxs6EnaSfLJKQ3uMfw3kfY84ckgj3WWPp5waDc9oroH6NLoSwyLtjmqrPqm6qV5EgAsKov24H95jpyp1XtMLsXW5wMsWizF6ABMLJVBqiNm8vQ9uWB6AbEzRRKF9bhN4e4LaZ2qzTkmofoiB3o9nQVuA9ncx2tbqynwi4XYRPsz6xMm4qxZiAhEwQA7jScndQ4dPLay4xK2zZWj5s8BYYCTeParhk52mNq7SBnaybp7i7EDiWY1ZPRUfXP75QwG7RkyMd2vmqBTWd5GzYpVtcFLkzPwoSRUk1irb9f4VNNVoCNvNyaAX6JR6Y5M9mF1WfB35sr7PJdNjmZBtCpS7YC5pNz2TySDeDoFjzyW4BbXAVgaeCpuMkugjYhTre8BBdqa7h79xQC4BayGtebVoPqRhozRuAhBqDNTAq6npT1B1Jc4itEj"
+}
 ```
 
 ### Verify BBSPlusPresentation

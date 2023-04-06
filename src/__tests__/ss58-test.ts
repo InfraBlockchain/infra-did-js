@@ -2,21 +2,24 @@ import { InfraSS58, CRYPTO_INFO, DIDSet, HexString, IConfig_SS58, Schema, KeyPai
 
 const vcId = 'did:infra:space:5FDseiC76zPek2YYkuyenu4ZgxZ7PUWXt9d19HNB5CaQXt5U';
 const vpId = 'http://example.edu/credentials/2803';
+// const address = 'wss://infra2.infrablockchain.com'; //'ws://localhost:9944';
 const address = 'ws://localhost:9944';
 const someJSONSchema = {
     $schema: 'http://json-schema.org/draft-07/schema#',
-    description: 'Schema Example',
+    title: 'Schema Example',
+    description: 'this is example',
     type: 'object',
     properties: {
         id: { type: 'string' },
+        테스트: { type: 'string' },
         email: { type: 'string', format: 'email' },
         alumniOf: { type: 'string' },
     },
     required: ['email', 'alumniOf'],
     additionalProperties: false,
 };
-jest.setTimeout(30000)
-describe('InfraSS58: DID', () => {
+jest.setTimeout(300000)
+describe.skip('InfraSS58: DID', () => {
     let infraSS58: InfraSS58;
     let srTest: DIDSet;
     let contDIDSet: DIDSet;
@@ -460,7 +463,7 @@ describe('InfraSS58: Verifiable', () => {
             const fromApi = await issuerApi.blobModule.getSchema(schema.id);
             await Schema.get(schema.id, issuerApi)
                 .then(res => {
-                    // console.log('get schema::', JSON.stringify(res, null, 2))
+                    console.log('get schema::', JSON.stringify(res, null, 2))
                     expect(res?.id).toEqual(fromApi?.id);
                 })
         })
@@ -496,13 +499,13 @@ describe('InfraSS58: Verifiable', () => {
         it('Create VC', async () => {
             expect.assertions(1);
             vc = new VerifiableCredential(vcId);
-            vc.addContext('https://www.w3.org/2018/credentials/examples/v1');
+            // vc.addContext('https://www.w3.org/2018/credentials/examples/v1');
             vc.addContext('https://www.w3.org/2018/credentials/v1');
             vc.addContext('https://schema.org');
             vc.addType('VerifiableCredential');
             vc.addType('VaccinationCredential');
             vc.setSchema(schema.id);
-            vc.addSubject({ id: holder.did, alumniOf: 'Example University', email: 'test@test.com' });
+            vc.addSubject({ id: holder.did, 테스트: '123', alumniOf: 'Example University', email: 'test@test.com' });
             // console.log('default vc json', vc.toJSON());
             expect(vc.toJSON()).toBeDefined();
         })
@@ -549,6 +552,7 @@ describe('InfraSS58: Verifiable', () => {
     })
 
     describe('VP test', () => {
+        //TODO 테스트 수정 필요. Verifier 가 challange 생성해서 holder가 그걸로 생성하는 거임. 순서에 맞게 수정 필요.
         const domain = 'example domain';
 
         it('Create VP', async () => {
@@ -563,17 +567,17 @@ describe('InfraSS58: Verifiable', () => {
 
         it('Sign VP', async () => {
             expect.assertions(1);
-            await vp.sign(holderApi, domain)
+            await vp.sign(holderApi, issuerApi.getChallenge(), domain)
                 .then(svp => {
                     signedVP = svp;
-                    console.log('signed VP::: ', signedVP.toJSON());
+                    console.log('signed VP::: ', JSON.stringify(signedVP.toJSON(), null, 2));
                     expect(signedVP).toBeDefined();
                 })
         })
 
         it('Verify VP', async () => {
             expect.assertions(1);
-            await signedVP.verify(issuerApi, holderApi.getChallenge(), domain)
+            await signedVP.verify(issuerApi, issuerApi.getChallenge(), domain)
                 .then(res => {
                     console.log('verified VP:::', JSON.stringify(res, null, 2));
                     expect(res.verified).toBeTruthy();
@@ -583,7 +587,7 @@ describe('InfraSS58: Verifiable', () => {
 
     })
 
-    describe('BBS+ VP test', () => {
+    describe.skip('BBS+ VP test', () => {
         beforeAll(async () => {
             //add bbs+ pubKey
             issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did);

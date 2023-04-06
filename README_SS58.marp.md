@@ -1017,6 +1017,40 @@ await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, [
 ])
 
 const presentation = await bbsPlusPresentation.createPresentation()
+console.log({ presentation })
+```
+
+---
+
+```json
+{
+  "version": "0.0.1",
+  "nonce": null,
+  "spec": {
+    "credentials": [
+      {
+        "version": "0.1.0",
+        "schema": "schemauri" //--snip--,
+        "revealedAttributes": {
+          "@context": "[\"https://www.w3.org/2018/credentials/v1\",
+          \"https://www.w3.org/2018/credentials/examples/v1\",
+          \"https://schema.org\"]",
+          "type": "[\"VerifiableCredential\",\"VaccinationCredential\"]",
+          "proof": {
+            "type": "Bls12381BBS+SignatureDock2022",
+            "verificationMethod": "did:infra:space:5EAFA4cfWyj6G7xxDWhAdCDcCTdh1tWenFzFaduTH8Mq2eCd#keys-2"
+          },
+          "credentialSubject": {
+            "alumniOf": "Example University"
+          }
+        }
+      }
+    ],
+    "attributeEqualities": []
+  },
+  "attributeCiphertexts": {},
+  "proof": "SOME_PROOF" // -- snip --
+}
 ```
 
 ---
