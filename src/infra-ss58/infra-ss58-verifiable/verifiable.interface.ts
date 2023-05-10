@@ -232,9 +232,9 @@ export class VerifiableHelper {
 
         let Cls;
         switch (keyDoc.type) {
-            case CRYPTO_INFO.Secp256k1.KEY_NAME:
-                Cls = CRYPTO_INFO.Secp256k1.SIG_CLS;
-                break;
+            // case CRYPTO_INFO.Secp256k1.KEY_NAME:
+            //     Cls = CRYPTO_INFO.Secp256k1.SIG_CLS;
+            //     break;
             case CRYPTO_INFO.ED25519.KEY_NAME:
                 Cls = CRYPTO_INFO.ED25519.SIG_CLS;
                 break;
@@ -329,7 +329,7 @@ export class VerifiableHelper {
         const result = await jsigs.verify(credential, {
             purpose: purpose || new CredentialIssuancePurpose(this.expandJSONLD, { controller }),
             suite: [
-                new CRYPTO_INFO.Secp256k1.SIG_CLS(),
+                // new CRYPTO_INFO.Secp256k1.SIG_CLS(),
                 new CRYPTO_INFO.ED25519.SIG_CLS(),
                 new CRYPTO_INFO.SR25519.SIG_CLS(),
                 new CRYPTO_BBS_INFO.SIG_CLS(),
@@ -444,7 +444,7 @@ export class VerifiableHelper {
             ...options,
             resolver: null,
             suite: [
-                new CRYPTO_INFO.Secp256k1.SIG_CLS(),
+                // new CRYPTO_INFO.Secp256k1.SIG_CLS(),
                 new CRYPTO_INFO.ED25519.SIG_CLS(),
                 new CRYPTO_INFO.SR25519.SIG_CLS(),
                 // new Ed25519Signature2018(), new EcdsaSecp256k1Signature2019(), new Sr25519Signature2020(),

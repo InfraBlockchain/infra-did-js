@@ -7,7 +7,7 @@ import { sha256 } from 'js-sha256';
 import {
   encodeAddress, decodeAddress,
   mnemonicGenerate, mnemonicToMiniSecret,
-  cryptoWaitReady, blake2AsHex, randomAsHex
+  cryptoWaitReady, blake2AsHex, randomAsHex, base64Encode, base64Decode, base58Decode
 } from '@polkadot/util-crypto';
 import { initializeWasm, isWasmInitialized, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 
@@ -21,6 +21,7 @@ import {
   CRYPTO_BBS_INFO
 } from './ss58.interface';
 import { VerifiableCredential, VerifiablePresentation, Schema, BBSPlusPresentation } from './infra-ss58-verifiable';
+import { U8aLike } from '@polkadot/util/types';
 
 export {
   CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
@@ -180,11 +181,11 @@ export default class InfraSS58 {
   }
 
   static async getKeyPairFromSeed(seed: HexString, cryptoInfo: CRYPTO_INFO): Promise<KeyPair> {
-    if (cryptoInfo.CRYPTO_TYPE === 'ecdsa') {
-      return secp256k1.genKeyPair({ entropy: seed });
-    } else {
-      return InfraSS58.getKeyringPairFromUri(seed, cryptoInfo);
-    }
+    // if (cryptoInfo.CRYPTO_TYPE === 'ecdsa') {
+    //   return secp256k1.genKeyPair({ entropy: seed });
+    // } else {
+    return InfraSS58.getKeyringPairFromUri(seed, cryptoInfo);
+    // }
   }
   static async getKeyringPairFromUri(uri, cryptoInfo?: CRYPTO_INFO): Promise<KeyringPair> {
     const cryptoType = cryptoInfo?.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE
@@ -197,7 +198,7 @@ export default class InfraSS58 {
   static keyPairToDID(networkId: string, keyPair: KeyPair) {
     if ((keyPair as KeyringPair).type)
       return InfraSS58.ss58addrToDID(networkId, (keyPair as KeyringPair).address)
-    return `${DID_QUALIFIER}${networkId}:${encodeAddress(`0x${(keyPair as elliptic.ec.KeyPair).getPublic(true, 'hex').slice(0, 64)}`)}`;
+    // return `${DID_QUALIFIER}${networkId}:${encodeAddress(`0x${(keyPair as elliptic.ec.KeyPair).getPublic(true, 'hex').slice(0, 64)}`)}`;
 
   }
   static validateInfraSS58DID(infraSS58DID: string): { result: boolean, errMsg?: string } {
@@ -223,10 +224,10 @@ export default class InfraSS58 {
     return `0x${r}${s}${i}`;
   }
   protected getSig(sigType: SIG_TYPE, keyPair, stateMessage) {
-    if (sigType === CRYPTO_INFO.Secp256k1.SIG_TYPE) {
-      return { [sigType]: this.signPrehashed(stateMessage, keyPair) }
-    } else
-      return { [sigType]: u8aToHex(keyPair.sign(stateMessage)) }
+    // if (sigType === CRYPTO_INFO.Secp256k1.SIG_TYPE) {
+    //   return { [sigType]: this.signPrehashed(stateMessage, keyPair) }
+    // } else
+    return { [sigType]: u8aToHex(keyPair.sign(stateMessage)) }
   }
 
   getDIDSig(did: string, sigType: SIG_TYPE, keyPair: KeyPair, stateMessage, keyId = 1) {
@@ -335,7 +336,7 @@ export default class InfraSS58 {
       verificationMethod: [
         {
           id: `${did}#keys-1`,
-          type: 'unknown',// TODO offchain DID에서는 SR25519, ED25519, Secp256k1 구분 불가...
+          type: 'Sr25519VerificationKey2020',// FIXME offchain DID에서  구분 불가...
           controller: did,
           publicKeyBase58: b58.encode(publicKey),
           // publicKeyHex: u8aToHex(publicKey).slice(2)
@@ -410,9 +411,9 @@ export default class InfraSS58 {
           } else if (pk.isEd25519) {
             typ = CRYPTO_INFO.ED25519.KEY_NAME;
             publicKeyRaw = pk.asEd25519.value;
-          } else if (pk.isSecp256k1) {
-            typ = CRYPTO_INFO.Secp256k1.KEY_NAME;
-            publicKeyRaw = pk.asSecp256k1.value;
+            // } else if (pk.isSecp256k1) {
+            //   typ = CRYPTO_INFO.Secp256k1.KEY_NAME;
+            //   publicKeyRaw = pk.asSecp256k1.value;
           } else {
             throw new Error(`Cannot parse public key ${pk}`);
           }

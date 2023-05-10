@@ -26,14 +26,14 @@ export const CRYPTO_INFO = {
     SIG_CLS: Ed25519Signature2018,
     LDKeyClass: Ed25519VerificationKey2018,
   },
-  Secp256k1: {
-    CRYPTO_TYPE: 'ecdsa',
-    KEY_NAME: 'EcdsaSecp256k1VerificationKey2019',
-    SIG_TYPE: 'Secp256k1',
-    SIG_NAME: 'EcdsaSecp256k1Signature2019',
-    SIG_CLS: EcdsaSecp256k1Signature2019,
-    LDKeyClass: EcdsaSecp256k1VerificationKey2019,
-  }
+  // Secp256k1: {
+  //   CRYPTO_TYPE: 'ecdsa',
+  //   KEY_NAME: 'EcdsaSecp256k1VerificationKey2019',
+  //   SIG_TYPE: 'Secp256k1',
+  //   SIG_NAME: 'EcdsaSecp256k1Signature2019',
+  //   SIG_CLS: EcdsaSecp256k1Signature2019,
+  //   LDKeyClass: EcdsaSecp256k1VerificationKey2019,
+  // }
 } as const
 
 export const CRYPTO_BBS_INFO = {
@@ -47,10 +47,10 @@ export const CRYPTO_BBS_INFO = {
 } as const
 
 export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
-export type SIG_TYPE = typeof CRYPTO_INFO.ED25519.SIG_TYPE | typeof CRYPTO_INFO.SR25519.SIG_TYPE | typeof CRYPTO_INFO.Secp256k1.SIG_TYPE
+export type SIG_TYPE = typeof CRYPTO_INFO.ED25519.SIG_TYPE | typeof CRYPTO_INFO.SR25519.SIG_TYPE // | typeof CRYPTO_INFO.Secp256k1.SIG_TYPE
 
 export type HexString = `0x${string}`;
-export type KeyPair = KeyringPair | elliptic.ec.KeyPair;
+export type KeyPair = KeyringPair //| elliptic.ec.KeyPair;
 export interface IConfig_SS58 {
   did: string;
   address: string;
@@ -104,8 +104,8 @@ export class PublicKey_SS58 {
         return new this(u8aToHex((pair as KeyringPair).publicKey), CRYPTO_INFO.ED25519.SIG_TYPE);
       case CRYPTO_INFO.SR25519.CRYPTO_TYPE:
         return new this(u8aToHex((pair as KeyringPair).publicKey), CRYPTO_INFO.SR25519.SIG_TYPE);
-      case undefined:
-        return new this(`0x${(pair as elliptic.ec.KeyPair).getPublic(true, 'hex')}`, CRYPTO_INFO.Secp256k1.SIG_TYPE);
+      // case undefined:
+      //   return new this(`0x${(pair as elliptic.ec.KeyPair).getPublic(true, 'hex')}`, CRYPTO_INFO.Secp256k1.SIG_TYPE);
       default:
         throw new Error('Not supported keyPair typs')
     }

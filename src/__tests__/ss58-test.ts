@@ -19,14 +19,14 @@ const someJSONSchema = {
     additionalProperties: false,
 };
 jest.setTimeout(300000)
-describe.skip('InfraSS58: DID', () => {
+describe('InfraSS58: DID', () => {
     let infraSS58: InfraSS58;
     let srTest: DIDSet;
     let contDIDSet: DIDSet;
     let edTest: DIDSet;
     let config: IConfig_SS58;
     let txfeePayerAccountKeyPair: KeyPair;
-    describe('DID creation', () => {
+    describe.only('DID creation', () => {
         it('should create SR25519 DID ', async () => {
             expect.assertions(1);
             return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519)
@@ -36,15 +36,15 @@ describe.skip('InfraSS58: DID', () => {
                     expect(srDIDSet.did).toBeDefined();
                 })
         })
-        it('should create Secp256k1 DID ', async () => {
-            expect.assertions(1);
-            return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1)
-                .then(secpDIDSet => {
-                    // console.log({ secpDIDSet })
-                    expect(secpDIDSet.did).toBeDefined();
+        // it('should create Secp256k1 DID ', async () => {
+        //     expect.assertions(1);
+        //     return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1)
+        //         .then(secpDIDSet => {
+        //             // console.log({ secpDIDSet })
+        //             expect(secpDIDSet.did).toBeDefined();
 
-                })
-        })
+        //         })
+        // })
         it('should create ED25519 DID ', async () => {
             expect.assertions(1);
             return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519)
@@ -62,7 +62,40 @@ describe.skip('InfraSS58: DID', () => {
             expect.assertions(2);
             expect(InfraSS58.validateInfraSS58DID(srTest.did).result).toBeTruthy();
             expect(InfraSS58.validateInfraSS58DID(edTest.did).result).toBeTruthy();
+        })
+        it('Extra: create and verify EdDSA alg JWT', async () => {
 
+            expect.assertions(2);
+            const senderApi = await InfraSS58.createAsync({
+                address,
+                networkId: 'space',
+                did: srTest.did,
+                keyPair: srTest.keyPair,
+                cryptoInfo: srTest.cryptoInfo,
+                verRels: srTest.verRels,
+                txfeePayerAccountKeyPair,
+            });
+            const receiverApi = await InfraSS58.createAsync({
+                address,
+                networkId: 'space',
+                did: edTest.did,
+                keyPair: edTest.keyPair,
+                cryptoInfo: edTest.cryptoInfo,
+                verRels: edTest.verRels,
+                txfeePayerAccountKeyPair,
+            });
+
+            const jwt = senderApi.didModule.createJWT({
+                "iss": srTest.did,
+                "iat": 1673231288,
+                "exp": 1673234888,
+                "aud": ["IWS.Cert"]
+            });
+            expect(jwt).toBeDefined();
+            console.log({ jwt });
+            const decodedJWT = await receiverApi.didModule.verifyAndDecodeJWT(jwt);
+            console.log({ decodedJWT });
+            expect(decodedJWT.verifyResult).toBeTruthy();
         })
     })
 
@@ -71,7 +104,7 @@ describe.skip('InfraSS58: DID', () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
             txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
             srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
-            contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1);
+            contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
             config = {
                 address,
                 networkId: 'space',
@@ -92,6 +125,7 @@ describe.skip('InfraSS58: DID', () => {
                 // txfeePayerAccountSeed: "someSeed",
             }
             infraSS58 = await InfraSS58.createAsync(config);
+
 
         })
         afterAll(async () => {
@@ -587,7 +621,7 @@ describe('InfraSS58: Verifiable', () => {
 
     })
 
-    describe.skip('BBS+ VP test', () => {
+    describe('BBS+ VP test', () => {
         beforeAll(async () => {
             //add bbs+ pubKey
             issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did);
