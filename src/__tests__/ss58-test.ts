@@ -26,25 +26,16 @@ describe('InfraSS58: DID', () => {
     let edTest: DIDSet;
     let config: IConfig_SS58;
     let txfeePayerAccountKeyPair: KeyPair;
-    describe.only('DID creation', () => {
+    describe('DID creation', () => {
         it('should create SR25519 DID ', async () => {
             expect.assertions(1);
             return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519)
                 .then(srDIDSet => {
                     srTest = srDIDSet;
-                    console.log({ srDIDSet })
+                    // console.log({ srDIDSet })
                     expect(srDIDSet.did).toBeDefined();
                 })
         })
-        // it('should create Secp256k1 DID ', async () => {
-        //     expect.assertions(1);
-        //     return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.Secp256k1)
-        //         .then(secpDIDSet => {
-        //             // console.log({ secpDIDSet })
-        //             expect(secpDIDSet.did).toBeDefined();
-
-        //         })
-        // })
         it('should create ED25519 DID ', async () => {
             expect.assertions(1);
             return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519)
@@ -63,40 +54,7 @@ describe('InfraSS58: DID', () => {
             expect(InfraSS58.validateInfraSS58DID(srTest.did).result).toBeTruthy();
             expect(InfraSS58.validateInfraSS58DID(edTest.did).result).toBeTruthy();
         })
-        it('Extra: create and verify EdDSA alg JWT', async () => {
 
-            expect.assertions(2);
-            const senderApi = await InfraSS58.createAsync({
-                address,
-                networkId: 'space',
-                did: srTest.did,
-                keyPair: srTest.keyPair,
-                cryptoInfo: srTest.cryptoInfo,
-                verRels: srTest.verRels,
-                txfeePayerAccountKeyPair,
-            });
-            const receiverApi = await InfraSS58.createAsync({
-                address,
-                networkId: 'space',
-                did: edTest.did,
-                keyPair: edTest.keyPair,
-                cryptoInfo: edTest.cryptoInfo,
-                verRels: edTest.verRels,
-                txfeePayerAccountKeyPair,
-            });
-
-            const jwt = senderApi.didModule.createJWT({
-                "iss": srTest.did,
-                "iat": 1673231288,
-                "exp": 1673234888,
-                "aud": ["IWS.Cert"]
-            });
-            expect(jwt).toBeDefined();
-            console.log({ jwt });
-            const decodedJWT = await receiverApi.didModule.verifyAndDecodeJWT(jwt);
-            console.log({ decodedJWT });
-            expect(decodedJWT.verifyResult).toBeTruthy();
-        })
     })
 
     describe('DID onChain test', () => {

@@ -94,7 +94,7 @@ export interface BBSPlus_Params {
   label: string | null;
 }
 export class PublicKey_SS58 {
-  constructor(private value: HexString, private sigType: SIG_TYPE = CRYPTO_INFO.SR25519.SIG_TYPE) {
+  constructor(private value: HexString, private sigType: SIG_TYPE = CRYPTO_INFO.ED25519.SIG_TYPE) {
     this.value = value;
     this.sigType = sigType;
   }

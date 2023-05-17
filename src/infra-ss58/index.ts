@@ -59,7 +59,7 @@ export default class InfraSS58 {
   }
   static async createNewSS58DIDSet(
     networkId: string,
-    cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.SR25519,
+    cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.ED25519,
     seed?: HexString,
     verRels = new VerificationRelationship(),
   ): Promise<DIDSet> {
@@ -126,9 +126,9 @@ export default class InfraSS58 {
         await this.disconnect()
       }
     }
-    this.cryptoInfo = conf.cryptoInfo ?? CRYPTO_INFO.SR25519;
+    this.cryptoInfo = conf.cryptoInfo ?? CRYPTO_INFO.ED25519;
     await cryptoWaitReady();
-    this.keyringModule = new Keyring({ type: this.cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE });
+    this.keyringModule = new Keyring({ type: this.cryptoInfo.CRYPTO_TYPE || CRYPTO_INFO.ED25519.CRYPTO_TYPE });
     this.networkId = conf.networkId;
     this.address = conf.address;
     if (this.address && this.address.indexOf('wss://') === -1 && this.address.indexOf('https://') === -1) {
@@ -188,7 +188,7 @@ export default class InfraSS58 {
     // }
   }
   static async getKeyringPairFromUri(uri, cryptoInfo?: CRYPTO_INFO): Promise<KeyringPair> {
-    const cryptoType = cryptoInfo?.CRYPTO_TYPE || CRYPTO_INFO.SR25519.CRYPTO_TYPE
+    const cryptoType = cryptoInfo?.CRYPTO_TYPE || CRYPTO_INFO.ED25519.CRYPTO_TYPE
     const keyringModule = new Keyring({ type: cryptoType });
     await cryptoWaitReady();
     return keyringModule.addFromUri(uri, undefined, cryptoType);
@@ -336,7 +336,7 @@ export default class InfraSS58 {
       verificationMethod: [
         {
           id: `${did}#keys-1`,
-          type: 'Sr25519VerificationKey2020',// FIXME offchain DID에서  구분 불가...
+          type: 'Ed25519VerificationKey2018',// offchain DID에서 구분 불가. 표준 타입인 ED25519로 
           controller: did,
           publicKeyBase58: b58.encode(publicKey),
           // publicKeyHex: u8aToHex(publicKey).slice(2)
