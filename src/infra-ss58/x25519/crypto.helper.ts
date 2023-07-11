@@ -21,32 +21,36 @@ export class EdToX25519Helper {
   static edToX25519SkJWK(edPk: Uint8Array, edSk: Uint8Array): PrivateJwk_ED {
     return this.key2JWK(EdToX25519Helper.edPkToX25519Pk(edPk), EdToX25519Helper.edSkToX25519Sk(edSk)) as PrivateJwk_ED;
   }
-  static edToX25519KeyPair(edPk: Uint8Array, edSk: Uint8Array) {
+  static edToX25519KeyPair(edPk: Uint8Array, edSk: Uint8Array): { publicKey: Uint8Array, privateKey: Uint8Array } {
     return {
       publicKey: EdToX25519Helper.edPkToX25519Pk(edPk),
       privateKey: EdToX25519Helper.edSkToX25519Sk(edSk),
     };
   }
-  static edToX25519KeyPairJWK(edPk: Uint8Array, edSk: Uint8Array) {
+  static edToX25519KeyPairJWK(edPk: Uint8Array, edSk: Uint8Array): { publicKeyJWK: PublicJwk_ED, privateKeyJWK: PrivateJwk_ED } {
     return {
       publicKeyJWK: this.key2JWK(EdToX25519Helper.edPkToX25519Pk(edPk)),
       privateKeyJWK: this.key2JWK(
         EdToX25519Helper.edPkToX25519Pk(edPk),
         EdToX25519Helper.edSkToX25519Sk(edSk)
-      ),
+      ) as PrivateJwk_ED,
     };
   }
 
   static key2JWK(pk: Uint8Array, sk?: Uint8Array): PublicJwk_ED | PrivateJwk_ED {
-    const jwk: any = {
+    const jwk: PublicJwk_ED = {
+      alg: 'EdDSA',
       kty: 'OKP',
       crv: 'X25519',
       x: Buffer.from(pk).toString('base64url'),
     };
     if (sk) {
-      jwk.d = Buffer.from(sk).toString('base64url');
+      return {
+        ...jwk,
+        d: Buffer.from(sk).toString('base64url')
+      } as PrivateJwk_ED
     }
-    return jwk;
+    return jwk as PublicJwk_ED
   }
   private static jwk2KeyObject(key: PublicJwk_ED | PrivateJwk_ED, type: 'public' | 'private'): crypto.KeyObject {
     let res: crypto.KeyObject;
@@ -58,11 +62,23 @@ export class EdToX25519Helper {
     }
     return res;
   }
-  static jwkToEcdhesKeypair(xPkJWK: PublicJwk_ED, xSkJWK: PrivateJwk_ED): Buffer {
-    return crypto.diffieHellman({
-      publicKey: this.jwk2KeyObject(xPkJWK, 'public'),
-      privateKey: this.jwk2KeyObject(xSkJWK, 'private'),
-    });
+  static jwkToEcdhesKeypair(xPkJWK: PublicJwk_ED | crypto.KeyObject, xSkJWK: PrivateJwk_ED | crypto.KeyObject): Buffer {
+    let publicKey: crypto.KeyObject
+    let privateKey: crypto.KeyObject
+
+    if (xPkJWK instanceof crypto.KeyObject) {
+      publicKey = xPkJWK
+    } else {
+      publicKey = this.jwk2KeyObject(xPkJWK, 'public')
+    }
+
+    if (xSkJWK instanceof crypto.KeyObject) {
+      privateKey = xSkJWK
+    } else {
+      privateKey = this.jwk2KeyObject(xSkJWK, 'private')
+    }
+
+    return crypto.diffieHellman({ publicKey, privateKey });
   }
 
 }

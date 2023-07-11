@@ -70,7 +70,7 @@ export type PublicJwk_ED = {
   alg: 'EdDSA',
   kty: 'OKP',
   kid?: string;
-  crv: 'Ed25519';
+  crv: 'Ed25519' | 'X25519';
   x: string;
   y?: string;
 };
