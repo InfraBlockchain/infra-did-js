@@ -66,6 +66,18 @@ export interface IConfig_SS58 {
   verRels?: VerificationRelationship;
 }
 
+export type PublicJwk_ED = {
+  alg: 'EdDSA',
+  kty: 'OKP',
+  kid?: string;
+  crv: 'Ed25519';
+  x: string;
+  y?: string;
+};
+
+export type PrivateJwk_ED = PublicJwk_ED & {
+  d: string;
+};
 export interface DIDSet {
   did: string;
   didKey: DidKey_SS58;
@@ -74,6 +86,7 @@ export interface DIDSet {
   verRels: VerificationRelationship;
   cryptoInfo: CRYPTO_INFO;
   seed: HexString;
+  keyPairJWK: { publicJwk: PublicJwk_ED, privateJwk: PrivateJwk_ED }
 }
 export interface BBSPlus_SigSet {
   params: SignatureParamsG1,

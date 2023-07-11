@@ -18,16 +18,18 @@ import {
   BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
   DIDSet, DidKey_SS58, PublicKey_SS58,
   VerificationRelationship,
-  CRYPTO_BBS_INFO
+  CRYPTO_BBS_INFO,
+  PublicJwk_ED,
+  PrivateJwk_ED
 } from './ss58.interface';
 import { VerifiableCredential, VerifiablePresentation, Schema, BBSPlusPresentation } from './infra-ss58-verifiable';
-import { U8aLike } from '@polkadot/util/types';
+import { EdToX25519Helper } from './x25519/crypto.helper';
 
 export {
   CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
   BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
   DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
-  VerificationRelationship, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation
+  VerificationRelationship, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, EdToX25519Helper
 }
 
 const secp256k1 = new elliptic.ec('secp256k1');
@@ -68,9 +70,23 @@ export default class InfraSS58 {
     const publicKey = PublicKey_SS58.fromKeyringPair(keyPair);
     const did = InfraSS58.keyPairToDID(networkId, keyPair);
     const didKey = new DidKey_SS58(publicKey, verRels);
-    return { did, didKey, keyPair, publicKey, verRels, cryptoInfo, seed };
+    const keyPairJWK = await InfraSS58.generateKeyPairJWK(publicKey.toJSON()[cryptoInfo.SIG_TYPE], seed)
+    return { did, didKey, keyPair, publicKey, verRels, cryptoInfo, seed, keyPairJWK };
   }
-
+  static async generateKeyPairJWK(publicKeyHex: HexString | Uint8Array, seed: HexString | Uint8Array): Promise<{ publicJwk: PublicJwk_ED, privateJwk: PrivateJwk_ED }> {
+    const privateKeyBytes = (typeof seed === 'string') ? hexToU8a(seed) : seed;
+    const publicKeyBytes = (typeof publicKeyHex === 'string') ? hexToU8a(publicKeyHex) : publicKeyHex;
+    const d = Buffer.from(privateKeyBytes).toString('base64url');
+    const x = Buffer.from(publicKeyBytes).toString('base64url');
+    const publicJwk: PublicJwk_ED = {
+      alg: 'EdDSA',
+      kty: 'OKP',
+      crv: 'Ed25519',
+      x
+    };
+    const privateJwk: PrivateJwk_ED = { ...publicJwk, d };
+    return { publicJwk, privateJwk };
+  }
   static async BBSPlus_createNewSigSet(controller: string, messageCounter = 1, label?: string): Promise<BBSPlus_SigSet> {
     if (!isWasmInitialized()) await initializeWasm()
     const params = InfraSS58.BBSPlus_createSigParamsWithLabel(messageCounter, label)
