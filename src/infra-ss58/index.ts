@@ -209,8 +209,14 @@ export default class InfraSS58 {
     const keyringModule = new Keyring({ type: cryptoType });
     await cryptoWaitReady();
     return keyringModule.addFromUri(uri, undefined, cryptoType);
-
   }
+  // static async getKeyringPairFromDID(did: string, cryptoInfo?: CRYPTO_INFO): Promise<KeyringPair> {
+  //   const [, , , addr] = did.split(':')
+  //   const cryptoType = cryptoInfo?.CRYPTO_TYPE || CRYPTO_INFO.ED25519.CRYPTO_TYPE
+  //   const keyringModule = new Keyring({ type: cryptoType });
+  //   await cryptoWaitReady();
+  //   return keyringModule.addFromAddress(addr);
+  // }
   static ss58addrToDID(networkId: string, addr: string) { return `${DID_QUALIFIER}${networkId}:${addr}` }
   static keyPairToDID(networkId: string, keyPair: KeyPair) {
     if ((keyPair as KeyringPair).type)
@@ -346,6 +352,7 @@ export default class InfraSS58 {
     did = did.split('#')[0];
     const { id: ss58ID, qualifier } = InfraSS58.splitDID(did);
     const publicKey = decodeAddress(ss58ID);
+    // const keypair = await InfraSS58.getKeyringPairFromDID(did)
     const offDocuments = (did) => ({
       '@context': ['https://www.w3.org/ns/did/v1'],
       id: did,
@@ -357,7 +364,19 @@ export default class InfraSS58 {
           controller: did,
           publicKeyBase58: b58.encode(publicKey),
           // publicKeyHex: u8aToHex(publicKey).slice(2)
-        }
+        },
+        {
+          id: `${did}#${ss58ID}`,
+          type: 'JsonWebKey2020',
+          controller: did,
+          publicKeyJwk: {
+            alg: 'EdDSA',
+            kty: 'OKP',
+            crv: 'Ed25519',
+            kid: ss58ID,
+            x: Buffer.from(publicKey).toString('base64url'),
+          }
+        },
       ],
       authentication: [`${did}#keys-1`,],
       assertionMethod: [`${did}#keys-1`,],
@@ -491,13 +510,27 @@ export default class InfraSS58 {
     capInv.sort();
     keyAgr.sort();
 
-    const verificationMethod = keys.map(([index, typ, publicKeyRaw]) => ({
+    const verificationMethod: any = keys.map(([index, typ, publicKeyRaw]) => ({
       id: `${id}#keys-${index}`,
       type: typ,
       controller: id,
       publicKeyBase58: b58.encode(publicKeyRaw),
       // publicKeyHex: u8aToHex(publicKeyRaw).slice(2),
+
     }));
+    verificationMethod.push({
+      id: `${did}#${ss58ID}`,
+      type: 'JsonWebKey2020',
+      controller: did,
+      publicKeyJwk: {
+        alg: 'EdDSA',
+        kty: 'OKP',
+        crv: 'Ed25519',
+        kid: ss58ID,
+        x: Buffer.from(publicKey).toString('base64url'),
+      }
+
+    });
     const assertionMethod = assertion.map((i) => `${id}#keys-${i}`);
     const authentication = authn.map((i) => `${id}#keys-${i}`);
     const capabilityInvocation = capInv.map((i) => `${id}#keys-${i}`);

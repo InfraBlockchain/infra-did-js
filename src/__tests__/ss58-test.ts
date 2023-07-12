@@ -128,7 +128,7 @@ describe('InfraSS58: DID', () => {
             expect.assertions(1);
             await infraSS58.didModule.addKeys(contDIDSet.didKey).then(async () =>
                 await infraSS58.didModule.getDocument().then(doc => {
-                    expect(doc.verificationMethod.length).toBe(2);
+                    expect(doc.verificationMethod.length).toBe(3);
                 })
             )
         })
@@ -137,7 +137,7 @@ describe('InfraSS58: DID', () => {
             expect.assertions(1);
             await infraSS58.didModule.removeKeys(2).then(async () =>
                 await infraSS58.didModule.getDocument().then(doc => {
-                    expect(doc.verificationMethod.length).toBe(1);
+                    expect(doc.verificationMethod.length).toBe(2);
                 })
             )
         })
@@ -180,7 +180,7 @@ describe('InfraSS58: DID', () => {
                 'https://rdf.dock.io/alpha/2021#attestsDocumentContent')
                 .then(async () =>
                     await infraSS58.didModule.getDocument().then(doc => {
-                        expect(doc.verificationMethod.length).toBe(1);
+                        expect(doc.verificationMethod.length).toBe(2);
                     })
                 )
         })
