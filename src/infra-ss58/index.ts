@@ -1,7 +1,8 @@
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { HttpProvider } from '@polkadot/rpc-provider';
-import { u8aToString, hexToU8a, u8aToHex, stringToHex, bufferToU8a, stringToU8a } from '@polkadot/util';
-import elliptic from 'elliptic';
+import { u8aToString, u8aToHex, stringToHex, bufferToU8a } from '@polkadot/util';
+import { hexToU8a } from '@polkadot/util/hex/toU8a';
+import { stringToU8a } from '@polkadot/util/string/toU8a';
 import b58 from 'bs58';
 import { sha256 } from 'js-sha256';
 import {
@@ -25,14 +26,14 @@ import {
 import { VerifiableCredential, VerifiablePresentation, Schema, BBSPlusPresentation } from './infra-ss58-verifiable';
 import { EdToX25519Helper } from './x25519/crypto.helper';
 
+
 export {
   CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
   BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
   DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
-  VerificationRelationship, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, EdToX25519Helper
+  VerificationRelationship, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, EdToX25519Helper,
 }
 
-const secp256k1 = new elliptic.ec('secp256k1');
 
 export default class InfraSS58 {
   api!: any;
