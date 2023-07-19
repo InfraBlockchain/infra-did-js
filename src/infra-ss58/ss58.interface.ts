@@ -10,14 +10,14 @@ import { Bls12381BBSSignatureDock2022, Bls12381G2KeyPairDock2022, EcdsaSecp256k1
 export { KeyringPair, Codec, typesBundle, BTreeSet };
 
 export const CRYPTO_INFO = {
-  SR25519: {
-    CRYPTO_TYPE: 'sr25519',
-    KEY_NAME: 'Sr25519VerificationKey2020',
-    SIG_TYPE: 'Sr25519',
-    SIG_NAME: 'Sr25519Signature2020',
-    SIG_CLS: Sr25519Signature2020,
-    LDKeyClass: Sr25519VerificationKey2020,
-  },
+  // SR25519: {
+  //   CRYPTO_TYPE: 'sr25519',
+  //   KEY_NAME: 'Sr25519VerificationKey2020',
+  //   SIG_TYPE: 'Sr25519',
+  //   SIG_NAME: 'Sr25519Signature2020',
+  //   SIG_CLS: Sr25519Signature2020,
+  //   LDKeyClass: Sr25519VerificationKey2020,
+  // },
   ED25519: {
     CRYPTO_TYPE: 'ed25519',
     KEY_NAME: 'Ed25519VerificationKey2018',
@@ -47,7 +47,7 @@ export const CRYPTO_BBS_INFO = {
 } as const
 
 export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
-export type SIG_TYPE = typeof CRYPTO_INFO.ED25519.SIG_TYPE | typeof CRYPTO_INFO.SR25519.SIG_TYPE // | typeof CRYPTO_INFO.Secp256k1.SIG_TYPE
+export type SIG_TYPE = typeof CRYPTO_INFO.ED25519.SIG_TYPE; //| typeof CRYPTO_INFO.SR25519.SIG_TYPE // | typeof CRYPTO_INFO.Secp256k1.SIG_TYPE
 
 export type HexString = `0x${string}`;
 export type KeyPair = KeyringPair //| elliptic.ec.KeyPair;
@@ -115,8 +115,8 @@ export class PublicKey_SS58 {
     switch ((pair as KeyringPair).type) {
       case CRYPTO_INFO.ED25519.CRYPTO_TYPE:
         return new this(u8aToHex((pair as KeyringPair).publicKey), CRYPTO_INFO.ED25519.SIG_TYPE);
-      case CRYPTO_INFO.SR25519.CRYPTO_TYPE:
-        return new this(u8aToHex((pair as KeyringPair).publicKey), CRYPTO_INFO.SR25519.SIG_TYPE);
+      // case CRYPTO_INFO.SR25519.CRYPTO_TYPE:
+      //   return new this(u8aToHex((pair as KeyringPair).publicKey), CRYPTO_INFO.SR25519.SIG_TYPE);
       // case undefined:
       //   return new this(`0x${(pair as elliptic.ec.KeyPair).getPublic(true, 'hex')}`, CRYPTO_INFO.Secp256k1.SIG_TYPE);
       default:

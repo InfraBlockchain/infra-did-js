@@ -2,7 +2,7 @@ import { InfraSS58, CRYPTO_INFO, DIDSet, HexString, IConfig_SS58, Schema, KeyPai
 
 const vcId = 'did:infra:space:5FDseiC76zPek2YYkuyenu4ZgxZ7PUWXt9d19HNB5CaQXt5U';
 const vpId = 'http://example.edu/credentials/2803';
-// const address = 'wss://infra2.infrablockchain.com'; //'ws://localhost:9944';
+// const address = 'wss://infra2.infrablockchain.com'; 
 const address = 'ws://localhost:9944';
 const someJSONSchema = {
     $schema: 'http://json-schema.org/draft-07/schema#',
@@ -21,27 +21,25 @@ const someJSONSchema = {
 jest.setTimeout(300000)
 describe('InfraSS58: DID', () => {
     let infraSS58: InfraSS58;
-    let srTest: DIDSet;
+    let edTest1: DIDSet;
     let contDIDSet: DIDSet;
-    let edTest: DIDSet;
+    let edTest2: DIDSet;
     let config: IConfig_SS58;
     let txfeePayerAccountKeyPair: KeyPair;
     describe('DID creation', () => {
         it('should create SR25519 DID ', async () => {
             expect.assertions(1);
-            return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519)
+            return await InfraSS58.createNewSS58DIDSet('space')
                 .then(srDIDSet => {
-                    srTest = srDIDSet;
-                    // console.log({ srDIDSet })
+                    edTest1 = srDIDSet;
                     expect(srDIDSet.did).toBeDefined();
                 })
         })
         it('should create ED25519 DID ', async () => {
             expect.assertions(1);
-            return await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519)
+            return await InfraSS58.createNewSS58DIDSet('space')
                 .then(edDIDSet => {
-                    edTest = edDIDSet;
-                    // console.log({ edDIDSet })
+                    edTest2 = edDIDSet;
                     expect(edDIDSet.did).toBeDefined();
                 })
         })
@@ -51,8 +49,8 @@ describe('InfraSS58: DID', () => {
         })
         it('verify SS58 DID', () => {
             expect.assertions(2);
-            expect(InfraSS58.validateInfraSS58DID(srTest.did).result).toBeTruthy();
-            expect(InfraSS58.validateInfraSS58DID(edTest.did).result).toBeTruthy();
+            expect(InfraSS58.validateInfraSS58DID(edTest1.did).result).toBeTruthy();
+            expect(InfraSS58.validateInfraSS58DID(edTest2.did).result).toBeTruthy();
         })
 
     })
@@ -60,23 +58,23 @@ describe('InfraSS58: DID', () => {
     describe('DID onChain test', () => {
         beforeAll(async () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
-            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
-            srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
-            contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
+            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519')
+            edTest1 = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
+            contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
             config = {
                 address,
                 networkId: 'space',
 
-                did: srTest.did,
+                did: edTest1.did,
                 // seed or keyPair required
                 // seed: srTest.seed,
-                keyPair: srTest.keyPair,
+                keyPair: edTest1.keyPair,
                 // publicKey: srTest.publicKey,
-                cryptoInfo: srTest.cryptoInfo,
-                verRels: srTest.verRels,
+                cryptoInfo: edTest1.cryptoInfo,
+                verRels: edTest1.verRels,
 
-                controllerDID: srTest.did,
-                controllerKeyPair: srTest.keyPair,
+                controllerDID: edTest1.did,
+                controllerKeyPair: edTest1.keyPair,
                 // controllerSeed: srTest.seed,
 
                 txfeePayerAccountKeyPair,
@@ -105,7 +103,7 @@ describe('InfraSS58: DID', () => {
         it('Get DID document(not register)', async () => {
             expect.assertions(1);
             await infraSS58.didModule.getDocument().then(didDocuments => {
-                console.log('default didDocuments: ', didDocuments);
+                console.log('didDocument(offchain): ', JSON.stringify(didDocuments, null, 2));
                 expect(didDocuments).toBeDefined();
             })
         })
@@ -119,7 +117,7 @@ describe('InfraSS58: DID', () => {
         it('Get DID document(onChain)', async () => {
             expect.assertions(1);
             await infraSS58.didModule.getDocument().then(didDocuments => {
-                console.log('didDocuments: ', didDocuments);
+                console.log('didDocument(onChain): ', JSON.stringify(didDocuments, null, 2));
                 expect(didDocuments).toBeDefined();
             })
         })
@@ -128,7 +126,8 @@ describe('InfraSS58: DID', () => {
             expect.assertions(1);
             await infraSS58.didModule.addKeys(contDIDSet.didKey).then(async () =>
                 await infraSS58.didModule.getDocument().then(doc => {
-                    expect(doc.verificationMethod.length).toBe(3);
+                    console.log('didDocument(onChain) after add keys: ', JSON.stringify(doc, null, 2));
+                    expect(doc.verificationMethod.length).toBe(6);
                 })
             )
         })
@@ -137,7 +136,9 @@ describe('InfraSS58: DID', () => {
             expect.assertions(1);
             await infraSS58.didModule.removeKeys(2).then(async () =>
                 await infraSS58.didModule.getDocument().then(doc => {
-                    expect(doc.verificationMethod.length).toBe(2);
+                    console.log('didDocument(onChain) after remove keys: ', JSON.stringify(doc, null, 2));
+
+                    expect(doc.verificationMethod.length).toBe(3);
                 })
             )
         })
@@ -180,7 +181,7 @@ describe('InfraSS58: DID', () => {
                 'https://rdf.dock.io/alpha/2021#attestsDocumentContent')
                 .then(async () =>
                     await infraSS58.didModule.getDocument().then(doc => {
-                        expect(doc.verificationMethod.length).toBe(2);
+                        expect(doc.verificationMethod.length).toBe(3);
                     })
                 )
         })
@@ -199,21 +200,21 @@ describe('InfraSS58: DID', () => {
         })
     })
 
-    describe('BBS+ test', () => {
+    describe.only('BBS+ test', () => {
         beforeAll(async () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
-            srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
+            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519')
+            edTest1 = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
             config = {
                 address,
                 networkId: 'space',
-                did: srTest.did,
-                seed: srTest.seed,
-                keyPair: srTest.keyPair,
+                did: edTest1.did,
+                seed: edTest1.seed,
+                keyPair: edTest1.keyPair,
                 txfeePayerAccountKeyPair,
-                cryptoInfo: srTest.cryptoInfo,
-                verRels: srTest.verRels,
+                cryptoInfo: edTest1.cryptoInfo,
+                verRels: edTest1.verRels,
             }
             infraSS58 = await InfraSS58.createAsync(config);
             await infraSS58.didModule.registerOnChain();
@@ -246,7 +247,7 @@ describe('InfraSS58: DID', () => {
 
         it('Add BBS+ publicKey', async () => {
             expect.assertions(1);
-            const sigSet = await InfraSS58.BBSPlus_createNewSigSet(srTest.did);
+            const sigSet = await InfraSS58.BBSPlus_createNewSigSet(edTest1.did);
             console.log({ sigSet })
             return await infraSS58.bbsModule.addPublicKey(sigSet.publicKey).then(async () => {
                 await infraSS58.bbsModule.getPublicKey(2).then(res => {
@@ -258,7 +259,7 @@ describe('InfraSS58: DID', () => {
         it('Get DID document(onChain)', async () => {
             expect.assertions(1);
             await infraSS58.didModule.getDocument().then(didDocuments => {
-                console.log('didDocuments: ', didDocuments);
+                console.log('bbs+ didDocument(onChain): ', JSON.stringify(didDocuments, null, 2));
                 expect(didDocuments).toBeDefined();
             })
         })
@@ -286,18 +287,18 @@ describe('InfraSS58: DID', () => {
         beforeAll(async () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519)
-            srTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
-            edTest = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
+            txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519')
+            edTest1 = await InfraSS58.createNewSS58DIDSet('space');
+            edTest2 = await InfraSS58.createNewSS58DIDSet('space');
             config = {
                 address,
                 networkId: 'space',
-                did: srTest.did,
-                seed: srTest.seed,
-                keyPair: srTest.keyPair,
+                did: edTest1.did,
+                seed: edTest1.seed,
+                keyPair: edTest1.keyPair,
                 txfeePayerAccountKeyPair,
-                cryptoInfo: srTest.cryptoInfo,
-                verRels: srTest.verRels,
+                cryptoInfo: edTest1.cryptoInfo,
+                verRels: edTest1.verRels,
             }
             infraSS58 = await InfraSS58.createAsync(config);
             await infraSS58.didModule.registerOnChain();
@@ -327,38 +328,38 @@ describe('InfraSS58: DID', () => {
         })
         it('Add issuer', async () => {
             expect.assertions(1);
-            await infraSS58.trustModule.addIssuer(authorizerId, edTest.did).then(res => {
+            await infraSS58.trustModule.addIssuer(authorizerId, edTest2.did).then(res => {
                 expect(res).toBeDefined();
             });
         })
         it('Get issuer', async () => {
             expect.assertions(1);
-            await infraSS58.trustModule.getIssuers(authorizerId, edTest.did).then(issuer => {
+            await infraSS58.trustModule.getIssuers(authorizerId, edTest2.did).then(issuer => {
                 expect(issuer).toBeDefined();
             });
         })
         it('Remove issuer', async () => {
             expect.assertions(1);
-            await infraSS58.trustModule.removeIssuer(authorizerId, edTest.did).then(res => {
+            await infraSS58.trustModule.removeIssuer(authorizerId, edTest2.did).then(res => {
                 expect(res).toBeDefined();
             });
         })
 
         it('Add verifier', async () => {
             expect.assertions(1);
-            await infraSS58.trustModule.addVerifier(authorizerId, edTest.did).then(res => {
+            await infraSS58.trustModule.addVerifier(authorizerId, edTest2.did).then(res => {
                 expect(res).toBeDefined();
             });
         })
         it('Get verifier', async () => {
             expect.assertions(1);
-            await infraSS58.trustModule.getVerifiers(authorizerId, edTest.did).then(verifier => {
+            await infraSS58.trustModule.getVerifiers(authorizerId, edTest2.did).then(verifier => {
                 expect(verifier).toBeDefined();
             });
         })
         it('Remove verifier', async () => {
             expect.assertions(1);
-            await infraSS58.trustModule.removeVerifier(authorizerId, edTest.did).then(res => {
+            await infraSS58.trustModule.removeVerifier(authorizerId, edTest2.did).then(res => {
                 expect(res).toBeDefined();
             });
         })
@@ -389,8 +390,8 @@ describe('InfraSS58: Verifiable', () => {
     beforeAll(async () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-        txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', CRYPTO_INFO.SR25519);
-        issuer = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.SR25519);
+        txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519');
+        issuer = await InfraSS58.createNewSS58DIDSet('space');
         issuerApi = await InfraSS58.createAsync({
             address,
             networkId: 'space',

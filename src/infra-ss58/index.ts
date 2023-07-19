@@ -201,11 +201,12 @@ export default class InfraSS58 {
     // if (cryptoInfo.CRYPTO_TYPE === 'ecdsa') {
     //   return secp256k1.genKeyPair({ entropy: seed });
     // } else {
-    return InfraSS58.getKeyringPairFromUri(seed, cryptoInfo);
+    return InfraSS58.getKeyringPairFromUri(seed, cryptoInfo.CRYPTO_TYPE);
     // }
   }
-  static async getKeyringPairFromUri(uri, cryptoInfo?: CRYPTO_INFO): Promise<KeyringPair> {
-    const cryptoType = cryptoInfo?.CRYPTO_TYPE || CRYPTO_INFO.ED25519.CRYPTO_TYPE
+  static async getKeyringPairFromUri(uri, cryptoInfo: 'sr25519' | 'ed25519' = 'ed25519'): Promise<KeyringPair> {
+
+    const cryptoType = cryptoInfo || CRYPTO_INFO.ED25519.CRYPTO_TYPE
     const keyringModule = new Keyring({ type: cryptoType });
     await cryptoWaitReady();
     return keyringModule.addFromUri(uri, undefined, cryptoType);
@@ -352,21 +353,26 @@ export default class InfraSS58 {
     did = did.split('#')[0];
     const { id: ss58ID, qualifier } = InfraSS58.splitDID(did);
     const publicKey = decodeAddress(ss58ID);
-    // const keypair = await InfraSS58.getKeyringPairFromDID(did)
     const offDocuments = (did) => ({
       '@context': ['https://www.w3.org/ns/did/v1'],
       id: did,
       controller: [did],
+      // offchain DID에서는 SR과 ED 구분 불가. 표준 타입인 ED25519로 사용.
       verificationMethod: [
         {
           id: `${did}#keys-1`,
-          type: 'Ed25519VerificationKey2018',// offchain DID에서 구분 불가. 표준 타입인 ED25519로 
+          type: 'Ed25519VerificationKey2018',
           controller: did,
           publicKeyBase58: b58.encode(publicKey),
-          // publicKeyHex: u8aToHex(publicKey).slice(2)
         },
         {
-          id: `${did}#${ss58ID}`,
+          id: `${did}#keys-2`,
+          type: 'Ed25519VerificationKey2020',
+          controller: did,
+          publicKeyMultibase: `z${b58.encode(publicKey)}`,
+        },
+        {
+          id: `${did}#keys-3`,
           type: 'JsonWebKey2020',
           controller: did,
           publicKeyJwk: {
@@ -378,10 +384,10 @@ export default class InfraSS58 {
           }
         },
       ],
-      authentication: [`${did}#keys-1`,],
-      assertionMethod: [`${did}#keys-1`,],
+      authentication: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
+      assertionMethod: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
       keyAgreement: [],
-      capabilityInvocation: [`${did}#keys-1`,],
+      capabilityInvocation: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
       ATTESTS_IRI: null,
       service: []
     })
@@ -428,6 +434,7 @@ export default class InfraSS58 {
     const authn: any[] = [];
     const capInv: any[] = [];
     const keyAgr: any[] = [];
+    let extraKeyId = 0
     if (didDetails.lastKeyId > 0) {
       const dks = await this.api.query.didModule.didKeys.entries(hexId);
       dks.forEach(([key, value]) => {
@@ -438,39 +445,35 @@ export default class InfraSS58 {
           if (d_ !== hexId) {
             throw new Error(`DID ${d_} was found to be different than queried DID ${hexId}`);
           }
-          const index = i.toNumber();
+          const index = i.toNumber() + extraKeyId;
           const pk = dk.publicKey;
           let publicKeyRaw, typ;
-          if (pk.isSr25519) {
-            typ = CRYPTO_INFO.SR25519.KEY_NAME;
-            publicKeyRaw = pk.asSr25519.value;
-          } else if (pk.isEd25519) {
+          if (pk.isEd25519) {
             typ = CRYPTO_INFO.ED25519.KEY_NAME;
             publicKeyRaw = pk.asEd25519.value;
-            // } else if (pk.isSecp256k1) {
-            //   typ = CRYPTO_INFO.Secp256k1.KEY_NAME;
-            //   publicKeyRaw = pk.asSecp256k1.value;
           } else {
             throw new Error(`Cannot parse public key ${pk}`);
           }
-          keys.push([index, typ, publicKeyRaw]);
+          keys.push([index, typ, publicKeyRaw], [index + 1, 'Ed25519VerificationKey2020', publicKeyRaw], [index + 2, 'JsonWebKey2020', publicKeyRaw]);
+
           const vr = new VerificationRelationship(dk.verRels.toNumber());
-          if (vr.isAuthentication()) authn.push(index);
-          if (vr.isAssertion()) assertion.push(index);
-          if (vr.isCapabilityInvocation()) capInv.push(index);
-          if (vr.isKeyAgreement()) keyAgr.push(index);
+          if (vr.isAuthentication()) authn.push(index, index + 1, index + 2);
+          if (vr.isAssertion()) assertion.push(index, index + 1, index + 2);
+          if (vr.isCapabilityInvocation()) capInv.push(index, index + 1, index + 2);
+          if (vr.isKeyAgreement()) keyAgr.push(index, index + 1, index + 2);
+          extraKeyId += 2;
         }
       });
     }
 
     if (getBbsPlusSigKeys) {
-      if (didDetails.lastKeyId > keys.length) {
+      if (didDetails.lastKeyId > keys.length - extraKeyId) {
         const possibleBbsPlusKeyIds = new Set();
         for (let i = 1; i <= didDetails.lastKeyId; i++) {
           possibleBbsPlusKeyIds.add(i);
         }
-        for (const [i] of keys) {
-          possibleBbsPlusKeyIds.delete(i);
+        for (const [i, typ] of keys) {
+          if (typ === CRYPTO_INFO.ED25519.KEY_NAME) { possibleBbsPlusKeyIds.delete(i); }
         }
 
         const queryKeys: any[] = [];
@@ -495,7 +498,8 @@ export default class InfraSS58 {
             if (pkObj.curveType !== CRYPTO_BBS_INFO.CURVE_TYPE) {
               throw new Error(`Curve type should have been Bls12381 but was ${pkObj.curveType}`);
             }
-            const keyIndex = queryKeys[currentIter][1];
+            const keyIndex = queryKeys[currentIter][1] + extraKeyId;
+            console.log(queryKeys[currentIter][1], extraKeyId)
             keys.push([keyIndex, CRYPTO_BBS_INFO.BBSDockVerKeyName, hexToU8a(pkObj.bytes)]);
             assertion.push(keyIndex);
           }
@@ -509,32 +513,85 @@ export default class InfraSS58 {
     authn.sort();
     capInv.sort();
     keyAgr.sort();
+    const verificationMethod: any = keys.map(([index, typ, publicKeyRaw]) => {
+      switch (typ) {
+        case 'Ed25519VerificationKey2020':
+          return {
+            id: `${id}#keys-${index}`,
+            type: typ,
+            controller: id,
+            publicKeyMultibase: `z${b58.encode(publicKeyRaw)}`,
+          }
+        case 'JsonWebKey2020':
+          return {
+            id: `${id}#keys-${index}`,
+            type: typ,
+            controller: id,
+            publicKeyJwk: {
+              alg: 'EdDSA',
+              kty: 'OKP',
+              crv: 'Ed25519',
+              kid: `keys-${index}`,
+              x: Buffer.from(publicKeyRaw).toString('base64url'),
+            }
+          }
+        default:
+          return {
+            id: `${id}#keys-${index}`,
+            type: typ,
+            controller: id,
+            publicKeyBase58: b58.encode(publicKeyRaw),
+          }
 
-    const verificationMethod: any = keys.map(([index, typ, publicKeyRaw]) => ({
-      id: `${id}#keys-${index}`,
-      type: typ,
-      controller: id,
-      publicKeyBase58: b58.encode(publicKeyRaw),
-      // publicKeyHex: u8aToHex(publicKeyRaw).slice(2),
-
-    }));
-    verificationMethod.push({
-      id: `${did}#${ss58ID}`,
-      type: 'JsonWebKey2020',
-      controller: did,
-      publicKeyJwk: {
-        alg: 'EdDSA',
-        kty: 'OKP',
-        crv: 'Ed25519',
-        kid: ss58ID,
-        x: Buffer.from(publicKey).toString('base64url'),
       }
+
 
     });
     const assertionMethod = assertion.map((i) => `${id}#keys-${i}`);
     const authentication = authn.map((i) => `${id}#keys-${i}`);
     const capabilityInvocation = capInv.map((i) => `${id}#keys-${i}`);
     const keyAgreement = keyAgr.map((i) => `${id}#keys-${i}`);
+
+    // extraKeyId = keys.length + 1
+    // // verificationMethod add Ed25519VerificationKey2020 and jsonWebKey2020 after every Ed25519VerificationKey2018 method
+    // keys.forEach(([index, typ, publicKeyRaw]) => {
+    //   if (typ === CRYPTO_INFO.ED25519.KEY_NAME) {
+    //     verificationMethod.push({
+    //       id: `${id}#keys-${extraKeyId}`,
+    //       type: 'Ed25519VerificationKey2020',
+    //       controller: id,
+    //       publicKeyMultibase: `z${b58.encode(publicKeyRaw)}`,
+    //     }, {
+    //       id: `${id}#keys-${extraKeyId + 1}`,
+    //       type: 'JsonWebKey2020',
+    //       controller: id,
+    //       publicKeyJwk: {
+    //         alg: 'EdDSA',
+    //         kty: 'OKP',
+    //         crv: 'Ed25519',
+    //         kid: `keys-${extraKeyId + 1}`,
+    //         x: Buffer.from(publicKeyRaw).toString('base64url'),
+    //       }
+    //     });
+    //     if (assertionMethod.indexOf(`${id}#keys-${index}`) > -1) {
+    //       assertionMethod.push(`${id}#keys-${extraKeyId}-2020`, `${id}#keys-${extraKeyId + 1}`);
+    //     }
+    //     if (authentication.indexOf(`${id}#keys-${index}`) > -1) {
+    //       authentication.push(`${id}#keys-${extraKeyId}`, `${id}#keys-${extraKeyId + 1}`);
+    //     }
+    //     if (capabilityInvocation.indexOf(`${id}#keys-${index}`) > -1) {
+    //       capabilityInvocation.push(`${id}#keys-${extraKeyId}`, `${id}#keys-${extraKeyId + 1}`);
+    //     }
+    //     if (keyAgreement.indexOf(`${id}#keys-${index}`) > -1) {
+    //       keyAgreement.push(`${id}#keys-${extraKeyId}`, `${id}#keys-${extraKeyId + 1}`);
+    //     }
+    //     extraKeyId += 2;
+    // }
+
+    // });
+
+
+
     let service: any[] = [];
     if (serviceEndpoints.length > 0) {
       const decoder = new TextDecoder();
