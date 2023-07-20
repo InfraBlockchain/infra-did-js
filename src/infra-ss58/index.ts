@@ -331,7 +331,7 @@ export default class InfraSS58 {
     try {
       didDetails = await this.getOnchainDIDDetail(hexId);
     } catch {
-      return this.defaultDocuments(did);
+      return InfraSS58.defaultDocuments(did);
     }
     const attests = await this.api.query.attest.attestations(hexId);
     const ATTESTS_IRI = attests.iri.isSome ? u8aToString(hexToU8a(attests.iri.toString())) : null;
@@ -520,7 +520,7 @@ export default class InfraSS58 {
       service,
     };
   }
-  private defaultDocuments = (did: string) => {
+  static defaultDocuments = (did: string) => {
     const { id } = InfraSS58.splitDID(did);
     const publicKey = decodeAddress(id);
     return ({
