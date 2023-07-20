@@ -22,7 +22,6 @@ export default class JsonWebKey2020 {
       return new this(base64.decode(verificationMethod.publicKeyJwk.x));
 
     }
-    console.log('from', JSON.stringify(verificationMethod, null, 2))
     throw new Error(`Unsupported signature encoding for 'JsonWebKey2020'`);
   }
 

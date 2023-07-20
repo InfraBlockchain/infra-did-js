@@ -326,8 +326,6 @@ export class VerifiableHelper {
         if (blobModule) {
             await this.getAndValidateSchemaIfPresent(expandedCredential, blobModule, credential[CREDENTIAL_CONTEXT], docLoader);
         }
-        console.log('vc verify??? :', credential
-        )
         const result = await jsigs.verify(credential, {
             purpose: purpose || new CredentialIssuancePurpose(this.expandJSONLD, { controller }),
             suite: [
