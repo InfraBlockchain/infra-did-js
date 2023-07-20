@@ -59,12 +59,10 @@ export default class BBSPlusPresentation extends VerifiableHelper {
       proof,
       documentLoader,
     });
-
     const pkRaw = b58.decode(keyDocument.publicKeyBase58);
     const pk = new BBSPlusPublicKeyG2(pkRaw);
     const [credential] = CRYPTO_BBS_INFO.SIG_CLS.convertCredential({ document });
     const convertedCredential = Credential.fromJSON(credential, CustomLinkedDataSignature.fromJsigProofValue(credentialLD.proof.proofValue));
-    // console.log('convertedCredential', convertedCredential.toJSON());
     const idx = await this.presBuilder.addCredential(convertedCredential, pk);
     // Enforce revealing of verificationMethod and type. also require context and type for JSON-LD
     this.addAttributeToReveal(idx, ['@context', 'type', 'proof.type', 'proof.verificationMethod']);

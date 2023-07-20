@@ -3,7 +3,7 @@
 export default {
   '@context': [{
     '@version': 1.1,
-  }, 'https://w3id.org/security/v1', {
+  }, 'https://w3id.org/security/v1', 'https://w3id.org/security/suites/ed25519-2020/v1', {
     AesKeyWrappingKey2019: 'sec:AesKeyWrappingKey2019',
     DeleteKeyOperation: 'sec:DeleteKeyOperation',
     DeriveSecretOperation: 'sec:DeriveSecretOperation',
@@ -28,6 +28,9 @@ export default {
     VerifyOperation: 'sec:VerifyOperation',
     WrapKeyOperation: 'sec:WrapKeyOperation',
     X25519KeyAgreementKey2019: 'sec:X25519KeyAgreementKey2019',
+
+
+
 
     allowedAction: 'sec:allowedAction',
     assertionMethod: { '@id': 'sec:assertionMethod', '@type': '@id', '@container': '@set' },

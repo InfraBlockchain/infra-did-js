@@ -13,17 +13,10 @@ export default class Ed25519VerificationKey2018 {
       throw new Error(`verification method should have type ${'Ed25519VerificationKey2018'} - got: ${verificationMethod.type}`);
     }
 
-    if (verificationMethod.publicKeyHex) {
-      return new this(hexToU8a(verificationMethod.publicKeyHex));
-    }
     if (verificationMethod.publicKeyBase58) {
       return new this(b58.decode(verificationMethod.publicKeyBase58));
     }
-
-    if (verificationMethod.publicKeyBase64) {
-      return new this(base64.decode(verificationMethod.publicKeyBase64));
-    }
-    throw new Error(`Unsupported signature encoding for ${'Ed25519VerificationKey2018'}`);
+    throw new Error(`Unsupported signature encoding for 'Ed25519VerificationKey2018'`);
   }
 
   /**

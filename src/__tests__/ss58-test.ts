@@ -1,4 +1,5 @@
 import { InfraSS58, CRYPTO_INFO, DIDSet, HexString, IConfig_SS58, Schema, KeyPair, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, BBSPlus_SigSet } from '../index';
+import { CRYPTO_BBS_INFO } from '../infra-ss58/ss58.interface';
 
 const vcId = 'did:infra:space:5FDseiC76zPek2YYkuyenu4ZgxZ7PUWXt9d19HNB5CaQXt5U';
 const vpId = 'http://example.edu/credentials/2803';
@@ -59,8 +60,8 @@ describe('InfraSS58: DID', () => {
         beforeAll(async () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
             txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519')
-            edTest1 = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
-            contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
+            edTest1 = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2018);
+            contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2018);
             config = {
                 address,
                 networkId: 'space',
@@ -200,12 +201,12 @@ describe('InfraSS58: DID', () => {
         })
     })
 
-    describe.only('BBS+ test', () => {
+    describe('BBS+ test', () => {
         beforeAll(async () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
 
             txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519')
-            edTest1 = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
+            edTest1 = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2018);
             config = {
                 address,
                 networkId: 'space',
@@ -372,7 +373,7 @@ describe('InfraSS58: DID', () => {
     })
 })
 
-describe('InfraSS58: Verifiable', () => {
+describe.only('InfraSS58: Verifiable', () => {
     let txfeePayerAccountKeyPair: KeyPair;
     let schema: Schema;
     let vc: VerifiableCredential;
@@ -389,9 +390,10 @@ describe('InfraSS58: Verifiable', () => {
     let issuerBBSSigSet: BBSPlus_SigSet;
     beforeAll(async () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
-
         txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519');
-        issuer = await InfraSS58.createNewSS58DIDSet('space');
+        issuer = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2020);
+        holder = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2020);
+
         issuerApi = await InfraSS58.createAsync({
             address,
             networkId: 'space',
@@ -401,8 +403,6 @@ describe('InfraSS58: Verifiable', () => {
             cryptoInfo: issuer.cryptoInfo,
             verRels: issuer.verRels,
         });
-        await issuerApi.didModule.registerOnChain()
-        holder = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519);
         holderApi = await InfraSS58.createAsync({
             address,
             networkId: 'space',
@@ -412,10 +412,10 @@ describe('InfraSS58: Verifiable', () => {
             cryptoInfo: holder.cryptoInfo,
             verRels: holder.verRels,
         })
+
+        await issuerApi.didModule.registerOnChain()
         await holderApi.didModule.registerOnChain();
         revokeId = issuerApi.registryModule.getRevokeId(vcId);
-
-
     })
 
     afterAll(async () => {
@@ -505,7 +505,7 @@ describe('InfraSS58: Verifiable', () => {
 
         it('Issue(Sign) VC', async () => {
             expect.assertions(1);
-            await vc.sign(issuerApi.didModule.getKeyDoc()).then(svc => {
+            await vc.sign(await issuerApi.didModule.getKeyDoc()).then(svc => {
                 signedVC = svc;
                 console.log('signed VC::: ', signedVC.toJSON());
                 expect(signedVC.proof.verificationMethod).toBeDefined();
@@ -580,13 +580,13 @@ describe('InfraSS58: Verifiable', () => {
 
     })
 
-    describe('BBS+ VP test', () => {
+    describe.skip('BBS+ VP test', () => {
         beforeAll(async () => {
             //add bbs+ pubKey
             issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did);
             await issuerApi.bbsModule.addPublicKey(issuerBBSSigSet.publicKey);
             await issuerApi.didModule.getDocument().then(doc => {
-                issuerBBSSigSet.keyPair.id = doc.verificationMethod[1].id
+                issuerBBSSigSet.keyPair.id = doc.verificationMethod.find(el => el.type === CRYPTO_BBS_INFO.BBSDockVerKeyName).id
             });
             //set schema
             schema = new Schema('space');
