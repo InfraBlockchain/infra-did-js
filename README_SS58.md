@@ -14,7 +14,10 @@
 
 Feature provided by `infra-did-js/infra-ss58` library
 
-- Infra SS58 DID Creation(SR25519, ED25519, Secp257K1)
+> Note:
+> The Infra DID resolver provides three types of verification methods in its DID document: 'Ed25519VerificationKey2018', 'Ed25519VerificationKey2020', and 'JsonWebKey2020'. However, as of 2023-07-21, we are using the [w3c standard](https://w3c-ccg.github.io/security-vocab/contexts/security-v2.jsonld) for VC/VP verification, so only 'Ed25519VerificationKey2018' is available.
+
+- Infra SS58 DID Creation
 - DID Module
   - Register/Unregister DID on chain
   - Update/Remove DID attributes (Service Endpoint, Controller DID, Public Key)
@@ -41,10 +44,10 @@ Feature provided by `infra-did-js/infra-ss58` library
 ```ts
 import  {InfraSS58, CRYPTO_INFO} from 'infra-did-js';
 
-const txfeePaterAccountKeyPair = await InfraSS58.getKeyPairFromUri('//Alice', CRYPTO_INFO.SR25519);
+const txfeePaterAccountKeyPair = await InfraSS58.getKeyPairFromUri('//Alice', 'sr25519');
 const confBlockchainNetwork = {
   networkId: 'space',
-  address: 'wss://polkadot.infrablockchain.com',
+  address: 'wss://infra2.infrablockchain.com',
   // seed or keyPair required
   txfeePayerAccountKeyPair,
   // or txfeePayerAccountSeed: 'TX_FEE_PAYER_ACCOUNT_SEED'
@@ -65,43 +68,61 @@ const infraApi = await InfraSS58.createAsync(conf);
 ## Infra SS58 DID Creation
 
 ```ts
-DIDSet = await InfraSS58.createNewSS58DIDSet(
-  networkId,
-  CRYPTO_INFO.SR25519 // or CRYPTO_INFO.ED25519 or CRYPTO_INFO.Secp256k1
-)
+DIDSet = await InfraSS58.createNewSS58DIDSet(networkId)
 console.log({ DIDSet })
 ```
 
 ```ts
 {
   DIDSet: {
-        did: 'did:infra:space:5FxjYbTe26dwcHKjBHxHUp14wqs1fU4iyTyKB5ff6uxcfCNy',
-        didKey: DidKey_SS58 {
-          publicKey: [PublicKey_SS58],
-          verRels: [VerificationRelationship]
-        },
-        keyPair: {
-          address: [Getter],
-          addressRaw: [Getter],
-          isLocked: [Getter],
-          meta: [Getter],
-          publicKey: [Getter],
-          type: [Getter],
-          // -- snip --
-        },
-        publicKey: PublicKey_SS58 {
-          value: '0xac63251df26461e78f5f82f7271db9e4c82a02d8f9e43c001096821f8a54ee58',
-          sigType: 'Sr25519'
-        },
-        verRels: VerificationRelationship { _value: 0 },
-        cryptoInfo: {
-          CRYPTO_TYPE: 'sr25519',
-          KEY_TYPE: 'Sr25519VerificationKey2020',
-          SIG_TYPE: 'Sr25519'
-        },
-        seed: '0x8b727f8418fdf7a01e76fc8a8e96d7e6c6b172fe9ae0e445e259ab38f911bf90'
+    did: 'did:infra:space:5Cq2Za1Z4HJx5eTvxT5iFyXZLM1XTwVZSafQsEuK4ujNKJEF',
+    didKey: DidKey_SS58 {
+      publicKey: PublicKey_SS58 {
+      value: '0x21cdc3dc94f8cccd889759fbc282f4272f89c8d974aea4d3051e8efa85e738b7',
+      sigType: 'Ed25519'
+    },
+    verRels: VerificationRelationship { _value: 0 }
+    },
+    keyPair: {
+      address: [Getter],
+      addressRaw: [Getter],
+      isLocked: [Getter],
+      meta: [Getter],
+      publicKey: [Getter],
+      type: [Getter],
+      // -- snip --
+    },
+      publicKey: PublicKey_SS58 {
+      value: '0x21cdc3dc94f8cccd889759fbc282f4272f89c8d974aea4d3051e8efa85e738b7',
+      sigType: 'Ed25519'
+    },
+    verRels: VerificationRelationship { _value: 0 },
+    cryptoInfo: {
+      CRYPTO_TYPE: 'ed25519',
+      KEY_NAME: 'Ed25519VerificationKey2018',
+      SIG_TYPE: 'Ed25519',
+      SIG_NAME: 'Ed25519Signature2018',
+      SIG_CLS: [class Ed25519Signature2018 extends CustomLinkedDataSignature],
+      LDKeyClass: [class Ed25519VerificationKey2018]
+    },
+    seed: '0x8c9971953c5c82a51e3ab0ec9a16ced7054585081483e2489241b5b059f5f3cf',
+    keyPairJWK: {
+      publicJwk: {
+        alg: 'EdDSA',
+        kty: 'OKP',
+        crv: 'Ed25519',
+        x: 'Ic3D3JT4zM2Il1n7woL0Jy-JyNl0rqTTBR6O-oXnOLc'
+      },
+      privateJwk: {
+        alg: 'EdDSA',
+        kty: 'OKP',
+        crv: 'Ed25519',
+        x: 'Ic3D3JT4zM2Il1n7woL0Jy-JyNl0rqTTBR6O-oXnOLc',
+        d: 'jJlxlTxcgqUeOrDsmhbO1wVFhQgUg-JIkkG1sFn1888'
       }
     }
+  }
+}
 ```
 
 ## Infra SS58 DID Format Validation
@@ -169,31 +190,57 @@ console.log({ didDocuments })
 ```json
 {
   "didDocuments": {
-    "@context": ["https://www.w3.org/ns/did/v1"],
-    "id": "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb",
-    "controller": [
-      "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb"
-    ],
-    "verificationMethod": [
-      {
-        "id": "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb#keys-1",
-        "type": "Sr25519VerificationKey2020", // 'unknown' if did not register chain
-        "controller": "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb",
-        "publicKeyBase58": "8z5UyxcPoGSAUNVoczXdka3KcXCKVsAzRig7p96qmHos"
-      }
-    ],
-    "authentication": [
-      "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb#keys-1"
-    ],
-    "assertionMethod": [
-      "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb#keys-1"
-    ],
-    "keyAgreement": [],
-    "capabilityInvocation": [
-      "did:infra:space:5EkFL4biewTM4eo5y4G1Bi5ArKU7993xRgQ94x3b29d1EgCb#keys-1"
-    ],
-    "ATTESTS_IRI": null,
-    "service": []
+   "@context": [
+        "https://www.w3.org/ns/did/v1"
+      ],
+      "id": "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX",
+      "controller": [
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX"
+      ],
+      "verificationMethod": [
+        {
+          "id": "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-1",
+          "type": "Ed25519VerificationKey2018",
+          "controller": "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX",
+          "publicKeyBase58": "FXvzvY3jcmtXNK48azNRund96FBFtVK62MMPHZeE1v7T"
+        },
+        {
+          "id": "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-2",
+          "type": "Ed25519VerificationKey2020",
+          "controller": "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX",
+          "publicKeyMultibase": "zFXvzvY3jcmtXNK48azNRund96FBFtVK62MMPHZeE1v7T"
+        },
+        {
+          "id": "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-3",
+          "type": "JsonWebKey2020",
+          "controller": "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX",
+          "publicKeyJwk": {
+            "alg": "EdDSA",
+            "kty": "OKP",
+            "crv": "Ed25519",
+            "kid": "keys-3",
+            "x": "1_AZBSwM9m5V0JvdNHro1FzkHi38m50V6N_fR_DaGdo"
+          }
+        }
+      ],
+      "authentication": [
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-1",
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-2",
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-3"
+      ],
+      "assertionMethod": [
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-1",
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-2",
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-3"
+      ],
+      "keyAgreement": [],
+      "capabilityInvocation": [
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-1",
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-2",
+        "did:infra:space:5GwqUaWxLMqZeC5bK7XgEQ1ZNL8y9YnxxvtVFSnoFtzRWfiX#keys-3"
+      ],
+      "ATTESTS_IRI": null,
+      "service": []
   }
 };
 ```
@@ -686,63 +733,25 @@ console.log(verifyResult)
             "https://www.w3.org/2018/credentials/examples/v1"
           ],
           "type": "Ed25519Signature2018",
-          "created": "2023-03-08T05:06:12Z",
-          "verificationMethod": "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1",
+          "created": "2023-07-20T23:47:06Z",
+          "verificationMethod": "did:infra:space:5CBKkEYcZ23fgmmhPbz2D7M1jZnLmHQJuJUrGqYKX7gbZoVU#keys-1",
           "proofPurpose": "authentication",
-          "challenge": "0xf805d8827cce9d4a49e1c30efd5f96a34dc726b7e50908d07e92f525be8bd068",
+          "challenge": "0xdfb67fc9b7c2fb7e672c6590d16ef38a88eb66aad4e6403806ad664494d6d203",
           "domain": "example domain",
-          "proofValue": "zkt1MCJ6uZMHUS67uuAYzXJKtvymYh7oiFmzyXbPA2BCQME5T8NqqR6cw3vwu2dy2ZY82tSfJ45Hh8a5YjXmB766"
+          "proofValue": "z2aTjMYC5SeWNnwunzEtTw89Q9BYRcx78jqsXcCoLMeEgE3FpTKHZtuXiGjGQbeDEDaBNkdQjymhcSiWht6atJiYC"
         },
         "verified": true,
         "verificationMethod": {
           "@context": "https://w3id.org/security/v2",
-          "id": "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1",
+          "id": "did:infra:space:5CBKkEYcZ23fgmmhPbz2D7M1jZnLmHQJuJUrGqYKX7gbZoVU#keys-1",
           "type": "Ed25519VerificationKey2018",
           "controller": {
-            "id": "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3",
-            "assertionMethod": [
-              "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1"
-            ],
-            "authentication": [
-              "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1"
-            ],
-            "capabilityInvocation": [
-              "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1"
-            ],
-            "controller": "did:infra:space5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3",
-            "verificationMethod": "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1"
+            /* snip */
           },
-          "publicKeyBase58": "5PtpUtVRvqRdpq34RFn3sYkHMisNUcNz97bs2jP6hLMj"
+          "publicKeyBase58": "LhuSNWqUPB6ykSKN7QYZFZupTdG1eAQrtaW3VumvuUs"
         },
         "purposeResult": {
-          "valid": true,
-          "controller": {
-            "@context": ["https://www.w3.org/ns/did/v1"],
-            "id": "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3",
-            "controller": [
-              "did:infra:space5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3"
-            ],
-            "verificationMethod": [
-              {
-                "id": "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1",
-                "type": "Ed25519VerificationKey2018",
-                "controller": "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3",
-                "publicKeyBase58": "5PtpUtVRvqRdpq34RFn3sYkHMisNUcNz97bs2jP6hLMj"
-              }
-            ],
-            "authentication": [
-              "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1"
-            ],
-            "assertionMethod": [
-              "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1"
-            ],
-            "keyAgreement": [],
-            "capabilityInvocation": [
-              "did:infra:space:5DYKafDzPZSfJ5jmcAQK5X1TAShwbAPJJPzetUKv2XQuBBL3#keys-1"
-            ],
-            "ATTESTS_IRI": null,
-            "service": []
-          }
+          /* snip */
         }
       }
     ]
@@ -755,35 +764,46 @@ console.log(verifyResult)
           "proof": {
             "@context": [
               "https://www.w3.org/2018/credentials/v1",
-              "https://www.w3.org/2018/credentials/examples/v1",
               "https://schema.org"
             ],
-            "type": "EcdsaSecp256k1Signature2019",
-            "created": "2023-03-08T05:06:06Z",
-            "verificationMethod": "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1",
+            "type": "Ed25519Signature2018",
+            "created": "2023-07-20T23:46:54Z",
+            "verificationMethod": "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR#keys-1",
             "proofPurpose": "assertionMethod",
-            "proofValue": "zAN1rKvtTouag9xApsQx1meZYG6bsDbMBN3dPiuBrsYJLKDzskZeZmRunwCjFGANBAsv7PfzbGuL7Ye9XPiDgWJbBXkSiRRAgs"
+            "proofValue": "z2TZV4YPEymjXp7CbpUtJD29ABXKRCRXhCyWfcZcg2foBkrab2h417tANL5DDEBumKC77hJsMkUKNL5KQZAe6KfAd"
           },
           "verified": true,
           "verificationMethod": {
             "@context": "https://w3id.org/security/v2",
-            "id": "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1",
-            "type": "EcdsaSecp256k1VerificationKey2019",
+            "id": "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR#keys-1",
+            "type": "Ed25519VerificationKey2018",
             "controller": {
-              "id": "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs",
+              "id": "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR",
               "assertionMethod": [
-                "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"
+                /* snip */
               ],
               "authentication": [
-                "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"
+                /* snip */
               ],
               "capabilityInvocation": [
-                "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"
+                /* snip */
               ],
-              "controller": "did:infra:space5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs",
-              "verificationMethod": "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"
+              "controller": "did:infra:space5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR",
+              "verificationMethod": [
+                "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR#keys-1",
+                {
+                  "id": "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR#keys-2",
+                  "type": "did:Ed25519VerificationKey2020",
+                  "controller": "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR"
+                },
+                {
+                  "id": "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR#keys-3",
+                  "type": "did:JsonWebKey2020",
+                  "controller": "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR"
+                }
+              ]
             },
-            "publicKeyBase58": "rmwTxfjnpCM5wncDQ8k7RmCbzkY34BfTiKdw5QVNfRda"
+            "publicKeyBase58": "BHsKsCtp9uovx1PefquegpVJtJJEEaR8A7agjeMRuSCs"
           },
           "purposeResult": {
             "valid": true,
@@ -791,7 +811,7 @@ console.log(verifyResult)
           }
         }
       ],
-      "credentialId": "http://example.vc/credentials/123532"
+      "credentialId": "did:infra:space:5FDseiC76zPek2YYkuyenu4ZgxZ7PUWXt9d19HNB5CaQXt5U"
     }
   ],
   "verified": true

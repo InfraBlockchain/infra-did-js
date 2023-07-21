@@ -60,8 +60,9 @@ describe('InfraSS58: DID', () => {
         beforeAll(async () => {
             jest.spyOn(console, 'warn').mockImplementation(() => {});
             txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519')
-            edTest1 = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2018);
-            contDIDSet = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2018);
+            edTest1 = await InfraSS58.createNewSS58DIDSet('space');
+            contDIDSet = await InfraSS58.createNewSS58DIDSet('space');
+            console.log('DID Set: ', edTest1)
             config = {
                 address,
                 networkId: 'space',
@@ -373,7 +374,7 @@ describe('InfraSS58: DID', () => {
     })
 })
 
-describe.only('InfraSS58: Verifiable', () => {
+describe('InfraSS58: Verifiable', () => {
     let txfeePayerAccountKeyPair: KeyPair;
     let schema: Schema;
     let vc: VerifiableCredential;
@@ -391,8 +392,8 @@ describe.only('InfraSS58: Verifiable', () => {
     beforeAll(async () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
         txfeePayerAccountKeyPair = await InfraSS58.getKeyringPairFromUri('//Alice', 'sr25519');
-        issuer = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2020);
-        holder = await InfraSS58.createNewSS58DIDSet('space', CRYPTO_INFO.ED25519_2020);
+        issuer = await InfraSS58.createNewSS58DIDSet('space');
+        holder = await InfraSS58.createNewSS58DIDSet('space');
 
         issuerApi = await InfraSS58.createAsync({
             address,
@@ -580,7 +581,7 @@ describe.only('InfraSS58: Verifiable', () => {
 
     })
 
-    describe.skip('BBS+ VP test', () => {
+    describe('BBS+ VP test', () => {
         beforeAll(async () => {
             //add bbs+ pubKey
             issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did);

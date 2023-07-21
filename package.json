@@ -1,6 +1,6 @@
 {
   "name": "infra-did-js",
-  "version": "0.5.0",
+  "version": "0.5.10",
   "description": "InfraBlockchain DID library creating and managing DIDs",
   "main": "lib/index.js",
   "module": "lib/index.esm.js",
@@ -16,6 +16,13 @@
     "LICENSE"
   ],
   "author": "Bezalel Lim <bezalel@infrablockchain.com>",
+  "contributors": [
+    {
+      "name": "Evan kim",
+      "email": "keispace.kyj@gmail.com",
+      "url": "https://github.com/keispace"
+    }
+  ],
   "license": "MIT",
   "scripts": {
     "test": "jest",
