@@ -1,6 +1,7 @@
 import { u8aToHex } from "@polkadot/util";
 import { randomAsHex } from "@polkadot/util-crypto";
-import { InfraSS58, Codec, BTreeSet, DidKey_SS58, IConfig_SS58, KeyringPair, PublicKey_SS58, VerificationRelationship, ServiceEndpointType } from "..";
+import { Codec, DidKey_SS58, BTreeSet, IConfig_SS58, KeyringPair, PublicKey_SS58, ServiceEndpointType, VerificationRelationship, DIDSet } from "../ss58.interface";
+import type { InfraSS58 } from "..";
 
 
 export class InfraSS58_DID {
@@ -17,13 +18,13 @@ export class InfraSS58_DID {
 
 
   private constructor(that: InfraSS58) { this.that = that }
-  static async createAsync(conf: IConfig_SS58, apiModule: InfraSS58): Promise<InfraSS58_DID> {
-    return await new InfraSS58_DID(apiModule).initModule(conf)
+  static async createAsync(conf: IConfig_SS58, apiModule: InfraSS58, didSet: DIDSet): Promise<InfraSS58_DID> {
+    return await new InfraSS58_DID(apiModule).initModule(conf, didSet)
   }
-  private async initModule(conf: IConfig_SS58): Promise<InfraSS58_DID> {
+  private async initModule(conf: IConfig_SS58, didSet: DIDSet): Promise<InfraSS58_DID> {
     this.verRels = conf.verRels || new VerificationRelationship()
     if (conf.seed) {
-      const { did, didKey, keyPair, publicKey } = await InfraSS58.createNewSS58DIDSet(conf.networkId, conf.cryptoInfo, conf.seed, conf.verRels)
+      const { did, didKey, keyPair, publicKey } = didSet; //await InfraSS58.createNewSS58DIDSet(conf.networkId, conf.cryptoInfo, conf.seed, conf.verRels)
       this.did = did;
       this.keyPairs = [keyPair];
       this.publicKey = publicKey;
@@ -58,11 +59,11 @@ export class InfraSS58_DID {
     return this.that.getKeyDoc(verificationMethod.id, this.did, this.that.cryptoInfo.KEY_NAME, this.keyPairs[0])
   }
   async registerDIDOnChain(did: string, didKey, controllerDID?: string) {
-    const hexId = InfraSS58.didToHex(did);
+    const hexId = this.that.didToHex(did);
     const didKeys = [didKey].map((d) => d.toJSON ? d.toJSON() : d);
     // @ts-ignore
     const controllers = new BTreeSet();
-    controllers.add(InfraSS58.didToHex(controllerDID) as unknown as Codec)
+    controllers.add(this.that.didToHex(controllerDID) as unknown as Codec)
 
     const tx = await this.that.api.tx.didModule.newOnchain(hexId, didKeys, controllers);
     return this.that.signAndSend(tx, false, {});
@@ -72,7 +73,7 @@ export class InfraSS58_DID {
   }
 
   async unregisterDIDOnChain(did, controllerDID, controllerSigType, contollerKeyPair) {
-    const hexDID = InfraSS58.didToHex(did)
+    const hexDID = this.that.didToHex(did)
     const nonce = await this.that.getNextNonce(hexDID);
     const DidRemoval = { did: hexDID, nonce };
     const stateMessage = this.that.api.createType('StateChange', { DidRemoval }).toU8a();
@@ -85,7 +86,7 @@ export class InfraSS58_DID {
   }
 
   async addKeys(...didKeys: DidKey_SS58[]) {
-    const hexDID = InfraSS58.didToHex(this.did)
+    const hexDID = this.that.didToHex(this.did)
     const nonce = await this.that.getNextNonce(hexDID);
     const keys = didKeys.map((d) => d.toJSON());
     const AddKeys = { did: hexDID, keys, nonce };
@@ -97,7 +98,7 @@ export class InfraSS58_DID {
   }
 
   async removeKeys(...keyIds: number[]) {
-    const hexDID = InfraSS58.didToHex(this.did)
+    const hexDID = this.that.didToHex(this.did)
     const nonce = await this.that.getNextNonce(hexDID);
     // @ts-ignore
     const keys = new BTreeSet();
@@ -112,12 +113,12 @@ export class InfraSS58_DID {
   }
 
   async addControllers(...controllerDIDs: string[]) {
-    const hexDID = InfraSS58.didToHex(this.did)
+    const hexDID = this.that.didToHex(this.did)
     const nonce = await this.that.getNextNonce(hexDID);
     // @ts-ignore
     const controllers = new BTreeSet();
     controllerDIDs.forEach((controllerDID) => {
-      const controllerHexDID: unknown = InfraSS58.didToHex(controllerDID);
+      const controllerHexDID: unknown = this.that.didToHex(controllerDID);
       controllers.add(controllerHexDID as Codec);
     });
     const AddControllers = { did: hexDID, controllers, nonce };
@@ -128,12 +129,12 @@ export class InfraSS58_DID {
   }
 
   async removeControllers(...controllerDIDs: string[]) {
-    const hexDID = InfraSS58.didToHex(this.did)
+    const hexDID = this.that.didToHex(this.did)
     const nonce = await this.that.getNextNonce(hexDID);
     // @ts-ignore
     const controllers = new BTreeSet();
     controllerDIDs.forEach((controllerDID) => {
-      const controllerHexDID: unknown = InfraSS58.didToHex(controllerDID);
+      const controllerHexDID: unknown = this.that.didToHex(controllerDID);
       controllers.add(controllerHexDID as Codec);
     });
     const RemoveControllers = { did: hexDID, controllers, nonce };
@@ -149,7 +150,7 @@ export class InfraSS58_DID {
     endpointIdText?: string,
   ) {
     const encoder = new TextEncoder();
-    const hexDID = InfraSS58.didToHex(this.did)
+    const hexDID = this.that.didToHex(this.did)
     const nonce = await this.that.getNextNonce(hexDID);
     if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
     if (!endpointType) {
@@ -170,7 +171,7 @@ export class InfraSS58_DID {
     const encoder = new TextEncoder();
     if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
     const spId = u8aToHex(encoder.encode(endpointIdText));
-    const hexDID = InfraSS58.didToHex(this.did)
+    const hexDID = this.that.didToHex(this.did)
     const nonce = await this.that.getNextNonce(hexDID);
     const RemoveServiceEndpoint = { did: hexDID, id: spId, nonce };
     const stateMessage = this.that.api.createType('StateChange', { RemoveServiceEndpoint }).toU8a();
@@ -180,7 +181,7 @@ export class InfraSS58_DID {
   }
 
   async getServiceEndpoint(endpointIdText?: string) {
-    const hexDID = InfraSS58.didToHex(this.did);
+    const hexDID = this.that.didToHex(this.did);
     const encoder = new TextEncoder();
     if (!endpointIdText) endpointIdText = `${this.did}#linked-domain`;
     const spId = u8aToHex(encoder.encode(endpointIdText));
@@ -198,8 +199,8 @@ export class InfraSS58_DID {
   }
 
   async isController(controllerDID: string): Promise<boolean> {
-    const controlledHexId = InfraSS58.didToHex(this.did);
-    const controllerHexId = InfraSS58.didToHex(controllerDID);
+    const controlledHexId = this.that.didToHex(this.did);
+    const controllerHexId = this.that.didToHex(controllerDID);
     const resp = await this.that.api.query.didModule.didControllers(
       controlledHexId,
       controllerHexId,
@@ -208,7 +209,7 @@ export class InfraSS58_DID {
   }
   async setClaim(priority: number, iri: string) {
     const encoder = new TextEncoder();
-    const hexDID = InfraSS58.didToHex(this.did);
+    const hexDID = this.that.didToHex(this.did);
     const nonce = await this.that.getNextNonce(hexDID);
     const attest = { priority, iri: u8aToHex(encoder.encode(iri)) };
     const SetAttestationClaim = { attest, nonce };

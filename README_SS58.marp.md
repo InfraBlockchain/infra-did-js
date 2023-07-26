@@ -1043,9 +1043,9 @@ const verifyResult = await bbsPlusPresentation.verifyPresentation(presentation, 
 const holder = await InfraSS58.createNewSS58DIDSet('space');
 const publicKey = hexToU8a(verifier.publicKey.toJSON()['Ed25519']);
 // convert Ed25519 to X25519
-const xPkU8a = CryptoHelper.edPkToX25519Pk(publicKey, 'u8a');
-const xPkJwk = CryptoHelper.edPkToX25519Pk(publicKey, 'jwk');
-const xPkKeyObject = CryptoHelper.edPkToX25519Pk(publicKey, 'keyObject');
+const xPkU8a = CryptoHelper.edToX25519Pk(publicKey, 'u8a');
+const xPkJwk = CryptoHelper.edToX25519Pk(publicKey, 'jwk');
+const xPkKeyObject = CryptoHelper.edToX25519Pk(publicKey, 'keyObject');
 
 // convert Key Type
 const obj2JWK = CryptoHelper.keyObject2JWK(xPkKeyObject as KeyObject);
@@ -1065,11 +1065,11 @@ const verifierX25519KeyPair = CryptoHelper.edToX25519KeyPair(hexToU8a(verifier.p
 const holderX25519KeyPair = CryptoHelper.edToX25519KeyPair(hexToU8a(holder.publicKey.toJSON()['Ed25519']), hexToU8a(holder.seed));
 
 const { publicKey: epk, privateKey: esk } = CryptoHelper.generateX25519KeyPairObject();
-const verifierSecretUsingESK = CryptoHelper.jwkToEcdhesKeypair('X25519', holderX25519KeyPair.publicKeyJWK, esk);
-const holderSecretUsingEPK = CryptoHelper.jwkToEcdhesKeypair('X25519', epk, holderX25519KeyPair.privateKeyJWK);
+const verifierSecretUsingESK = CryptoHelper.x25519ToEcdhesKeypair(holderX25519KeyPair.publicKeyJWK, esk);
+const holderSecretUsingEPK = CryptoHelper.x25519ToEcdhesKeypair(epk, holderX25519KeyPair.privateKeyJWK);
 
-const verifierDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair('X25519', holderX25519KeyPair.publicKeyJWK, verifierX25519KeyPair.privateKeyJWK);
-const holderDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair('X25519', verifierX25519KeyPair.publicKeyJWK, holderX25519KeyPair.privateKeyJWK);
+const verifierDIDSharedKey = CryptoHelper.x25519ToEcdhesKeypair(holderX25519KeyPair.publicKeyJWK, verifierX25519KeyPair.privateKeyJWK);
+const holderDIDSharedKey = CryptoHelper.x25519ToEcdhesKeypair(verifierX25519KeyPair.publicKeyJWK, holderX25519KeyPair.privateKeyJWK);
 ```
 
 ---

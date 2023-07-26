@@ -647,9 +647,9 @@ describe('CryptoHelper test', () => {
         holder = await InfraSS58.createNewSS58DIDSet('space');
     })
     it('convert function test', async () => {
-        const xPkU8a = CryptoHelper.edPkToX25519Pk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), 'u8a');
-        const xPkJwk = CryptoHelper.edPkToX25519Pk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), 'jwk');
-        const xPkKeyObject = CryptoHelper.edPkToX25519Pk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), 'keyObject');
+        const xPkU8a = CryptoHelper.edToX25519Pk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), 'u8a');
+        const xPkJwk = CryptoHelper.edToX25519Pk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), 'jwk');
+        const xPkKeyObject = CryptoHelper.edToX25519Pk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), 'keyObject');
         expect(xPkU8a).toBeInstanceOf(Uint8Array);
         expect(xPkKeyObject).toBeInstanceOf(KeyObject);
         expect(xPkJwk).toHaveProperty('alg');
@@ -657,9 +657,9 @@ describe('CryptoHelper test', () => {
         expect(xPkJwk).toHaveProperty('kty');
         expect(xPkJwk).toHaveProperty('x');
 
-        const xSkU8a = CryptoHelper.edSkToX25519Sk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), hexToU8a(verifier.seed), 'u8a');
-        const xSkJwk = CryptoHelper.edSkToX25519Sk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), hexToU8a(verifier.seed), 'jwk');
-        const xSkKeyObject = CryptoHelper.edSkToX25519Sk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), hexToU8a(verifier.seed), 'keyObject');
+        const xSkU8a = CryptoHelper.edToX25519Sk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), hexToU8a(verifier.seed), 'u8a');
+        const xSkJwk = CryptoHelper.edToX25519Sk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), hexToU8a(verifier.seed), 'jwk');
+        const xSkKeyObject = CryptoHelper.edToX25519Sk(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), hexToU8a(verifier.seed), 'keyObject');
         expect(xSkU8a).toBeInstanceOf(Uint8Array);
         expect(xSkKeyObject).toBeInstanceOf(KeyObject);
         expect(xSkJwk).toHaveProperty('alg');
@@ -690,12 +690,12 @@ describe('CryptoHelper test', () => {
         const holderX25519KeyPair = CryptoHelper.edToX25519KeyPair(hexToU8a(holder.publicKey.toJSON()['Ed25519']), hexToU8a(holder.seed));
 
         const { publicKey: epk, privateKey: esk } = CryptoHelper.generateX25519KeyPairObject();
-        const verifierSecretUsingESK = CryptoHelper.jwkToEcdhesKeypair('X25519', holderX25519KeyPair.publicKeyJWK, esk);
-        const holderSecretUsingEPK = CryptoHelper.jwkToEcdhesKeypair('X25519', epk, holderX25519KeyPair.privateKeyJWK);
+        const verifierSecretUsingESK = CryptoHelper.x25519ToEcdhesKeypair(holderX25519KeyPair.publicKeyJWK, esk);
+        const holderSecretUsingEPK = CryptoHelper.x25519ToEcdhesKeypair(epk, holderX25519KeyPair.privateKeyJWK);
         expect(verifierSecretUsingESK).toEqual(holderSecretUsingEPK);
 
-        const verifierDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair('X25519', holderX25519KeyPair.publicKeyJWK, verifierX25519KeyPair.privateKeyJWK);
-        const holderDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair('X25519', verifierX25519KeyPair.publicKeyJWK, holderX25519KeyPair.privateKeyJWK);
+        const verifierDIDSharedKey = CryptoHelper.x25519ToEcdhesKeypair(holderX25519KeyPair.publicKeyJWK, verifierX25519KeyPair.privateKeyJWK);
+        const holderDIDSharedKey = CryptoHelper.x25519ToEcdhesKeypair(verifierX25519KeyPair.publicKeyJWK, holderX25519KeyPair.privateKeyJWK);
         expect(verifierDIDSharedKey).toEqual(holderDIDSharedKey);
     });
 

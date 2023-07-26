@@ -938,15 +938,15 @@ const verifyResult = await bbsPlusPresentation.verifyPresentation(
 ```ts
 const holder = await InfraSS58.createNewSS58DIDSet('space')
 // convert Ed25519 to X25519
-const xPkU8a = CryptoHelper.edPkToX25519Pk(
+const xPkU8a = CryptoHelper.edToX25519Pk(
   hexToU8a(verifier.publicKey.toJSON()['Ed25519']),
   'u8a'
 )
-const xPkJwk = CryptoHelper.edPkToX25519Pk(
+const xPkJwk = CryptoHelper.edToX25519Pk(
   hexToU8a(verifier.publicKey.toJSON()['Ed25519']),
   'jwk'
 )
-const xPkKeyObject = CryptoHelper.edPkToX25519Pk(
+const xPkKeyObject = CryptoHelper.edToX25519Pk(
   hexToU8a(verifier.publicKey.toJSON()['Ed25519']),
   'keyObject'
 )
@@ -972,24 +972,20 @@ const holderX25519KeyPair = CryptoHelper.edToX25519KeyPair(
 
 const { publicKey: epk, privateKey: esk } =
   CryptoHelper.generateX25519KeyPairObject()
-const verifierSecretUsingESK = CryptoHelper.jwkToEcdhesKeypair(
-  'X25519',
+const verifierSecretUsingESK = CryptoHelper.x25519ToEcdhesKeypair(
   holderX25519KeyPair.publicKeyJWK,
   esk
 )
-const holderSecretUsingEPK = CryptoHelper.jwkToEcdhesKeypair(
-  'X25519',
+const holderSecretUsingEPK = CryptoHelper.x25519ToEcdhesKeypair(
   epk,
   holderX25519KeyPair.privateKeyJWK
 )
 
-const verifierDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair(
-  'X25519',
+const verifierDIDSharedKey = CryptoHelper.x25519ToEcdhesKeypair(
   holderX25519KeyPair.publicKeyJWK,
   verifierX25519KeyPair.privateKeyJWK
 )
-const holderDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair(
-  'X25519',
+const holderDIDSharedKey = CryptoHelper.x25519ToEcdhesKeypair(
   verifierX25519KeyPair.publicKeyJWK,
   holderX25519KeyPair.privateKeyJWK
 )

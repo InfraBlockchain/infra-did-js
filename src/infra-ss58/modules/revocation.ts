@@ -1,5 +1,5 @@
 import { randomAsHex, blake2AsHex } from "@polkadot/util-crypto";
-import { InfraSS58, HexString } from "..";
+import type { InfraSS58, HexString } from "..";
 
 export class InfraSS58_Revocation {
   private policyOwner: string[];
@@ -21,7 +21,7 @@ export class InfraSS58_Revocation {
   }
 
   public async revokeCredential(registryId, revId) {
-    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
 
     const revoke = { registryId, revokeIds: [revId] };
@@ -34,7 +34,7 @@ export class InfraSS58_Revocation {
   }
 
   public async unrevokeCredential(registryId, revId) {
-    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
 
     const unrevoke = { registryId, revokeIds: [revId] };
@@ -47,7 +47,7 @@ export class InfraSS58_Revocation {
   }
 
   public async unregisterRegistry(registryId) {
-    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
 
     const removal = { registryId };
@@ -76,6 +76,6 @@ export class InfraSS58_Revocation {
   }
   public addPolicyOwner(ownerDID?: string) {
     ownerDID ??= this.that.didModule.did
-    this.policyOwner.push(InfraSS58.didToHex(ownerDID))
+    this.policyOwner.push(this.that.didToHex(ownerDID))
   }
 }

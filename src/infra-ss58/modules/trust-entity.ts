@@ -1,5 +1,6 @@
 import { randomAsHex, blake2AsHex } from "@polkadot/util-crypto";
-import { InfraSS58, BTreeSet, HexString, Codec } from "..";
+import type { HexString, InfraSS58 } from "..";
+import type { BTreeSet, Codec } from '../ss58.interface';
 
 export class InfraSS58_TrustedEntity {
   private owners: string[];
@@ -23,7 +24,7 @@ export class InfraSS58_TrustedEntity {
 
 
   public async unregisterAuthorizer(authorizerId) {
-    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
     const removal = { authorizerId };
     const RemoveAuthorizer = { data: removal, nonce, };
@@ -35,11 +36,11 @@ export class InfraSS58_TrustedEntity {
   }
 
   public async addIssuer(authorizerId, issuerDID = this.that.didModule.did) {
-    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
     // @ts-ignore
     const entityIds = new BTreeSet();
-    entityIds.add(InfraSS58.didToHex(issuerDID) as unknown as Codec)
+    entityIds.add(this.that.didToHex(issuerDID) as unknown as Codec)
     const entity = { authorizerId, entityIds };
     const AddIssuer = { data: entity, nonce, };
     const stateMessage = this.that.api.createType('StateChange', { AddIssuer }).toU8a();
@@ -50,11 +51,11 @@ export class InfraSS58_TrustedEntity {
   }
 
   public async removeIssuer(authorizerId, issuerDID = this.that.didModule.did) {
-    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
     // @ts-ignore
     const entityIds = new BTreeSet();
-    entityIds.add(InfraSS58.didToHex(issuerDID) as unknown as Codec)
+    entityIds.add(this.that.didToHex(issuerDID) as unknown as Codec)
     const entity = { authorizerId, entityIds };
     const RemoveIssuer = { data: entity, nonce, };
     const stateMessage = this.that.api.createType('StateChange', { RemoveIssuer }).toU8a();
@@ -65,11 +66,11 @@ export class InfraSS58_TrustedEntity {
   }
 
   public async addVerifier(authorizerId, verifierDID = this.that.didModule.did) {
-    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
     // @ts-ignore
     const entityIds = new BTreeSet();
-    entityIds.add(InfraSS58.didToHex(verifierDID) as unknown as Codec)
+    entityIds.add(this.that.didToHex(verifierDID) as unknown as Codec)
     const entity = { authorizerId, entityIds };
     const AddVerifier = { data: entity, nonce, };
     const stateMessage = this.that.api.createType('StateChange', { AddVerifier }).toU8a();
@@ -80,11 +81,11 @@ export class InfraSS58_TrustedEntity {
   }
 
   public async removeVerifier(authorizerId, verifierDID = this.that.didModule.did) {
-    const hexDid = InfraSS58.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHex(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
     // @ts-ignore
     const entityIds = new BTreeSet();
-    entityIds.add(InfraSS58.didToHex(verifierDID) as unknown as Codec)
+    entityIds.add(this.that.didToHex(verifierDID) as unknown as Codec)
     const entity = { authorizerId, entityIds };
     const RemoveVerifier = { data: entity, nonce, };
     const stateMessage = this.that.api.createType('StateChange', { RemoveVerifier }).toU8a();
@@ -102,14 +103,14 @@ export class InfraSS58_TrustedEntity {
     return resp.unwrap();
   }
   public async getIssuers(authorizerId, issuerId) {
-    const resp = await this.that.api.query.trustedEntity.issuers(authorizerId, InfraSS58.didToHex(issuerId));
+    const resp = await this.that.api.query.trustedEntity.issuers(authorizerId, this.that.didToHex(issuerId));
     if (resp.isNone) {
       throw new Error(`Could not find issuers: ${issuerId}`);
     }
     return resp.unwrap();
   }
   public async getVerifiers(authorizerId, verifierId) {
-    const resp = await this.that.api.query.trustedEntity.verifiers(authorizerId, InfraSS58.didToHex(verifierId));
+    const resp = await this.that.api.query.trustedEntity.verifiers(authorizerId, this.that.didToHex(verifierId));
     if (resp.isNone) {
       throw new Error(`Could not find issuers: ${verifierId}`);
     }
@@ -123,6 +124,6 @@ export class InfraSS58_TrustedEntity {
   }
   public addPolicyOwner(ownerDID?: string) {
     ownerDID ??= this.that.didModule.did
-    this.owners.push(InfraSS58.didToHex(ownerDID))
+    this.owners.push(this.that.didToHex(ownerDID))
   }
 }

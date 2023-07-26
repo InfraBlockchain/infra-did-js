@@ -26,7 +26,6 @@ import {
 } from './ss58.interface';
 
 export { CryptoHelper } from './derived/crypto.helper';
-export { DerivedEd25519Key, DerivedEd25519KeySet } from './derived/slip0010';
 export { VerifiableCredential, VerifiablePresentation, Schema, BBSPlusPresentation } from './infra-ss58-verifiable';
 export {
   typesBundle, ExtrinsicError, CRYPTO_BBS_INFO, PublicJwk_ED, PrivateJwk_ED,
@@ -177,7 +176,7 @@ export class InfraSS58 {
       }
     };
 
-    this.didModule = await InfraSS58_DID.createAsync(conf, this);
+    this.didModule = await InfraSS58_DID.createAsync(conf, this, await InfraSS58.createNewSS58DIDSet(conf.networkId, conf.cryptoInfo, conf.seed, conf.verRels));
     this.bbsModule = new InfraSS58_BBS(this);
     this.blobModule = new InfraSS58_BLOB(this);
     this.registryModule = new InfraSS58_Revocation(this);
@@ -197,7 +196,10 @@ export class InfraSS58 {
     const { id: ss58ID } = InfraSS58.splitDID(did);
     return u8aToHex(decodeAddress(ss58ID));
   }
-
+  didToHex(did: string): HexString {
+    const { id: ss58ID } = InfraSS58.splitDID(did);
+    return u8aToHex(decodeAddress(ss58ID));
+  }
   static async getKeyPairFromSeed(seed: HexString, cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.ED25519_2018): Promise<KeyringPair> {
     return InfraSS58.getKeyringPairFromUri(seed, cryptoInfo.CRYPTO_TYPE);
   }

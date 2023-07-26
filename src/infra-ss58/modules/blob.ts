@@ -1,6 +1,8 @@
 import { bufferToU8a, u8aToString, u8aToHex } from "@polkadot/util";
 import { encodeAddress } from "@polkadot/util-crypto";
-import { InfraSS58, Schema, DID_QUALIFIER } from "..";
+import type { InfraSS58 } from "..";
+import { Schema } from '../infra-ss58-verifiable';
+import { DID_QUALIFIER } from '../infra-ss58-verifiable/verifiable.constants';
 
 
 export class InfraSS58_BLOB {
@@ -11,7 +13,7 @@ export class InfraSS58_BLOB {
     this.did = that.didModule.did
   }
   async writeSchemaOnChainByBlob(blobSchema) {
-    const hexId = InfraSS58.didToHex(this.did);
+    const hexId = this.that.didToHex(this.did);
     const nonce = await this.that.getNextNonce(hexId);
 
     const AddBlob = {
