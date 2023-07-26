@@ -8,14 +8,14 @@ export class CryptoHelper {
     return crypto.generateKeyPairSync('x25519');
   }
 
-  static edPkToX25519Pk(edPk: Uint8Array, format: 'u8a' | 'jwk' | 'keyObject'): Uint8Array | PublicJwk_ED | crypto.KeyObject {
+  static edToX25519Pk(edPk: Uint8Array, format: 'u8a' | 'jwk' | 'keyObject'): Uint8Array | PublicJwk_ED | crypto.KeyObject {
     const xPk = Curve25519Converter.convertPublicKey(edPk);
     if (format === 'u8a') return xPk
     else if (format === 'jwk') return this.key2JWK('X25519', xPk);
     else if (format === 'keyObject') return this.jwk2KeyObject(this.key2JWK('X25519', xPk), 'public');
   }
 
-  static edSkToX25519Sk(edPk: Uint8Array, edSk: Uint8Array, format: 'u8a' | 'jwk' | 'keyObject'): Uint8Array | PrivateJwk_ED | crypto.KeyObject {
+  static edToX25519Sk(edPk: Uint8Array, edSk: Uint8Array, format: 'u8a' | 'jwk' | 'keyObject'): Uint8Array | PrivateJwk_ED | crypto.KeyObject {
     const xSk = Curve25519Converter.convertSecretKey(edSk);
     const xPk = Curve25519Converter.convertPublicKey(edPk);
     if (format === 'u8a') return xSk
@@ -24,8 +24,8 @@ export class CryptoHelper {
   }
 
   static edToX25519KeyPair(edPk: Uint8Array, edSk: Uint8Array): { publicKey: Uint8Array, privateKey: Uint8Array, publicKeyJWK: PublicJwk_ED, privateKeyJWK: PrivateJwk_ED } {
-    const publicKey = CryptoHelper.edPkToX25519Pk(edPk, 'u8a') as Uint8Array;
-    const privateKey = CryptoHelper.edSkToX25519Sk(edPk, edSk, 'u8a') as Uint8Array;
+    const publicKey = CryptoHelper.edToX25519Pk(edPk, 'u8a') as Uint8Array;
+    const privateKey = CryptoHelper.edToX25519Sk(edPk, edSk, 'u8a') as Uint8Array;
 
     return {
       publicKey,
@@ -79,12 +79,12 @@ export class CryptoHelper {
 
 
 
-  static jwkToEcdhesKeypair(crv: 'Ed25519' | 'X25519', pk: Uint8Array | PublicJwk_ED | crypto.KeyObject, sk: Uint8Array | PrivateJwk_ED | crypto.KeyObject): Buffer {
+  static x25519ToEcdhesKeypair(pk: Uint8Array | PublicJwk_ED | crypto.KeyObject, sk: Uint8Array | PrivateJwk_ED | crypto.KeyObject): Buffer {
     let publicKey: crypto.KeyObject
     let privateKey: crypto.KeyObject
 
     if (pk instanceof Uint8Array) {
-      publicKey = this.jwk2KeyObject(this.key2JWK(crv, pk), 'public')
+      publicKey = this.jwk2KeyObject(this.key2JWK('X25519', pk), 'public')
     }
     if (pk instanceof crypto.KeyObject) {
       publicKey = pk
@@ -93,7 +93,7 @@ export class CryptoHelper {
     }
 
     if (sk instanceof Uint8Array) {
-      privateKey = this.jwk2KeyObject(this.key2JWK(crv, this.jwk2Key(this.keyObject2JWK(publicKey)).publicKey, sk), 'private')
+      privateKey = this.jwk2KeyObject(this.key2JWK('X25519', this.jwk2Key(this.keyObject2JWK(publicKey)).publicKey, sk), 'private')
     }
     if (sk instanceof crypto.KeyObject) {
       privateKey = sk
