@@ -1,7 +1,7 @@
 import { SignatureParamsG1 } from "@docknetwork/crypto-wasm-ts";
 import { hexToU8a, u8aToHex } from "@polkadot/util";
-import InfraSS58 from "..";
-import { HexString, BBSPlus_Params, CRYPTO_BBS_INFO, BBSPlus_PublicKey } from "../ss58.interface";
+import { InfraSS58, HexString, BBSPlus_Params, CRYPTO_BBS_INFO, BBSPlus_PublicKey } from "..";
+
 
 export class InfraSS58_BBS {
   did: string;

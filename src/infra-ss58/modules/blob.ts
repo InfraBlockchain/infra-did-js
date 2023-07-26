@@ -1,8 +1,7 @@
 import { bufferToU8a, u8aToString, u8aToHex } from "@polkadot/util";
 import { encodeAddress } from "@polkadot/util-crypto";
-import InfraSS58 from "..";
-import { Schema } from "../infra-ss58-verifiable";
-import { DID_QUALIFIER } from "../infra-ss58-verifiable/verifiable.constants";
+import { InfraSS58, Schema, DID_QUALIFIER } from "..";
+
 
 export class InfraSS58_BLOB {
   that: InfraSS58;

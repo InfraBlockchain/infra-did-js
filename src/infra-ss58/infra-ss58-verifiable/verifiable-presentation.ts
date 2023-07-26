@@ -1,9 +1,8 @@
 
 import { VerifiableHelper } from './verifiable.interface';
-
 import { DEFAULT_CONTEXT_V1_URL, DEFAULT_VP_TYPE } from './verifiable.constants';
-import VerifiableCredential from './verifiable-credential';
-import InfraSS58 from '..';
+
+import { InfraSS58, VerifiableCredential } from '..';
 
 export default class VerifiablePresentation extends VerifiableHelper {
   proof: any;

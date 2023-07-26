@@ -55,18 +55,19 @@ section::after {
 
 ---
 
-## Feature(1/3)
+## Feature(1/4)
 
 - Infra SS58 DID Creation
 - DID Module
   - Register/Unregister DID on chain
-  - Update/Remove DID attributes (Service Endpoint, Controller DID, Public Key)
+  - Update/Remove DID attributes
+    - Service Endpoint, Controller DID, Public Key
   - Set Attestations Claim
   - Get Documents of DID(Resolve)
 
 ---
 
-## Feature(2/3)
+## Feature(2/4)
 
 - BBS+ Module
   - BBS+ Key Pair & Public Key Creation
@@ -80,7 +81,7 @@ section::after {
 
 ---
 
-## Feature(3/3)
+## Feature(3/4)
 
 - Verifiable Classes
   - Create/Register/Get Schema
@@ -88,6 +89,16 @@ section::after {
   - Revoke/Unrevoke/Check Verifiable Credential
   - Create/Sign/Verify VerifiablePresentation
   - Issue/Verify BBSPlusCredential and BBSPlusPresentation
+
+---
+
+## Feature(4/4)
+
+- Crypto Helper
+  - Convert Ed25519 to X25519
+  - Convert key type (u8a to jwk, keyobject)
+  - Create ECDH-ES Key(diffieHellman) using X25519
+  - ED25519 derived key [SLIP-10](https://github.com/satoshilabs/slips/blob/master/slip-0010.md)
 
 ---
 
@@ -119,8 +130,8 @@ const infraApi = await InfraSS58.createAsync(conf);
 ## Infra SS58 DID Creation
 
 ```ts
-DIDSet = await InfraSS58.createNewSS58DIDSet(networkId)
-console.log({ DIDSet })
+DIDSet = await InfraSS58.createNewSS58DIDSet(networkId);
+console.log({ DIDSet });
 ```
 
 ---
@@ -183,7 +194,7 @@ console.log({ DIDSet })
 ## Infra SS58 DID Format Validation
 
 ```ts
-InfraSS58.validateInfraSS58(SOME_DID_STRING).result
+InfraSS58.validateInfraSS58(SOME_DID_STRING).result;
 ```
 
 ---
@@ -200,9 +211,9 @@ InfraSS58.validateInfraSS58(SOME_DID_STRING).result
 
 ```ts
 // Register DID
-await infraApi.didModule.registerOnchain()
+await infraApi.didModule.registerOnchain();
 // Unregister DID
-await infraApi.didModule.unregisterOnChain()
+await infraApi.didModule.unregisterOnChain();
 ```
 
 ---
@@ -211,9 +222,9 @@ await infraApi.didModule.unregisterOnChain()
 
 ```ts
 // Add keys
-await infraApi.didModule.addKeys(SOME_DID_KEY)
+await infraApi.didModule.addKeys(SOME_DID_KEY);
 // Remove Keys
-await infraApi.didModule.removeKeys(DID_KEY_IDS)
+await infraApi.didModule.removeKeys(DID_KEY_IDS);
 ```
 
 ---
@@ -222,9 +233,9 @@ await infraApi.didModule.removeKeys(DID_KEY_IDS)
 
 ```ts
 // Add Controller DID
-await infraApi.didModule.addControllers(CONTROLLER_DIDS)
+await infraApi.didModule.addControllers(CONTROLLER_DIDS);
 // Remove Controller DID
-await infraApi.didModule.removeControllers(CONTROLLER_DIDS)
+await infraApi.didModule.removeControllers(CONTROLLER_DIDS);
 ```
 
 ---
@@ -233,11 +244,11 @@ await infraApi.didModule.removeControllers(CONTROLLER_DIDS)
 
 ```ts
 // Add Service Endpoint
-await infraApi.didModule.addServiceEndpoint(SOME_SERVICE_ENDPOINT_URLS)
+await infraApi.didModule.addServiceEndpoint(SOME_SERVICE_ENDPOINT_URLS);
 // Get Service Endpoint
-await infraApi.didModule.getServiceEndpoint()
+await infraApi.didModule.getServiceEndpoint();
 // Remove Service Endpoint
-await infraApi.didModule.removeServiceEndpoint()
+await infraApi.didModule.removeServiceEndpoint();
 ```
 
 ---
@@ -245,7 +256,7 @@ await infraApi.didModule.removeServiceEndpoint()
 ### Set Attestation Claim
 
 ```ts
-await infraApi.didModule.setClaim(PRIORITY_NUMBER, CLAIM_IRI)
+await infraApi.didModule.setClaim(PRIORITY_NUMBER, CLAIM_IRI);
 ```
 
 ---
@@ -254,11 +265,11 @@ await infraApi.didModule.setClaim(PRIORITY_NUMBER, CLAIM_IRI)
 
 ```ts
 // get self.document
-const didDocuments = await infraDID.didModule.getDocument()
+const didDocuments = await infraDID.didModule.getDocument();
 // or get some did document
-const didDocuments2 = await infraDID.getDocument(SOME_DID)
+const didDocuments2 = await infraDID.getDocument(SOME_DID);
 
-console.log({ didDocuments })
+console.log({ didDocuments });
 ```
 
 ---
@@ -334,8 +345,10 @@ console.log({ didDocuments })
 ### BBS+ SigSet Creation
 
 ```ts
-const newSigSet = await InfraSS58.BBSPlus_createNewSigSet(did)
-console.log({ newSigSet })
+const newSigSet = await InfraSS58.BBSPlus_createNewSigSet(did);
+console.log({
+  newSigSet
+});
 ```
 
 ```js
@@ -362,18 +375,15 @@ console.log({ newSigSet })
 
 ```ts
 // Create Sig Param
-const sigParam = InfraSS58.BBSPlus_createSigParamsWithLabel(
-  MESSAGE_COUNTER_NUMBER,
-  'some-param-label'
-)
+const sigParam = InfraSS58.BBSPlus_createSigParamsWithLabel(MESSAGE_COUNTER_NUMBER, 'some-param-label');
 // Add BBS+ Params
-await infraSS58.bbsModule.addParams(sigParam)
+await infraSS58.bbsModule.addParams(sigParam);
 // Get BBS+ Params
-const param = await infraDID.bbsModule.getParams(PARAM_COUNTER_NUMBER)
+const param = await infraDID.bbsModule.getParams(PARAM_COUNTER_NUMBER);
 // Get BBS+ Last Params
-const lastParam = await infraDID.bbsModule.getLastParamsWritten()
+const lastParam = await infraDID.bbsModule.getLastParamsWritten();
 // Remove BBS+ {arams
-await infraDID.bbsModule.removeParams(PARAM_COUNTER_NUMBER)
+await infraDID.bbsModule.removeParams(PARAM_COUNTER_NUMBER);
 ```
 
 ---
@@ -382,12 +392,14 @@ await infraDID.bbsModule.removeParams(PARAM_COUNTER_NUMBER)
 
 ```ts
 // Add BBS+ Public Key
-await infraDID.bbsModule.addPublicKey(SigSet.publicKey)
+await infraDID.bbsModule.addPublicKey(SigSet.publicKey);
 // Get BBS+ Public Key
-const publicKey = await infraDID.bbsModule.getPublicKey(KEY_ID_NUMBER)
-console.log({ publicKey })
+const publicKey = await infraDID.bbsModule.getPublicKey(KEY_ID_NUMBER);
+console.log({
+  publicKey
+});
 // Remove BBS+ Public Key
-await infraDID.bbsModule.removePublicKey(KEY_ID_NUMBER)
+await infraDID.bbsModule.removePublicKey(KEY_ID_NUMBER);
 ```
 
 ```json
@@ -414,15 +426,15 @@ await infraDID.bbsModule.removePublicKey(KEY_ID_NUMBER)
 
 ```ts
 // Create Authorizer id
-const authorizerId = infraSS58.trustModule.createNewAuthorizerId()
+const authorizerId = infraSS58.trustModule.createNewAuthorizerId();
 // Add Owner DID if want
-infraSS58.trustModule.addPolicyOwner('some did')
+infraSS58.trustModule.addPolicyOwner('some did');
 // Add new Authorizer
-await infraSS58.trustModule.registerAuthorizer(authorizerId)
+await infraSS58.trustModule.registerAuthorizer(authorizerId);
 // Get Authorizer
-await infraSS58.trustModule.getAuthorizer(authorizerId)
+await infraSS58.trustModule.getAuthorizer(authorizerId);
 // Remove Authorizer
-await infraSS58.trustModule.unregisterAuthorizer(authorizerId)
+await infraSS58.trustModule.unregisterAuthorizer(authorizerId);
 ```
 
 ---
@@ -431,11 +443,11 @@ await infraSS58.trustModule.unregisterAuthorizer(authorizerId)
 
 ```ts
 // Add Issuer
-await infraSS58.trustModule.addIssuer(authorizerId, issuerDID)
+await infraSS58.trustModule.addIssuer(authorizerId, issuerDID);
 // Get Issuer
-await infraSS58.trustModule.getIssuers(authorizerId, issuerDID)
+await infraSS58.trustModule.getIssuers(authorizerId, issuerDID);
 // Remove Issuer
-await infraSS58.trustModule.removeIssuer(authorizerId, issuerDID)
+await infraSS58.trustModule.removeIssuer(authorizerId, issuerDID);
 ```
 
 ---
@@ -444,11 +456,11 @@ await infraSS58.trustModule.removeIssuer(authorizerId, issuerDID)
 
 ```ts
 // Add Issuer
-await infraSS58.trustModule.addVerifier(authorizerId, verifierDID)
+await infraSS58.trustModule.addVerifier(authorizerId, verifierDID);
 // Get Issuer
-await infraSS58.trustModule.getVerifiers(authorizerId, verifierDID)
+await infraSS58.trustModule.getVerifiers(authorizerId, verifierDID);
 // Remove Issuer
-await infraSS58.trustModule.removeVerifier(authorizerId, verifierDID)
+await infraSS58.trustModule.removeVerifier(authorizerId, verifierDID);
 ```
 
 ---
@@ -464,21 +476,28 @@ await infraSS58.trustModule.removeVerifier(authorizerId, verifierDID)
 ### Create Schema
 
 ```ts
-let schema = new Schema(newtworkId)
+let schema = new Schema(newtworkId);
 const someJSONSchema = {
   $schema: 'http://json-schema.org/draft-07/schema#',
   description: 'Schema Example',
   type: 'object',
   properties: {
-    id: { type: 'string' },
-    email: { type: 'string', format: 'email' },
-    alumniOf: { type: 'string' }
+    id: {
+      type: 'string'
+    },
+    email: {
+      type: 'string',
+      format: 'email'
+    },
+    alumniOf: {
+      type: 'string'
+    }
   },
   required: ['email', 'alumniOf'],
   additionalProperties: false
-}
-schema = await schema.setJSONSchema(someJSONSchema)
-console.log(schema.toJSON())
+};
+schema = await schema.setJSONSchema(someJSONSchema);
+console.log(schema.toJSON());
 ```
 
 ---
@@ -514,14 +533,14 @@ console.log(schema.toJSON())
 
 ```ts
 // Register Schema
-await infraApi.blobModule.writeSchemaOnChainByBlob(schema.toBlob())
+await infraApi.blobModule.writeSchemaOnChainByBlob(schema.toBlob());
 // or
-await schema.writeToChain(infraApi)
+await schema.writeToChain(infraApi);
 
 // Get Schema
-await infraApi.blobModule.getSchema(schemaId)
+await infraApi.blobModule.getSchema(schemaId);
 // or
-await Schema.get(schemaId, infraApi)
+await Schema.get(schemaId, infraApi);
 ```
 
 ---
@@ -529,8 +548,8 @@ await Schema.get(schemaId, infraApi)
 ### Validate Schema
 
 ```ts
-const validationResult = await Schema.validateSchema(schema.schema)
-console.log(validationResult)
+const validationResult = await Schema.validateSchema(schema.schema);
+console.log(validationResult);
 ```
 
 ---
@@ -594,13 +613,13 @@ console.log(validationResult)
 
 ```ts
 // Create new Registry id
-const registryId = issuerApi.registryModule.createNewRegistryId()
+const registryId = issuerApi.registryModule.createNewRegistryId();
 // Register Registry
-await issuerApi.registryModule.registerRegistry(registryId)
+await issuerApi.registryModule.registerRegistry(registryId);
 // Get Registry
-await issuerApi.registryModule.getRegistry(registryId)
+await issuerApi.registryModule.getRegistry(registryId);
 // Unregister Registry
-await issuerApi.registryModule.unregisterRegistry(registryId)
+await issuerApi.registryModule.unregisterRegistry(registryId);
 ```
 
 ---
@@ -608,31 +627,27 @@ await issuerApi.registryModule.unregisterRegistry(registryId)
 ### Create Verifiable Credential
 
 ```ts
-vc = new VerifiableCredential(VC_ID)
-vc.addContext('https://www.w3.org/2018/credentials/examples/v1')
-vc.addContext('https://www.w3.org/2018/credentials/v1')
-vc.addContext('https://schema.org')
-vc.addType('VerifiableCredential')
-vc.addType('VaccinationCredential')
-vc.setSchema(schemaId)
+vc = new VerifiableCredential(VC_ID);
+vc.addContext('https://www.w3.org/2018/credentials/examples/v1');
+vc.addContext('https://www.w3.org/2018/credentials/v1');
+vc.addContext('https://schema.org');
+vc.addType('VerifiableCredential');
+vc.addType('VaccinationCredential');
+vc.setSchema(schemaId);
 vc.addSubject({
   id: HOLDER_DID,
   alumniOf: 'Example University',
   email: 'test@test.com'
-})
-vc.setIssuanceDate('2021-04-02T10:11:41.000Z')
-console.log(vc.toJSON())
+});
+vc.setIssuanceDate('2021-04-02T10:11:41.000Z');
+console.log(vc.toJSON());
 ```
 
 ---
 
 ```json
 {
-  "@context": [
-    "https://www.w3.org/2018/credentials/v1",
-    "https://www.w3.org/2018/credentials/examples/v1",
-    "https://schema.org"
-  ],
+  "@context": ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1", "https://schema.org"],
   "id": "http://example.vc/credentials/123532",
   "type": ["VerifiableCredential", "VaccinationCredential"],
   "credentialSubject": [
@@ -655,19 +670,15 @@ console.log(vc.toJSON())
 ### Issue(Sign) Verifiable Credential
 
 ```ts
-const signedVC = await vc.sign(issuerInfraApi.didModule.getKeyDoc())
-console.log(signedVC.toJSON())
+const signedVC = await vc.sign(issuerInfraApi.didModule.getKeyDoc());
+console.log(signedVC.toJSON());
 ```
 
 ---
 
 ```json
 {
-  "@context": [
-    "https://www.w3.org/2018/credentials/v1",
-    "https://www.w3.org/2018/credentials/examples/v1",
-    "https://schema.org"
-  ],
+  "@context": ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1", "https://schema.org"],
   "id": "http://example.vc/credentials/123532",
   "type": ["VerifiableCredential", "VaccinationCredential"],
   "credentialSubject": [
@@ -698,7 +709,7 @@ console.log(signedVC.toJSON())
 ### Validate Credential Schema
 
 ```ts
-const result: boolean = await signedVC.validateSchema(schema)
+const result: boolean = await signedVC.validateSchema(schema);
 ```
 
 ---
@@ -706,8 +717,8 @@ const result: boolean = await signedVC.validateSchema(schema)
 ### Verify Verifiable Credential
 
 ```ts
-const verifyResult = await signedVC.verify(issuerApi)
-console.log(verifyResult)
+const verifyResult = await signedVC.verify(issuerApi);
+console.log(verifyResult);
 ```
 
 ---
@@ -718,11 +729,7 @@ console.log(verifyResult)
   "results": [
     {
       "proof": {
-        "@context": [
-          "https://www.w3.org/2018/credentials/v1",
-          "https://www.w3.org/2018/credentials/examples/v1",
-          "https://schema.org"
-        ],
+        "@context": ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1", "https://schema.org"],
         "type": "EcdsaSecp256k1Signature2019",
         "created": "2023-03-08T05:06:06Z",
         "verificationMethod": "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1",
@@ -736,15 +743,9 @@ console.log(verifyResult)
         "type": "EcdsaSecp256k1VerificationKey2019",
         "controller": {
           "id": "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs",
-          "assertionMethod": [
-            "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"
-          ],
-          "authentication": [
-            "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"
-          ],
-          "capabilityInvocation": [
-            "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"
-          ],
+          "assertionMethod": ["did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"],
+          "authentication": ["did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"],
+          "capabilityInvocation": ["did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"],
           "controller": "did:infra:space5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs",
           "verificationMethod": "did:infra:space:5C8VZ28vrCbjsYeJrfNiy2TDSUDpCrRvya2RDy2KtbD6RFvs#keys-1"
         },
@@ -764,16 +765,13 @@ console.log(verifyResult)
 ### Revoke/Unrevoke/Check Verifiable Credential
 
 ```ts
-const revokeId = issuerApi.registryModule.getRevokeId(VC_ID)
+const revokeId = issuerApi.registryModule.getRevokeId(VC_ID);
 // Revoke VC
-await issuerApi.registryModule.revokeCredential(registryId, revokeId)
+await issuerApi.registryModule.revokeCredential(registryId, revokeId);
 // Unrevoke VC
-await issuerApi.registryModule.unrevokeCredential(registryId, revokeId)
+await issuerApi.registryModule.unrevokeCredential(registryId, revokeId);
 // Check Revoke state
-const isRevoked: boolean = await issuerApi.registryModule.getIsRevoked(
-  registryId,
-  revokeId
-)
+const isRevoked: boolean = await issuerApi.registryModule.getIsRevoked(registryId, revokeId);
 ```
 
 ---
@@ -789,22 +787,19 @@ const isRevoked: boolean = await issuerApi.registryModule.getIsRevoked(
 ### Create Verifiable Presentation
 
 ```ts
-vp = new VerifiablePresentation(VP_ID)
-vp.addContext('https://www.w3.org/2018/credentials/examples/v1')
-vp.addType('CredentialManagerPresentation')
-vp.setHolder(HOLDER_DID)
-vp.addCredential(vc)
-console.log(vp.toJSON())
+vp = new VerifiablePresentation(VP_ID);
+vp.addContext('https://www.w3.org/2018/credentials/examples/v1');
+vp.addType('CredentialManagerPresentation');
+vp.setHolder(HOLDER_DID);
+vp.addCredential(vc);
+console.log(vp.toJSON());
 ```
 
 ---
 
 ```json
 {
-  "@context": [
-    "https://www.w3.org/2018/credentials/v1",
-    "https://www.w3.org/2018/credentials/examples/v1"
-  ],
+  "@context": ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1"],
   "verifiableCredential": [
     {
       "@context": ["Array"],
@@ -829,18 +824,15 @@ console.log(vp.toJSON())
 ### Sign Verifiable Presentation
 
 ```ts
-const signedVP = await vp.sign(holderInfraApi, DOMAIN_URL)
-console.log(signedVP)
+const signedVP = await vp.sign(holderInfraApi, DOMAIN_URL);
+console.log(signedVP);
 ```
 
 ---
 
 ```json
 {
-  "@context": [
-    "https://www.w3.org/2018/credentials/v1",
-    "https://www.w3.org/2018/credentials/examples/v1"
-  ],
+  "@context": ["https://www.w3.org/2018/credentials/v1", "https://www.w3.org/2018/credentials/examples/v1"],
   "verifiableCredential": [
     {
       "@context": ["Array"],
@@ -873,8 +865,8 @@ console.log(signedVP)
 ### Verify Verifiable Presentation
 
 ```ts
-const verifyResult = await signedVP.verify(verifierInfraApi, DOMAIN_URL)
-console.log(verifyResult)
+const verifyResult = await signedVP.verify(verifierInfraApi, DOMAIN_URL);
+console.log(verifyResult);
 ```
 
 ---
@@ -893,10 +885,7 @@ console.log(verifyResult)
       "results": [
         {
           "proof": {
-            "@context": [
-              "https://www.w3.org/2018/credentials/v1",
-              "https://schema.org"
-            ],
+            "@context": ["https://www.w3.org/2018/credentials/v1", "https://schema.org"],
             "type": "Ed25519Signature2018",
             "created": "2023-07-20T23:46:54Z",
             "verificationMethod": "did:infra:space:5FXBmypmPrqsp9pSrcJB3En2bdVYmA6T2C3aRXqjEMmLGBcR#keys-1",
@@ -940,28 +929,28 @@ console.log(verifyResult)
 
 ```ts
 // Add BBS+ Public Key and Key Pair ID
-issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did)
-await issuerApi.bbsModule.addPublicKey(issuerBBSSigSet.publicKey)
+issuerBBSSigSet = await InfraSS58.BBSPlus_createNewSigSet(issuer.did);
+await issuerApi.bbsModule.addPublicKey(issuerBBSSigSet.publicKey);
 await issuerApi.didModule.getDocument().then((doc) => {
-  issuerBBSSigSet.keyPair.id = doc.verificationMethod[1].id
-})
+  issuerBBSSigSet.keyPair.id = doc.verificationMethod[1].id;
+});
 // Create Verifiable Credential
-vc = new VerifiableCredential(vcId)
-vc.addContext('https://www.w3.org/2018/credentials/examples/v1')
-vc.addContext('https://www.w3.org/2018/credentials/v1')
-vc.addContext('https://schema.org')
-vc.addType('VerifiableCredential')
-vc.addType('VaccinationCredential')
+vc = new VerifiableCredential(vcId);
+vc.addContext('https://www.w3.org/2018/credentials/examples/v1');
+vc.addContext('https://www.w3.org/2018/credentials/v1');
+vc.addContext('https://schema.org');
+vc.addType('VerifiableCredential');
+vc.addType('VaccinationCredential');
 // Different parts than normal Verifiable Credential
-vc.setSchema(schema.toBBSSchema()) // Use toBBSSchema for schema,
+vc.setSchema(schema.toBBSSchema()); // Use toBBSSchema for schema,
 // Use setSubject because BBSPlusPresentation does not allow arrays.
 vc.setSubject({
   id: holder.did,
   alumniOf: 'Example University',
   email: 'test@test.com'
-})
-vc.setIssuer(issuer.did)
-bbsPlusPresentation = new BBSPlusPresentation()
+});
+vc.setIssuer(issuer.did);
+bbsPlusPresentation = new BBSPlusPresentation();
 ```
 
 ---
@@ -970,17 +959,14 @@ bbsPlusPresentation = new BBSPlusPresentation()
 
 ```ts
 // Sign / Issue BBSPlusCredential
-const { id, type } = issuerBBSSigSet.keyPair
+const { id, type } = issuerBBSSigSet.keyPair;
 const issuerKeyDoc = issuerApi.getKeyDoc(
   id,
   issuer.did,
   type,
   issuerBBSSigSet.keyPair //use BBS+ keypair
-)
-const bbsPlusCredential = await bbsPlusPresentation.issueCredential(
-  issuerKeyDoc,
-  vc.toJSON()
-)
+);
+const bbsPlusCredential = await bbsPlusPresentation.issueCredential(issuerKeyDoc, vc.toJSON());
 ```
 
 ---
@@ -989,18 +975,13 @@ const bbsPlusCredential = await bbsPlusPresentation.issueCredential(
 
 ```ts
 // Add Presentation and reveal Attribute
-const idx = await bbsPlusPresentation.addCredentialToPresent(
-  bbsPlusCredential,
-  {
-    resolver: issuerApi.Resolver
-  }
-)
-await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, [
-  'alumniOf'
-])
+const idx = await bbsPlusPresentation.addCredentialToPresent(bbsPlusCredential, {
+  resolver: issuerApi.Resolver
+});
+await bbsPlusPresentation.addCredentialSubjectAttributeToReveal(idx, ['alumniOf']);
 
-const presentation = await bbsPlusPresentation.createPresentation()
-console.log({ presentation })
+const presentation = await bbsPlusPresentation.createPresentation();
+console.log({ presentation });
 ```
 
 ---
@@ -1041,12 +1022,76 @@ console.log({ presentation })
 ### Verify BBSPlusPresentation
 
 ```ts
-const verifyResult = await bbsPlusPresentation.verifyPresentation(
-  presentation,
-  {
-    resolver: issuerApi.Resolver
-  }
-)
+const verifyResult = await bbsPlusPresentation.verifyPresentation(presentation, {
+  resolver: issuerApi.Resolver
+});
+```
+
+---
+
+<!-- _class: lead -->
+
+## Crypto Helper
+
+<!--footer: "CryptoHelper Class" -->
+
+---
+
+### Convert Key
+
+```ts
+const holder = await InfraSS58.createNewSS58DIDSet('space');
+const publicKey = hexToU8a(verifier.publicKey.toJSON()['Ed25519']);
+// convert Ed25519 to X25519
+const xPkU8a = CryptoHelper.edPkToX25519Pk(publicKey, 'u8a');
+const xPkJwk = CryptoHelper.edPkToX25519Pk(publicKey, 'jwk');
+const xPkKeyObject = CryptoHelper.edPkToX25519Pk(publicKey, 'keyObject');
+
+// convert Key Type
+const obj2JWK = CryptoHelper.keyObject2JWK(xPkKeyObject as KeyObject);
+const key2Jwk = CryptoHelper.key2JWK('X25519', xPkU8a as Uint8Array);
+const jwk2Key = CryptoHelper.jwk2Key(xPkJwk as PublicJwk_ED).publicKey;
+const jwk2Obj = CryptoHelper.jwk2KeyObject(xPkJwk as PublicJwk_ED, 'public');
+```
+
+---
+
+### ECDH-ES (diffieHellman)
+
+```ts
+const verifier = await InfraSS58.createNewSS58DIDSet('space');
+const holder = await InfraSS58.createNewSS58DIDSet('space');
+const verifierX25519KeyPair = CryptoHelper.edToX25519KeyPair(hexToU8a(verifier.publicKey.toJSON()['Ed25519']), hexToU8a(verifier.seed));
+const holderX25519KeyPair = CryptoHelper.edToX25519KeyPair(hexToU8a(holder.publicKey.toJSON()['Ed25519']), hexToU8a(holder.seed));
+
+const { publicKey: epk, privateKey: esk } = CryptoHelper.generateX25519KeyPairObject();
+const verifierSecretUsingESK = CryptoHelper.jwkToEcdhesKeypair('X25519', holderX25519KeyPair.publicKeyJWK, esk);
+const holderSecretUsingEPK = CryptoHelper.jwkToEcdhesKeypair('X25519', epk, holderX25519KeyPair.privateKeyJWK);
+
+const verifierDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair('X25519', holderX25519KeyPair.publicKeyJWK, verifierX25519KeyPair.privateKeyJWK);
+const holderDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair('X25519', verifierX25519KeyPair.publicKeyJWK, holderX25519KeyPair.privateKeyJWK);
+```
+
+---
+
+### Derived Key(SLIP-0010 implementation)
+
+- according to the https://github.com/satoshilabs/slips/blob/master/slip-0010.md
+- example is 1 depth of testvector 1
+
+```ts
+const seed = '0x000102030405060708090a0b0c0d0e0f';
+const mk = await DerivedEd25519Key.getMasterKey(seed);
+// expect(mk.path).toEqual('m');
+// expect(u8aToHex(mk.chainCode)).toEqual('0x90046a93de5380a72b5e45010748567d5ea02bbf6522f979e05c0d8d8ca9fffb');
+// expect(u8aToHex(mk.sk)).toEqual('0x2b4be7f19ee27bbf30c667b642d5f4aa69fd169872f8fc3059c08ebae2eb19e7');
+// expect(u8aToHex(mk.pk)).toEqual('0xa4b2856bfec510abab89753fac1ac0e1112364e7d250545963f135f2a33188ed');
+
+const dk = await DerivedEd25519Key.getDeriveKey(mk.sk, mk.chainCode, mk.path, 0x80000000);
+// expect(dk.path).toEqual('m/0h');
+// expect(u8aToHex(dk.chainCode)).toEqual('0x8b59aa11380b624e81507a27fedda59fea6d0b779a778918a2fd3590e16e9c69');
+// expect(u8aToHex(dk.sk)).toEqual('0x68e0fe46dfb67e368c75379acec591dad19df3cde26e63b93a8e704f1dade7a3');
+// expect(u8aToHex(dk.pk)).toEqual('0x8c8a13df77a28f3445213a0f432fde644acaa215fc72dcdf300d5efaa85d350c');
 ```
 
 ---

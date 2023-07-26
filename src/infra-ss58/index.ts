@@ -1,42 +1,43 @@
 import b58 from 'bs58';
-import { EdToX25519Helper } from './x25519/crypto.helper';
-import { DID_QUALIFIER } from './infra-ss58-verifiable/verifiable.constants';
+
 import { HttpProvider } from '@polkadot/rpc-provider';
-
-import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-
 import { hexToU8a } from '@polkadot/util/hex/toU8a';
 import { stringToU8a } from '@polkadot/util/string/toU8a';
 import { stringToHex } from '@polkadot/util/string/toHex';
 import { u8aToString } from '@polkadot/util/u8a/toString';
 import { u8aToHex } from '@polkadot/util/u8a/toHex';
-
+import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { encodeAddress, decodeAddress, mnemonicGenerate, mnemonicToMiniSecret, cryptoWaitReady } from '@polkadot/util-crypto';
+
+
 import { initializeWasm, isWasmInitialized, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 
-import { VerifiableCredential, VerifiablePresentation, Schema, BBSPlusPresentation } from './infra-ss58-verifiable';
+import { DID_QUALIFIER } from './infra-ss58-verifiable/verifiable.constants';
 import { InfraSS58_DID, InfraSS58_BBS, InfraSS58_BLOB, InfraSS58_Revocation, InfraSS58_TrustedEntity } from './modules';
-
 import {
   typesBundle, ExtrinsicError,
-  CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
+  CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyringPair,
   BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
   DIDSet, DidKey_SS58, PublicKey_SS58,
   VerificationRelationship,
   CRYPTO_BBS_INFO,
   PublicJwk_ED,
-  PrivateJwk_ED
+  PrivateJwk_ED, Codec, BTreeSet, ServiceEndpointType
 } from './ss58.interface';
 
+export { CryptoHelper } from './derived/crypto.helper';
+export { DerivedEd25519Key, DerivedEd25519KeySet } from './derived/slip0010';
+export { VerifiableCredential, VerifiablePresentation, Schema, BBSPlusPresentation } from './infra-ss58-verifiable';
 export {
-  CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
+  typesBundle, ExtrinsicError, CRYPTO_BBS_INFO, PublicJwk_ED, PrivateJwk_ED,
+  CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyringPair,
   BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
-  DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
-  VerificationRelationship, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, EdToX25519Helper,
+  DIDSet, DidKey_SS58, PublicKey_SS58, ServiceEndpointType,
+  VerificationRelationship, Codec, BTreeSet, DID_QUALIFIER
 }
 
 
-export default class InfraSS58 {
+export class InfraSS58 {
   api!: any;
 
   get isConnected(): boolean {
@@ -44,10 +45,10 @@ export default class InfraSS58 {
   }
   private address!: string;
   networkId!: string;
-  accountKeyPair;
+  accountKeyPair: KeyringPair;
   cryptoInfo: CRYPTO_INFO;
   controllerDID: string;
-  controllerKeyPair: KeyPair;
+  controllerKeyPair: KeyringPair;
   keyringModule: Keyring;
   didModule: InfraSS58_DID;
   bbsModule: InfraSS58_BBS;
@@ -197,7 +198,7 @@ export default class InfraSS58 {
     return u8aToHex(decodeAddress(ss58ID));
   }
 
-  static async getKeyPairFromSeed(seed: HexString, cryptoInfo: CRYPTO_INFO): Promise<KeyPair> {
+  static async getKeyPairFromSeed(seed: HexString, cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.ED25519_2018): Promise<KeyringPair> {
     return InfraSS58.getKeyringPairFromUri(seed, cryptoInfo.CRYPTO_TYPE);
   }
   static async getKeyringPairFromUri(uri, cryptoInfo: 'sr25519' | 'ed25519' = 'ed25519'): Promise<KeyringPair> {
@@ -207,11 +208,10 @@ export default class InfraSS58 {
     return keyringModule.addFromUri(uri, undefined, cryptoType);
   }
   static ss58addrToDID(networkId: string, addr: string): string { return `${DID_QUALIFIER}${networkId}:${addr}` }
-  static keyPairToDID(networkId: string, keyPair: KeyPair): string {
-    if ((keyPair as KeyringPair).type) {
-      return InfraSS58.ss58addrToDID(networkId, (keyPair as KeyringPair).address)
-    }
+  static keyPairToDID(networkId: string, keyPair: KeyringPair): string {
+    return InfraSS58.ss58addrToDID(networkId, (keyPair.address));
   }
+
   static validateInfraSS58DID(infraSS58DID: string): { result: boolean, errMsg?: string } {
     const didSplit = infraSS58DID.split(':')
     if (didSplit.length !== 4) {
@@ -228,7 +228,7 @@ export default class InfraSS58 {
     return { [sigType]: u8aToHex(keyPair.sign(stateMessage)) }
   }
 
-  public getDIDSig(did: string, sigType: SIG_TYPE, keyPair: KeyPair, stateMessage, keyId = 1) {
+  public getDIDSig(did: string, sigType: SIG_TYPE, keyPair: KeyringPair, stateMessage, keyId = 1) {
     return {
       did: InfraSS58.didToHex(did),
       keyId,

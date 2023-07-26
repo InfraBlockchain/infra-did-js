@@ -1,6 +1,5 @@
 import { randomAsHex, blake2AsHex } from "@polkadot/util-crypto";
-import InfraSS58 from "..";
-import { BTreeSet, HexString, Codec } from "../ss58.interface";
+import { InfraSS58, BTreeSet, HexString, Codec } from "..";
 
 export class InfraSS58_TrustedEntity {
   private owners: string[];

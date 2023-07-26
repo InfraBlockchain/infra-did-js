@@ -1,6 +1,5 @@
 import { randomAsHex, blake2AsHex } from "@polkadot/util-crypto";
-import InfraSS58 from "..";
-import { HexString } from "../ss58.interface";
+import { InfraSS58, HexString } from "..";
 
 export class InfraSS58_Revocation {
   private policyOwner: string[];

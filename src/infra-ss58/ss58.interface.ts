@@ -4,8 +4,8 @@ import { Codec } from '@polkadot/types-codec/types';
 import { KeyringPair } from '@polkadot/keyring/types';
 import typesBundle from '@docknetwork/node-types';
 import { SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
-import { Bls12381BBSSignatureDock2022, Bls12381G2KeyPairDock2022, Ed25519Signature2018, Ed25519VerificationKey2018, Bls12381BBSSignatureProofDock2022, Ed25519VerificationKey2020, Ed25519Signature2020, JsonWebSignature2020 } from './infra-ss58-verifiable/crypto';
-import JsonWebKey2020 from './infra-ss58-verifiable/crypto/JsonWebKey2020';
+import { Bls12381BBSSignatureDock2022, Bls12381G2KeyPairDock2022, Ed25519Signature2018, Ed25519VerificationKey2018, Bls12381BBSSignatureProofDock2022, Ed25519VerificationKey2020, Ed25519Signature2020, JsonWebSignature2020, JsonWebKey2020 } from './infra-ss58-verifiable/crypto';
+
 
 export { KeyringPair, Codec, typesBundle, BTreeSet };
 
@@ -50,18 +50,17 @@ export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
 export type SIG_TYPE = typeof CRYPTO_INFO.ED25519_2018.SIG_TYPE | typeof CRYPTO_INFO.ED25519_2020.SIG_TYPE | typeof CRYPTO_INFO.ED25519_JWK.SIG_TYPE;;
 
 export type HexString = `0x${string}`;
-export type KeyPair = KeyringPair
 export interface IConfig_SS58 {
   did: string;
   address: string;
   networkId: string;
   seed?: HexString; //seed or key pair required
-  keyPair?: KeyPair;
+  keyPair?: KeyringPair;
   controllerDID?: string;// same role as didOwnerPrivateKey
   controllerSeed?: HexString; // alter to controllerKeyPair
-  controllerKeyPair?: KeyPair; // same role as didOwnerPrivateKey
+  controllerKeyPair?: KeyringPair; // same role as didOwnerPrivateKey
   txfeePayerAccountSeed?: HexString, // alter to txfeePayerAccountKeyPair
-  txfeePayerAccountKeyPair?: KeyPair, // same role as txfeePayerAccount
+  txfeePayerAccountKeyPair?: KeyringPair, // same role as txfeePayerAccount
   cryptoInfo?: CRYPTO_INFO;
   verRels?: VerificationRelationship;
 }
@@ -81,7 +80,7 @@ export type PrivateJwk_ED = PublicJwk_ED & {
 export interface DIDSet {
   did: string;
   didKey: DidKey_SS58;
-  keyPair: KeyPair;
+  keyPair: KeyringPair;
   publicKey: PublicKey_SS58;
   verRels: VerificationRelationship;
   cryptoInfo: CRYPTO_INFO;
@@ -111,7 +110,7 @@ export class PublicKey_SS58 {
     this.value = value;
     this.sigType = sigType;
   }
-  static fromKeyringPair(pair: KeyPair): PublicKey_SS58 {
+  static fromKeyringPair(pair: KeyringPair): PublicKey_SS58 {
     switch ((pair as KeyringPair).type) {
       case CRYPTO_INFO.ED25519_2018.CRYPTO_TYPE:
         return new this(u8aToHex((pair as KeyringPair).publicKey), CRYPTO_INFO.ED25519_2018.SIG_TYPE);

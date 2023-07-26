@@ -12,21 +12,8 @@ import { ec as EC } from 'elliptic-expo'
 import { Buffer } from 'buffer'
 // const EC = require('elliptic').ec
 
-import InfraSS58, {
-  CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
-  BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
-  DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
-  VerificationRelationship, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, EdToX25519Helper,
-} from "./infra-ss58"
 
-
-
-export {
-  InfraSS58, CRYPTO_INFO, SIG_TYPE, HexString, IConfig_SS58, KeyPair, KeyringPair,
-  BBSPlus_Params, BBSPlus_PublicKey, BBSPlus_SigSet,
-  DIDSet, DidKey_SS58, PublicKey_SS58, Schema,
-  VerificationRelationship, VerifiableCredential, VerifiablePresentation, BBSPlusPresentation, EdToX25519Helper,
-}
+export * from "./infra-ss58"
 
 const secp256k1 = new EC('secp256k1') // currently only support secp256k1 key
 

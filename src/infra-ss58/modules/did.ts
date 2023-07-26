@@ -1,13 +1,13 @@
 import { u8aToHex } from "@polkadot/util";
 import { randomAsHex } from "@polkadot/util-crypto";
-import InfraSS58 from "..";
-import { BTreeSet, Codec, DidKey_SS58, IConfig_SS58, KeyPair, PublicKey_SS58, ServiceEndpointType, VerificationRelationship } from "../ss58.interface";
+import { InfraSS58, Codec, BTreeSet, DidKey_SS58, IConfig_SS58, KeyringPair, PublicKey_SS58, VerificationRelationship, ServiceEndpointType } from "..";
+
 
 export class InfraSS58_DID {
 
   private verRels: VerificationRelationship;
   did: string;
-  keyPairs: KeyPair[];
+  keyPairs: KeyringPair[];
   private publicKey: PublicKey_SS58;
 
   private didKey: DidKey_SS58;

@@ -38,6 +38,11 @@ Feature provided by `infra-did-js/infra-ss58` library
   - Revoke/Unrevoke/Check Verifiable Credential
   - Create/Sign/Verify VerifiablePresentation
   - Issue/Verify BBSPlusCredential and BBSPlusPresentation
+- Crypto Helper
+  - convert Ed25519 to X25519
+  - convert key type (u8a to jwk, keyobject)
+  - create ECDH-ES Key(diffieHellman) using X25519
+  - ED25519 derived key [SLIP-10](https://github.com/satoshilabs/slips/blob/master/slip-0010.md)
 
 ## Infra SS58 DID API Configuration
 
@@ -924,4 +929,92 @@ const verifyResult = await bbsPlusPresentation.verifyPresentation(
     resolver: issuerApi.Resolver
   }
 )
+```
+
+## Crypto Helper
+
+### Convert Key
+
+```ts
+const holder = await InfraSS58.createNewSS58DIDSet('space')
+// convert Ed25519 to X25519
+const xPkU8a = CryptoHelper.edPkToX25519Pk(
+  hexToU8a(verifier.publicKey.toJSON()['Ed25519']),
+  'u8a'
+)
+const xPkJwk = CryptoHelper.edPkToX25519Pk(
+  hexToU8a(verifier.publicKey.toJSON()['Ed25519']),
+  'jwk'
+)
+const xPkKeyObject = CryptoHelper.edPkToX25519Pk(
+  hexToU8a(verifier.publicKey.toJSON()['Ed25519']),
+  'keyObject'
+)
+
+// convert Key Type
+const obj2JWK = CryptoHelper.keyObject2JWK(xPkKeyObject as KeyObject)
+const key2Jwk = CryptoHelper.key2JWK('X25519', xPkU8a as Uint8Array)
+const jwk2Key = CryptoHelper.jwk2Key(xPkJwk as PublicJwk_ED).publicKey
+const jwk2Obj = CryptoHelper.jwk2KeyObject(xPkJwk as PublicJwk_ED, 'public')
+```
+
+### ECDH-ES (diffieHellman)
+
+```ts
+const verifierX25519KeyPair = CryptoHelper.edToX25519KeyPair(
+  hexToU8a(verifier.publicKey.toJSON()['Ed25519']),
+  hexToU8a(verifier.seed)
+)
+const holderX25519KeyPair = CryptoHelper.edToX25519KeyPair(
+  hexToU8a(holder.publicKey.toJSON()['Ed25519']),
+  hexToU8a(holder.seed)
+)
+
+const { publicKey: epk, privateKey: esk } =
+  CryptoHelper.generateX25519KeyPairObject()
+const verifierSecretUsingESK = CryptoHelper.jwkToEcdhesKeypair(
+  'X25519',
+  holderX25519KeyPair.publicKeyJWK,
+  esk
+)
+const holderSecretUsingEPK = CryptoHelper.jwkToEcdhesKeypair(
+  'X25519',
+  epk,
+  holderX25519KeyPair.privateKeyJWK
+)
+
+const verifierDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair(
+  'X25519',
+  holderX25519KeyPair.publicKeyJWK,
+  verifierX25519KeyPair.privateKeyJWK
+)
+const holderDIDSharedKey = CryptoHelper.jwkToEcdhesKeypair(
+  'X25519',
+  verifierX25519KeyPair.publicKeyJWK,
+  holderX25519KeyPair.privateKeyJWK
+)
+```
+
+### Derived Key(SLIP-0010 implementation)
+
+- according to the https://github.com/satoshilabs/slips/blob/master/slip-0010.md
+- example is 1 depth of testvector 1
+
+```ts
+const seed = '0x000102030405060708090a0b0c0d0e0f'
+const mk = await DerivedEd25519Key.getMasterKey(seed)
+// expect(mk.path).toEqual('m');
+// expect(u8aToHex(mk.chainCode)).toEqual('0x90046a93de5380a72b5e45010748567d5ea02bbf6522f979e05c0d8d8ca9fffb');
+// expect(u8aToHex(mk.sk)).toEqual('0x2b4be7f19ee27bbf30c667b642d5f4aa69fd169872f8fc3059c08ebae2eb19e7');
+// expect(u8aToHex(mk.pk)).toEqual('0xa4b2856bfec510abab89753fac1ac0e1112364e7d250545963f135f2a33188ed');
+const dk = await DerivedEd25519Key.getDeriveKey(
+  mk.sk,
+  mk.chainCode,
+  mk.path,
+  0x80000000
+)
+// expect(dk.path).toEqual('m/0h');
+// expect(u8aToHex(dk.chainCode)).toEqual('0x8b59aa11380b624e81507a27fedda59fea6d0b779a778918a2fd3590e16e9c69');
+// expect(u8aToHex(dk.sk)).toEqual('0x68e0fe46dfb67e368c75379acec591dad19df3cde26e63b93a8e704f1dade7a3');
+// expect(u8aToHex(dk.pk)).toEqual('0x8c8a13df77a28f3445213a0f432fde644acaa215fc72dcdf300d5efaa85d350c');
 ```
