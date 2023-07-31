@@ -13,7 +13,7 @@ export class InfraSS58_BLOB {
     this.did = that.didModule.did
   }
   async writeSchemaOnChainByBlob(blobSchema) {
-    const hexId = this.that.didToHex(this.did);
+    const hexId = this.that.didToHexPk(this.did);
     const nonce = await this.that.getNextNonce(hexId);
 
     const AddBlob = {

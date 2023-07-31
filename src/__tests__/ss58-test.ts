@@ -56,7 +56,13 @@ describe('InfraSS58: DID', () => {
             expect(InfraSS58.validateInfraSS58DID(edTest1.did).result).toBeTruthy();
             expect(InfraSS58.validateInfraSS58DID(edTest2.did).result).toBeTruthy();
         })
+        it('convert SS58 DID to publicKey', () => {
+            expect.assertions(2);
+            const pk = InfraSS58.didToHexPk(edTest1.did)
 
+            expect(edTest1.publicKey.toJSON()['Ed25519']).toEqual(pk)
+            expect(InfraSS58.hexPkToDid(pk)).toEqual(edTest1.did)
+        })
     })
 
     describe('DID onChain test', () => {

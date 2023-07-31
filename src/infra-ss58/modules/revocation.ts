@@ -21,7 +21,7 @@ export class InfraSS58_Revocation {
   }
 
   public async revokeCredential(registryId, revId) {
-    const hexDid = this.that.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHexPk(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
 
     const revoke = { registryId, revokeIds: [revId] };
@@ -34,7 +34,7 @@ export class InfraSS58_Revocation {
   }
 
   public async unrevokeCredential(registryId, revId) {
-    const hexDid = this.that.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHexPk(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
 
     const unrevoke = { registryId, revokeIds: [revId] };
@@ -47,7 +47,7 @@ export class InfraSS58_Revocation {
   }
 
   public async unregisterRegistry(registryId) {
-    const hexDid = this.that.didToHex(this.that.didModule.did);
+    const hexDid = this.that.didToHexPk(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
 
     const removal = { registryId };
@@ -76,6 +76,6 @@ export class InfraSS58_Revocation {
   }
   public addPolicyOwner(ownerDID?: string) {
     ownerDID ??= this.that.didModule.did
-    this.policyOwner.push(this.that.didToHex(ownerDID))
+    this.policyOwner.push(this.that.didToHexPk(ownerDID))
   }
 }

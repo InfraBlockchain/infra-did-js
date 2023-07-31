@@ -114,7 +114,7 @@ export class InfraSS58 {
       if (typeof params[1] !== 'number') {
         throw new Error(`Second item of reference should be a number but was ${params[1]}`);
       }
-      const hexDID = InfraSS58.didToHex(params[0])
+      const hexDID = InfraSS58.didToHexPk(params[0])
       paramsRef = [hexDID, params[1]]
     }
     return {
@@ -192,13 +192,21 @@ export class InfraSS58 {
       qualifier: splitDID.join(':'),
     }
   }
-  static didToHex(did: string): HexString {
-    const { id: ss58ID } = InfraSS58.splitDID(did);
-    return u8aToHex(decodeAddress(ss58ID));
+  static didToHexPk(did: string): HexString {
+    const { id: ss58Addr } = InfraSS58.splitDID(did);
+    return u8aToHex(decodeAddress(ss58Addr));
   }
-  didToHex(did: string): HexString {
-    const { id: ss58ID } = InfraSS58.splitDID(did);
-    return u8aToHex(decodeAddress(ss58ID));
+  didToHexPk(did: string): HexString {
+    const { id: ss58Addr } = InfraSS58.splitDID(did);
+    return u8aToHex(decodeAddress(ss58Addr));
+  }
+  static hexPkToDid(pk: HexString, networkId = 'space') {
+    const ss58Addr = encodeAddress(pk)
+    return InfraSS58.ss58addrToDID(networkId, ss58Addr)
+  }
+  hexPkToDid(pk: HexString, networkId = 'space') {
+    const ss58Addr = encodeAddress(pk)
+    return InfraSS58.ss58addrToDID(networkId, ss58Addr)
   }
   static async getKeyPairFromSeed(seed: HexString, cryptoInfo: CRYPTO_INFO = CRYPTO_INFO.ED25519_2018): Promise<KeyringPair> {
     return InfraSS58.getKeyringPairFromUri(seed, cryptoInfo.CRYPTO_TYPE);
@@ -209,6 +217,7 @@ export class InfraSS58 {
     await cryptoWaitReady();
     return keyringModule.addFromUri(uri, undefined, cryptoType);
   }
+
   static ss58addrToDID(networkId: string, addr: string): string { return `${DID_QUALIFIER}${networkId}:${addr}` }
   static keyPairToDID(networkId: string, keyPair: KeyringPair): string {
     return InfraSS58.ss58addrToDID(networkId, (keyPair.address));
@@ -232,7 +241,7 @@ export class InfraSS58 {
 
   public getDIDSig(did: string, sigType: SIG_TYPE, keyPair: KeyringPair, stateMessage, keyId = 1) {
     return {
-      did: InfraSS58.didToHex(did),
+      did: InfraSS58.didToHexPk(did),
       keyId,
       sig: this.getSig(sigType, keyPair, stateMessage)
     }
@@ -328,7 +337,7 @@ export class InfraSS58 {
     did = did.split('#')[0];
 
     const qualifier = InfraSS58.splitDID(did).qualifier;
-    const hexId = InfraSS58.didToHex(did);
+    const hexId = InfraSS58.didToHexPk(did);
     let didDetails
     try {
       didDetails = await this.getOnchainDIDDetail(hexId);
