@@ -1,8 +1,8 @@
-import { SignatureParamsG1 } from "@docknetwork/crypto-wasm-ts";
+import { BBSPlusSignatureParamsG1 } from "@docknetwork/crypto-wasm-ts";
 import { hexToU8a, u8aToHex } from "@polkadot/util";
 import { HexString, BBSPlus_Params, CRYPTO_BBS_INFO, BBSPlus_PublicKey } from "../ss58.interface";
 import type { InfraSS58 } from "..";
-
+import { stringToHex } from "@polkadot/util";
 
 export class InfraSS58_BBS {
   did: string;
@@ -10,26 +10,26 @@ export class InfraSS58_BBS {
     this.did = that.didModule.did
   }
   async createSigParamsByDID(paramCounter: number)
-    : Promise<SignatureParamsG1> {
+    : Promise<BBSPlusSignatureParamsG1> {
     const queriedParams = await this.getParams(paramCounter);
-    const params1Val = SignatureParamsG1.valueFromBytes(hexToU8a(queriedParams?.bytes));
-    return await new SignatureParamsG1(params1Val, hexToU8a(queriedParams?.label));
+    const params1Val = BBSPlusSignatureParamsG1.valueFromBytes(hexToU8a(queriedParams?.bytes));
+    return await new BBSPlusSignatureParamsG1(params1Val, hexToU8a(queriedParams?.label));
   }
   private async getParamsByHexDid(hexDid: HexString, paramCounter: number): Promise<BBSPlus_Params | null> {
-    const resp = await this.that.api.query.bbsPlus.bbsPlusParams(hexDid, paramCounter);
+    const resp = await this.that.api.query.offchainSignatures.signatureParams(hexDid, paramCounter);
     if (resp.isSome) {
       const params = resp.unwrap()
       return {
         bytes: u8aToHex(params.bytes),
         curveType: CRYPTO_BBS_INFO.CURVE_TYPE,
-        label: params.label.isSome ? u8aToHex(params.label.unwrap()) : null
+        label: params.label ? u8aToHex(params.label.unwrap()) : null
       }
     }
     return null;
   }
 
   private async getPublicKeyByHexDid(hexDid: HexString, keyId: number, withParams = false): Promise<BBSPlus_PublicKey | null> {
-    const resp = await this.that.api.query.bbsPlus.bbsPlusKeys(hexDid, keyId);
+    const resp = await this.that.api.query.offchainSignatures.publicKeys(hexDid, keyId);
     if (resp.isSome) {
       const pk = resp.unwrap();
       let paramsRef: any = null
@@ -62,20 +62,20 @@ export class InfraSS58_BBS {
   async addPublicKey(publicKey: BBSPlus_PublicKey) {
     const hexDID = this.that.didToHexPk(this.did);
     const nonce = await this.that.getNextNonce(hexDID);
-    const AddBBSPlusPublicKey = { key: publicKey, did: hexDID, nonce };
-    const stateMessage = this.that.api.createType('StateChange', { AddBBSPlusPublicKey }).toU8a();
+    const AddOffchainSignaturePublicKey = { key: { BBSPlus: { curveType: publicKey.curveType, bytes: publicKey.bytes } }, did: hexDID, nonce };
+    const stateMessage = this.that.api.createType('StateChange', { AddOffchainSignaturePublicKey }).toU8a();
     const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
-    const tx = await this.that.api.tx.bbsPlus.addPublicKey(AddBBSPlusPublicKey, controllerDIDSig);
+    const tx = await this.that.api.tx.offchainSignatures.addPublicKey(AddOffchainSignaturePublicKey, controllerDIDSig);
     return this.that.signAndSend(tx, false, {});
   }
 
   async removePublicKey(removeKeyId: number) {
     const hexDID = this.that.didToHexPk(this.did);
     const nonce = await this.that.getNextNonce(hexDID);
-    const RemoveBBSPlusPublicKey = { keyRef: [hexDID, removeKeyId], did: hexDID, nonce };
-    const stateMessage = this.that.api.createType('StateChange', { RemoveBBSPlusPublicKey }).toU8a();
+    const RemoveOffchainSignaturePublicKey = { keyRef: [hexDID, removeKeyId], did: hexDID, nonce };
+    const stateMessage = this.that.api.createType('StateChange', { RemoveOffchainSignaturePublicKey }).toU8a();
     const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
-    const tx = await this.that.api.tx.bbsPlus.removePublicKey(RemoveBBSPlusPublicKey, controllerDIDSig);
+    const tx = await this.that.api.tx.offchainSignatures.removePublicKey(RemoveOffchainSignaturePublicKey, controllerDIDSig);
     return this.that.signAndSend(tx, false, {});
   }
 
@@ -84,28 +84,29 @@ export class InfraSS58_BBS {
     return this.getPublicKeyByHexDid(hexId, keyId, withParams);
   }
 
-  async addParams(sigParam: SignatureParamsG1, label?: string) {
+  async addParams(sigParam: BBSPlusSignatureParamsG1, label?: string) {
     const hexDID = this.that.didToHexPk(this.did);
     const nonce = await this.that.getNextNonce(hexDID);
     const params = {
+      label: stringToHex(label),
       bytes: u8aToHex(sigParam.toBytes()),
       curveType: CRYPTO_BBS_INFO.CURVE_TYPE,
-      label
     }
-    const AddBBSPlusParams = { params, nonce };
-    const stateMessage = this.that.api.createType('StateChange', { AddBBSPlusParams }).toU8a();
+    const AddOffchainSignatureParams = { BBSPlus: { params }, nonce };
+    const stateMessage = this.that.api.createType('StateChange', { AddOffchainSignatureParams }).toU8a();
     const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
-    const tx = await this.that.api.tx.bbsPlus.addParams(AddBBSPlusParams, controllerDIDSig);
+    const tx = await this.that.api.tx.offchainSignatures.addParams(AddOffchainSignatureParams, controllerDIDSig);
     return this.that.signAndSend(tx, false, {});
   }
 
   async removeParams(paramCounter: number) {
     const hexDID = this.that.didToHexPk(this.did);
     const nonce = await this.that.getNextNonce(hexDID);
-    const RemoveBBSPlusParams = { paramsRef: [hexDID, paramCounter], nonce };
-    const stateMessage = this.that.api.createType('StateChange', { RemoveBBSPlusParams }).toU8a();
+    const paramsRef = [hexDID, paramCounter];
+    const RemoveOffchainSignatureParams = { paramsRef, nonce };
+    const stateMessage = this.that.api.createType('StateChange', { RemoveOffchainSignatureParams }).toU8a();
     const controllerDIDSig = this.that.getControllerDIDSig(stateMessage);
-    const tx = await this.that.api.tx.bbsPlus.removeParams(RemoveBBSPlusParams, controllerDIDSig);
+    const tx = await this.that.api.tx.offchainSignatures.removeParams(RemoveOffchainSignatureParams, controllerDIDSig);
     return this.that.signAndSend(tx, false, {});
   }
 
@@ -116,7 +117,7 @@ export class InfraSS58_BBS {
 
   async getLastParamsWritten(): Promise<BBSPlus_Params | null> {
     const hexId = this.that.didToHexPk(this.did);
-    const lastCounter: number = await this.that.api.query.bbsPlus.paramsCounter(hexId);
+    const lastCounter: number = await this.that.api.query.offchainSignatures.paramsCounter(hexId);
     if (lastCounter < 1) return null
     return await this.getParamsByHexDid(hexId, lastCounter)
   }
@@ -124,7 +125,7 @@ export class InfraSS58_BBS {
   async getAllParams(): Promise<BBSPlus_Params[]> {
     const hexId = this.that.didToHexPk(this.did);
     const params: any = [];
-    const lastCounter: number = await this.that.api.query.bbsPlus.paramsCounter(hexId);
+    const lastCounter: number = await this.that.api.query.offchainSignatures.paramsCounter(hexId);
     if (lastCounter > 0) {
       for (let counter = 1; counter <= lastCounter; counter++) {
         const param = await this.getParamsByHexDid(hexId, counter);

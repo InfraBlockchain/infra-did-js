@@ -78,11 +78,12 @@ export default class VerifiableCredential extends VerifiableHelper {
   }
 
   addSubject(subject) {
-    if (!this.credentialSubject || this.credentialSubject.length === 0) {
-      this.credentialSubject = [subject];
-    }
-    const subjects = this.credentialSubject.length ? this.credentialSubject : [this.credentialSubject];
-    this.credentialSubject = this.getUniqueElementsFromArray([...subjects, subject], JSON.stringify);
+    // if (!this.credentialSubject || this.credentialSubject.length === 0) {
+    //   this.credentialSubject = subject;
+    // }
+    // const subjects = this.credentialSubject.length ? this.credentialSubject : this.credentialSubject;
+    // this.credentialSubject = this.getUniqueElementsFromArray([...subjects, subject], JSON.stringify);
+    this.credentialSubject = subject;
     return this;
   }
 

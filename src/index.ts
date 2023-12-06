@@ -96,8 +96,7 @@ export default class InfraDID {
     if (conf.jwtSigner) {
       this.jwtSigner = conf.jwtSigner
     } else {
-      const privateKeyHex = Buffer.from(privKey.data).toString('hex')
-      this.jwtSigner = ES256KSigner(privateKeyHex)
+      this.jwtSigner = ES256KSigner(privKey.data)
     }
   }
 

@@ -1,5 +1,5 @@
-import { CredentialSchema, CredentialBuilder, SIGNATURE_PARAMS_LABEL_BYTES } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
-import { initializeWasm, SignatureG1, BBSPlusSecretKey, getSigParamsOfRequiredSize } from '@docknetwork/crypto-wasm-ts';
+import { CredentialSchema, BBS_PLUS_SIGNATURE_PARAMS_LABEL_BYTES, BBSPlusCredentialBuilder } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
+import { initializeWasm, BBSPlusSecretKey, BBSPlusSignatureG1, BBSPlusSignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 import jsonld from 'jsonld';
 import { SECURITY_CONTEXT_URL } from 'jsonld-signatures';
 import CustomLinkedDataSignature from './custom-linkeddatasignature';
@@ -81,7 +81,7 @@ export default class Bls12381BBSSignatureDock2022 extends CustomLinkedDataSignat
     const [serializedCredential, credSchema] = Bls12381BBSSignatureDock2022.convertCredential(options);
 
     // Encode messages, retrieve names/values array
-    const nameValues = credSchema.encoder.encodeMessageObject(serializedCredential, SIGNATURE_PARAMS_LABEL_BYTES);
+    const nameValues = credSchema.encoder.encodeMessageObject(serializedCredential, false);
     return nameValues[1];
   }
 
@@ -121,7 +121,7 @@ export default class Bls12381BBSSignatureDock2022 extends CustomLinkedDataSignat
       credSchema = new CredentialSchema(CredentialSchema.essential(), DEFAULT_PARSING_OPTS);
     }
 
-    const credBuilder = new CredentialBuilder();
+    const credBuilder = new BBSPlusCredentialBuilder();
     credBuilder.schema = credSchema;
 
     const {
@@ -207,8 +207,8 @@ export default class Bls12381BBSSignatureDock2022 extends CustomLinkedDataSignat
         }
 
         const msgCount = data.length;
-        const sigParams = getSigParamsOfRequiredSize(msgCount, SIGNATURE_PARAMS_LABEL_BYTES);
-        const signature = SignatureG1.generate(data, new BBSPlusSecretKey(keypair.privateKeyBuffer), sigParams, false);
+        const sigParams = BBSPlusSignatureParamsG1.getSigParamsOfRequiredSize(msgCount, BBS_PLUS_SIGNATURE_PARAMS_LABEL_BYTES);
+        const signature = BBSPlusSignatureG1.generate(data, new BBSPlusSecretKey(keypair.privateKeyBuffer), sigParams, false);
         return signature.value;
       },
     };

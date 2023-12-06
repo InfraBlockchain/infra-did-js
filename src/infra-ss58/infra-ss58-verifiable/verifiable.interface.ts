@@ -299,7 +299,6 @@ export class VerifiableHelper {
         }
 
         const docLoader = documentLoader || defaultDocumentLoader(resolver);
-
         this.checkCredential(credential);
 
         if (verifyDates && 'expirationDate' in credential) {

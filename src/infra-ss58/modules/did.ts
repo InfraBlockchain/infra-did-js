@@ -61,7 +61,7 @@ export class InfraSS58_DID {
   async registerDIDOnChain(did: string, didKey, controllerDID?: string) {
     const hexId = this.that.didToHexPk(did);
     const didKeys = [didKey].map((d) => d.toJSON ? d.toJSON() : d);
-    // @ts-ignore
+    //@ts-ignore
     const controllers = new BTreeSet();
     controllers.add(this.that.didToHexPk(controllerDID) as unknown as Codec)
 
