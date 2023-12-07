@@ -10,7 +10,7 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { encodeAddress, decodeAddress, mnemonicGenerate, mnemonicToMiniSecret, cryptoWaitReady } from '@polkadot/util-crypto';
 
 
-import { initializeWasm, isWasmInitialized, SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
+import { BBSPlusSignatureParamsG1, initializeWasm, isWasmInitialized } from '@docknetwork/crypto-wasm-ts';
 
 import { DID_QUALIFIER } from './infra-ss58-verifiable/verifiable.constants';
 import { InfraSS58_DID, InfraSS58_BBS, InfraSS58_BLOB, InfraSS58_Revocation, InfraSS58_TrustedEntity } from './modules';
@@ -55,7 +55,7 @@ export class InfraSS58 {
   registryModule: InfraSS58_Revocation;
   trustModule: InfraSS58_TrustedEntity;
 
-  private constructor() {}
+  private constructor() { }
 
   static async createAsync(conf: IConfig_SS58): Promise<InfraSS58> {
     if (!isWasmInitialized()) await initializeWasm()
@@ -96,13 +96,13 @@ export class InfraSS58 {
     const publicKey = InfraSS58.BBSPlus_createSigPublicKey(keyPair.publicKeyBuffer)
     return { params, publicKey, messageCounter, label, keyPair }
   }
-  static BBSPlus_changeSigParamMessageCounter(sigParam: SignatureParamsG1, messageCounter: number): SignatureParamsG1 {
+  static BBSPlus_changeSigParamMessageCounter(sigParam: BBSPlusSignatureParamsG1, messageCounter: number): BBSPlusSignatureParamsG1 {
     return sigParam.adapt(messageCounter)
   }
-  static BBSPlus_createSigParamsWithLabel(messageCounter: number, label?: string): SignatureParamsG1 {
+  static BBSPlus_createSigParamsWithLabel(messageCounter: number, label?: string): BBSPlusSignatureParamsG1 {
     return label ?
-      SignatureParamsG1.generate(messageCounter, stringToU8a(label)) :
-      SignatureParamsG1.generate(messageCounter, stringToU8a('DockBBS+Signature2022'))
+      BBSPlusSignatureParamsG1.generate(messageCounter, hexToU8a(label)) :
+      BBSPlusSignatureParamsG1.generate(messageCounter, stringToU8a('DockBBS+Signature2022'))
   }
 
   static BBSPlus_createSigPublicKey(publicKey: Uint8Array, params: any = undefined): BBSPlus_PublicKey {
@@ -155,6 +155,23 @@ export class InfraSS58 {
     const provider = isWebsocket ? new WsProvider(this.address) : new HttpProvider(this.address);
     const apiOptions = {
       provider,
+      types: {
+        SystemTokenId: {
+          paraId: "Compact<u32>",
+          palletId: "Compact<u32>",
+          assetId: "Compact<u32>"
+        },
+      },
+      signedExtensions: {
+        ChargeSystemToken: {
+          extrinsic: {
+            tip: 'Compact<u128>',
+            systemTokenId: 'Option<SystemTokenId>',
+            voteCandidate: 'Option<AccountId32>',
+          },
+          payload: {}
+        }
+      },
       rpc: {},
       typesBundle: typesBundle,
     };
@@ -270,7 +287,7 @@ export class InfraSS58 {
   private async send(extrinsic, waitForFinalization = true) {
     const sendPromise = new Promise((resolve, reject) => {
       try {
-        let unsubFunc = () => {};
+        let unsubFunc = () => { };
         return extrinsic
           .send((extrResult) => {
             const { events = [], status } = extrResult;
@@ -345,7 +362,7 @@ export class InfraSS58 {
       return InfraSS58.defaultDocuments(did);
     }
     const attests = await this.api.query.attest.attestations(hexId);
-    const ATTESTS_IRI = attests.iri.isSome ? u8aToString(hexToU8a(attests.iri.toString())) : null;
+    // const ATTESTS_IRI = attests.iri.isSome ? u8aToString(hexToU8a(attests.iri.toString())) : null;
     const id = (did === hexId) ? `${qualifier}${encodeAddress(hexId)}` : did;
     const controllers: any[] = [];
     if (didDetails.activeControllers > 0) {
@@ -393,8 +410,9 @@ export class InfraSS58 {
           }
           const index = i.toNumber() + extraKeyId;
           const pk = dk.publicKey;
-          if (pk.isEd25519) {
-            const publicKeyRaw = pk.asEd25519.value;
+          const pkObj = pk.toJSON();
+          if (pkObj.ed25519) {
+            const publicKeyRaw = hexToU8a(pkObj.ed25519);
             keys.push(
               [index, CRYPTO_INFO.ED25519_2018.KEY_NAME, publicKeyRaw],
               [index + 1, CRYPTO_INFO.ED25519_2020.KEY_NAME, publicKeyRaw],
@@ -428,14 +446,29 @@ export class InfraSS58 {
         for (const k of possibleBbsPlusKeyIds) {
           queryKeys.push([hexId, k]);
         }
-        const resp = await this.api.query.bbsPlus.bbsPlusKeys.multi(queryKeys);
+        const resp = await this.api.query.offchainSignatures.publicKeys.multi(queryKeys);
         function createPublicKeyObjFromChainResponse(pk) {
-          const pr = (pk.paramsRef.isSome) ? pk.paramsRef.unwrap() : null
-          return {
-            bytes: u8aToHex(pk.bytes),
-            curveType: pk.curveType.isBls12381 ? CRYPTO_BBS_INFO.CURVE_TYPE : null,
-            paramsRef: pr ? [u8aToHex(pr[0]), pr[1].toNumber()] : null,
-          };
+          const pr = (pk.paramsRef) ? pk.paramsRef.unwrap() : null
+          const pkObj = pk.toJSON();
+          if (pkObj.bbs) {
+            return {
+              bytes: pkObj.bbs.bytes,
+              curveType: pkObj.bbs.curveType === CRYPTO_BBS_INFO.CURVE_TYPE ? CRYPTO_BBS_INFO.CURVE_TYPE : null,
+              paramsRef: pr ? [u8aToHex(pr[0]), pr[1].toNumber()] : null,
+            };
+          } else if (pkObj.bbsPlus) {
+            return {
+              bytes: pkObj.bbsPlus.bytes,
+              curveType: pkObj.bbsPlus.curveType === CRYPTO_BBS_INFO.CURVE_TYPE ? CRYPTO_BBS_INFO.CURVE_TYPE : null,
+              paramsRef: pr ? [u8aToHex(pr[0]), pr[1].toNumber()] : null,
+            };
+          } else {
+            return {
+              bytes: pkObj.ps.bytes,
+              curveType: pkObj.ps.curveType === CRYPTO_BBS_INFO.CURVE_TYPE ? CRYPTO_BBS_INFO.CURVE_TYPE : null,
+              paramsRef: pr ? [u8aToHex(pr[0]), pr[1].toNumber()] : null,
+            };
+          }
         }
         let currentIter = 0;
         for (const r of resp) {
@@ -527,7 +560,7 @@ export class InfraSS58 {
       assertionMethod,
       keyAgreement,
       capabilityInvocation,
-      ATTESTS_IRI,
+      // ATTESTS_IRI,
       service,
     };
   }
@@ -568,7 +601,6 @@ export class InfraSS58 {
       assertionMethod: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
       keyAgreement: [],
       capabilityInvocation: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
-      ATTESTS_IRI: null,
       service: []
     });
   }

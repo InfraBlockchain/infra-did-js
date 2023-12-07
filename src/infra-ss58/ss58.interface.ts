@@ -3,7 +3,7 @@ import { BTreeSet } from '@polkadot/types';
 import { Codec } from '@polkadot/types-codec/types';
 import { KeyringPair } from '@polkadot/keyring/types';
 import typesBundle from '@docknetwork/node-types';
-import { SignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
+import { BBSPlusSignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
 import { Bls12381BBSSignatureDock2022, Bls12381G2KeyPairDock2022, Ed25519Signature2018, Ed25519VerificationKey2018, Bls12381BBSSignatureProofDock2022, Ed25519VerificationKey2020, Ed25519Signature2020, JsonWebSignature2020, JsonWebKey2020 } from './infra-ss58-verifiable/crypto';
 
 
@@ -88,7 +88,7 @@ export interface DIDSet {
   keyPairJWK: { publicJwk: PublicJwk_ED, privateJwk: PrivateJwk_ED }
 }
 export interface BBSPlus_SigSet {
-  params: SignatureParamsG1,
+  params: BBSPlusSignatureParamsG1,
   publicKey: BBSPlus_PublicKey,
   messageCounter?: number,
   keyPair: Bls12381G2KeyPairDock2022,

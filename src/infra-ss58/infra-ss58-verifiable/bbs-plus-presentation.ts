@@ -2,7 +2,7 @@ import { BBSPlusPublicKeyG2, initializeWasm, isWasmInitialized } from '@docknetw
 import b58 from 'bs58';
 import { stringToU8a } from '@polkadot/util';
 import { VerifiableHelper, defaultDocumentLoader } from './verifiable.interface';
-import { PresentationBuilder, Credential, } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
+import { PresentationBuilder, BBSPlusCredential, } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
 import CustomLinkedDataSignature from './crypto/custom-linkeddatasignature';
 import { CRYPTO_BBS_INFO } from '../ss58.interface';
 
@@ -62,7 +62,7 @@ export default class BBSPlusPresentation extends VerifiableHelper {
     const pkRaw = b58.decode(keyDocument.publicKeyBase58);
     const pk = new BBSPlusPublicKeyG2(pkRaw);
     const [credential] = CRYPTO_BBS_INFO.SIG_CLS.convertCredential({ document });
-    const convertedCredential = Credential.fromJSON(credential, CustomLinkedDataSignature.fromJsigProofValue(credentialLD.proof.proofValue));
+    const convertedCredential = BBSPlusCredential.fromJSON(credential, CustomLinkedDataSignature.fromJsigProofValue(credentialLD.proof.proofValue));
     const idx = await this.presBuilder.addCredential(convertedCredential, pk);
     // Enforce revealing of verificationMethod and type. also require context and type for JSON-LD
     this.addAttributeToReveal(idx, ['@context', 'type', 'proof.type', 'proof.verificationMethod']);

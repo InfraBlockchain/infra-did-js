@@ -1,14 +1,15 @@
 import { hexToU8a, u8aToU8a } from '@polkadot/util';
 import b58 from 'bs58';
+import { stringToU8a } from '@polkadot/util/string/toU8a';
 
 import {
-  KeypairG2,
-  SignatureG1,
+  BBSPlusKeypairG2,
+  BBSPlusSignatureG1,
   BBSPlusPublicKeyG2,
   BBSPlusSecretKey,
-  getSigParamsOfRequiredSize,
+  BBSPlusSignatureParamsG1,
 } from '@docknetwork/crypto-wasm-ts';
-import { SIGNATURE_PARAMS_LABEL_BYTES, } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
+import { BBS_PLUS_SIGNATURE_PARAMS_LABEL_BYTES, } from '@docknetwork/crypto-wasm-ts/lib/anonymous-credentials';
 
 
 const signerFactory = (key) => {
@@ -29,8 +30,8 @@ const signerFactory = (key) => {
   return {
     async sign({ data }) {
       const msgCount = data.length;
-      const sigParams = getSigParamsOfRequiredSize(msgCount, SIGNATURE_PARAMS_LABEL_BYTES);
-      const signature = SignatureG1.generate(data, new BBSPlusSecretKey(u8aToU8a(key.privateKeyBuffer)), sigParams, false);
+      const sigParams = BBSPlusSignatureParamsG1.getSigParamsOfRequiredSize(msgCount, BBS_PLUS_SIGNATURE_PARAMS_LABEL_BYTES);
+      const signature = BBSPlusSignatureG1.generate(data, new BBSPlusSecretKey(u8aToU8a(key.privateKeyBuffer)), sigParams, false);
       return signature.value;
     },
   };
@@ -55,8 +56,8 @@ const verifierFactory = (key) => {
   return {
     async verify({ data, signature }) {
       const msgCount = data.length;
-      const sigParams = getSigParamsOfRequiredSize(msgCount, SIGNATURE_PARAMS_LABEL_BYTES);
-      const bbsSignature = new SignatureG1(u8aToU8a(signature));
+      const sigParams = BBSPlusSignatureParamsG1.getSigParamsOfRequiredSize(msgCount, BBS_PLUS_SIGNATURE_PARAMS_LABEL_BYTES);
+      const bbsSignature = new BBSPlusSignatureG1(u8aToU8a(signature));
 
       try {
         const result = bbsSignature.verify(data, new BBSPlusPublicKeyG2(u8aToU8a(key.publicKeyBuffer)), sigParams, false);
@@ -102,7 +103,7 @@ export default class Bls12381G2KeyPairDock2022 {
   static generate({
     seed, params, controller, id,
   }: any = {}) {
-    const keypair = KeypairG2.generate(params || getSigParamsOfRequiredSize(1, SIGNATURE_PARAMS_LABEL_BYTES), seed);
+    const keypair = BBSPlusKeypairG2.generate(params || BBSPlusSignatureParamsG1.generate(10, stringToU8a('DockBBS+Signature2022')));
     return new Bls12381G2KeyPairDock2022({ keypair, controller, id });
   }
 

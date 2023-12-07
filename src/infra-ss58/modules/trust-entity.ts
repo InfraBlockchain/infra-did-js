@@ -1,7 +1,6 @@
 import { randomAsHex, blake2AsHex } from "@polkadot/util-crypto";
 import type { HexString, InfraSS58 } from "..";
-import type { BTreeSet, Codec } from '../ss58.interface';
-
+import { Codec, BTreeSet } from "../ss58.interface";
 export class InfraSS58_TrustedEntity {
   private owners: string[];
 
@@ -38,7 +37,7 @@ export class InfraSS58_TrustedEntity {
   public async addIssuer(authorizerId, issuerDID = this.that.didModule.did) {
     const hexDid = this.that.didToHexPk(this.that.didModule.did);
     const nonce = await this.that.getNextNonce(hexDid);
-    // @ts-ignore
+    //@ts-ignore
     const entityIds = new BTreeSet();
     entityIds.add(this.that.didToHexPk(issuerDID) as unknown as Codec)
     const entity = { authorizerId, entityIds };
