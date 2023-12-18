@@ -16,6 +16,8 @@ import { Buffer } from 'buffer'
 export * from "./infra-ss58"
 export { DerivedEd25519Key, DerivedEd25519KeySet } from './infra-ss58/derived/slip0010';
 
+export * from "./sdjwt"
+
 const secp256k1 = new EC('secp256k1') // currently only support secp256k1 key
 
 const defaultPubKeyDidSignDataPrefix = "infra-mainnet"
