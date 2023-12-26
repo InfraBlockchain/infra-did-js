@@ -1,6 +1,6 @@
 {
   "name": "infra-did-js",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "InfraBlockchain DID library creating and managing DIDs",
   "main": "lib/index.js",
   "module": "lib/index.esm.js",
@@ -16,6 +16,18 @@
     "LICENSE"
   ],
   "author": "Bezalel Lim <bezalel@infrablockchain.com>",
+  "contributors": [
+    {
+      "name": "Evan kim",
+      "email": "keispace.kyj@gmail.com",
+      "url": "https://github.com/keispace"
+    },
+    {
+      "name": "CuteWisp",
+      "email": "sweatpotato13@gmail.com",
+      "url": "https://github.com/sweatpotato13"
+    }
+  ],
   "license": "MIT",
   "scripts": {
     "test": "jest",
@@ -23,61 +35,62 @@
     "build:js": "microbundle",
     "build": "npm run build:js",
     "build:webpack": "./node_modules/.bin/webpack",
-    "prepare": "npm run build",
-    "release": "semantic-release --debug"
-  },
-  "jest": {
-    "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ],
-    "coverageDirectory": "./coverage/",
-    "collectCoverageFrom": [
-      "src/**/*.{ts,tsx}",
-      "!src/**/*.d.ts",
-      "!**/node_modules/**"
-    ],
-    "testEnvironment": "node"
+    "release": "semantic-release --debug",
+    "example:chain": "ts-node example/chain.ts",
+    "example:verifiable": "ts-node example/verifiable.ts",
+    "example:bbs": "ts-node example/bbs-verifiable.ts"
   },
   "devDependencies": {
-    "@types/elliptic": "^6.4.12",
+    "@babel/cli": "^7.23.4",
+    "@babel/node": "^7.22.19",
+    "@babel/plugin-transform-modules-commonjs": "^7.23.3",
+    "@babel/preset-env": "^7.23.5",
+    "@babel/preset-typescript": "^7.23.3",
+    "@types/elliptic": "^6.4.18",
     "@types/jest": "26.0.23",
-    "@types/node": "^14.14.31",
+    "@types/jsonschema": "^1.1.1",
+    "@types/node": "^20.10.3",
+    "babel-jest": "24.5.0",
     "codecov": "3.8.2",
-    "did-jwt-vc": "^2.1.2",
-    "did-resolver": "^3.1.0",
-    "infra-did-resolver": "^0.3.1",
+    "did-jwt-vc": "^3.2.14",
+    "did-resolver": "^4.1.0",
+    "infra-did-resolver": "^0.3.3",
     "jest": "27.0.4",
-    "microbundle": "0.13.3",
-    "prettier": "2.3.0",
+    "microbundle": "0.15.1",
+    "prettier": "3.1.0",
     "ts-jest": "27.0.3",
     "ts-lint": "4.5.1",
+    "ts-node": "^10.9.1",
     "tslint-config-prettier": "1.18.0",
     "tslint-eslint-rules": "5.4.0",
-    "typescript": "4.2.4",
-    "webpack": "^5.39.0",
-    "webpack-cli": "^4.7.2"
+    "typescript": "^5.3.2",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "@babel/core": "^7.14.6",
+    "@babel/core": "^7.23.5",
     "@babel/polyfill": "^7.12.1",
-    "@babel/preset-env": "^7.14.5",
-    "babel-loader": "^8.2.2",
+    "@docknetwork/crypto-wasm-ts": "0.48.0",
+    "@docknetwork/node-types": "^0.16.0",
+    "@juanelas/base64": "^1.1.5",
+    "@polkadot/api": "9.7.1",
+    "axios": "^1.6.2",
+    "babel-loader": "^9.1.3",
+    "base64url": "^3.0.1",
     "browserify": "^17.0.0",
+    "bs58": "^5.0.0",
     "buffer": "^6.0.3",
     "buffer-browserify": "^0.2.5",
     "crypto-browserify": "^3.12.0",
-    "did-jwt": "^5.0.1",
+    "did-jwt": "^7.4.5",
     "elliptic-expo": "^6.5.3",
-    "infrablockchain-js": "^22.1.2",
+    "infrablockchain-js": "^22.1.4",
+    "jose": "^5.1.3",
+    "js-sha256": "^0.10.1",
+    "json-canonicalize": "1.0.4",
+    "jsonld": "^5.0.0",
+    "jsonld-signatures": "^9.3.1",
+    "jsonschema": "1.4.1",
     "node-fetch": "^2.6.1",
     "stream-browserify": "^3.0.0"
   }

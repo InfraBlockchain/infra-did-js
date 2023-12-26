@@ -4,5 +4,14 @@
   "tabWidth": 2,
   "printWidth": 80,
   "singleQuote": true,
-  "semi": false
+  "semi": false,
+  "overrides": [
+    {
+      "files": ["*.marp.md"],
+      "options": {
+        "printWidth": 250,
+        "semi": true
+      }
+    }
+  ]
 }
