@@ -1,6 +1,6 @@
 {
   "name": "infra-did-js",
-  "version": "0.5.10",
+  "version": "1.0.0",
   "description": "InfraBlockchain DID library creating and managing DIDs",
   "main": "lib/index.js",
   "module": "lib/index.esm.js",
@@ -21,6 +21,11 @@
       "name": "Evan kim",
       "email": "keispace.kyj@gmail.com",
       "url": "https://github.com/keispace"
+    },
+    {
+      "name": "CuteWisp",
+      "email": "sweatpotato13@gmail.com",
+      "url": "https://github.com/sweatpotato13"
     }
   ],
   "license": "MIT",
