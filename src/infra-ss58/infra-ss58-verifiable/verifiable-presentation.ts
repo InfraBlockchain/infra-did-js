@@ -2,7 +2,7 @@
 import { VerifiableHelper } from './verifiable.interface';
 import { DEFAULT_CONTEXT_V1_URL, DEFAULT_VP_TYPE } from './verifiable.constants';
 
-import type { InfraSS58, VerifiableCredential } from '..';
+import { InfraSS58, VerifiableCredential } from '..';
 
 export default class VerifiablePresentation extends VerifiableHelper {
   proof: any;
@@ -91,10 +91,10 @@ export default class VerifiablePresentation extends VerifiableHelper {
   }
 
   addCredential(credential: VerifiableCredential) {
-    // let cred = credential;
-    // if (credential instanceof VerifiableCredential) {
-    const cred = credential.toJSON();
-    // }
+    let cred = credential;
+    if (credential instanceof VerifiableCredential) {
+      cred = credential.toJSON();
+    }
     this.ensureObjectWithKey(cred, 'id', 'credential');
     this.credentials = this.getUniqueElementsFromArray([...this.credentials, cred], JSON.stringify);
 
