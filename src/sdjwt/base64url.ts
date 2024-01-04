@@ -1,5 +1,6 @@
 const encoder = new TextEncoder();
-const decoder = new TextDecoder();
+const decoder = new TextDecoder("utf-8");
+import base64url from 'base64url';
 
 export function encodeBase64(input: Uint8Array | string) {
   let unencoded = input;
@@ -18,9 +19,10 @@ export function encode(input: Uint8Array | string) {
   return encodeBase64(input).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 };
 
-export function decodeBase64(encoded: string): string {
-  const binary = atob(encoded);
-  return binary;
+export function decodeBase64(encoded: string): Uint8Array {
+  const buffer = base64url.toBuffer(encoded);
+  // @ts-ignore
+  return new Uint8Array(buffer.buffer, buffer.offset, buffer.length);
 };
 
 export const decode = (input: Uint8Array | string) => {
@@ -30,7 +32,9 @@ export const decode = (input: Uint8Array | string) => {
   }
   encoded = encoded.replace(/-/g, '+').replace(/_/g, '/').replace(/\s/g, '');
   try {
-    return decodeBase64(encoded);
+    const bytes = decodeBase64(encoded);
+    const resultString = decoder.decode(bytes);
+    return resultString;
   } catch {
     throw new TypeError('The input to be decoded is not correctly encoded.');
   }

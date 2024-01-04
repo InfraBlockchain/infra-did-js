@@ -1,6 +1,6 @@
 {
   "name": "infra-did-js",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "InfraBlockchain DID library creating and managing DIDs",
   "main": "lib/index.js",
   "module": "lib/index.esm.js",
