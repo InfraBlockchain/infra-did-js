@@ -3,6 +3,7 @@ export const DEFAULT_VC_TYPE = 'VerifiableCredential';
 export const DEFAULT_VP_TYPE = 'VerifiablePresentation';
 export const DEFAULT_CONTEXT_URL = 'https://www.w3.org/2018/credentials';
 export const DEFAULT_CONTEXT_V1_URL = `${DEFAULT_CONTEXT_URL}/v1`;
+export const CREDENTIAL_CONTEXT_V2_URL = 'https://www.w3.org/ns/credentials/v2';
 export const EXPANDED_STATUS_PROPERTY = `${DEFAULT_CONTEXT_URL}#credentialStatus`;
 export const EXPANDED_SUBJECT_PROPERTY = `${DEFAULT_CONTEXT_URL}#credentialSubject`;
 export const EXPANDED_SCHEMA_PROPERTY = `${DEFAULT_CONTEXT_URL}#credentialSchema`;

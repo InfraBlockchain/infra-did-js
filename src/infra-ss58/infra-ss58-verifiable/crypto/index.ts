@@ -7,5 +7,7 @@ export { default as Ed25519VerificationKey2020 } from './Ed25519VerificationKey2
 export { default as Ed25519Signature2020 } from './Ed25519Signature2020';
 export { default as JsonWebKey2020 } from './JsonWebKey2020';
 export { default as JsonWebSignature2020 } from './JsonWebSignature2020';
+export { default as Ed25519MultiKey } from './Ed25519MultiKey';
+export { default as DataIntegrityProof } from './DataIntegrityProof';
 
 

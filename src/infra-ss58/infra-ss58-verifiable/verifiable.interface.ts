@@ -232,6 +232,9 @@ export class VerifiableHelper {
 
         let Cls;
         switch (keyDoc.type) {
+            case CRYPTO_INFO.MULTIKEY.KEY_NAME:
+                Cls = CRYPTO_INFO.MULTIKEY.SIG_CLS;
+                break;
             case CRYPTO_INFO.ED25519_2018.KEY_NAME:
                 Cls = CRYPTO_INFO.ED25519_2018.SIG_CLS;
                 break;
@@ -287,7 +290,7 @@ export class VerifiableHelper {
         suite = [],
         verifyDates = true,
     } = {}) {
-
+    
         if (documentLoader && resolver) {
             throw new Error('Passing resolver and documentLoader results in resolver being ignored, please re-factor.');
         }
@@ -331,6 +334,7 @@ export class VerifiableHelper {
                 new CRYPTO_INFO.ED25519_2018.SIG_CLS(),
                 new CRYPTO_INFO.ED25519_2020.SIG_CLS(),
                 new CRYPTO_INFO.ED25519_JWK.SIG_CLS(),
+                new CRYPTO_INFO.MULTIKEY.SIG_CLS(),
                 new CRYPTO_BBS_INFO.SIG_CLS(),
                 new CRYPTO_BBS_INFO.PROOF_CLS(),
                 ...suite],
@@ -370,7 +374,11 @@ export class VerifiableHelper {
             expansionMap,
             addSuiteContext,
         }
-        return jsigs.sign(cred, sig);
+        const result = await jsigs.sign(cred, sig);
+        if (suite.type === CRYPTO_INFO.MULTIKEY.SIG_NAME) {
+            result.proof.cryptosuite = "eddsa-2022"
+        }
+        return result;
     }
     private async verifyBBSPlusPresentation(presentation, options: any = {}) {
         const documentLoader = options.documentLoader || defaultDocumentLoader(options.resolver);
@@ -443,6 +451,7 @@ export class VerifiableHelper {
             ...options,
             resolver: null,
             suite: [
+                new CRYPTO_INFO.MULTIKEY.SIG_CLS(),
                 new CRYPTO_INFO.ED25519_2018.SIG_CLS(),
                 new CRYPTO_INFO.ED25519_2020.SIG_CLS(),
                 new CRYPTO_INFO.ED25519_JWK.SIG_CLS(),

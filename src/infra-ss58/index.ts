@@ -9,7 +9,6 @@ import { u8aToHex } from '@polkadot/util/u8a/toHex';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { encodeAddress, decodeAddress, mnemonicGenerate, mnemonicToMiniSecret, cryptoWaitReady } from '@polkadot/util-crypto';
 
-
 import { BBSPlusSignatureParamsG1, initializeWasm, isWasmInitialized } from '@docknetwork/crypto-wasm-ts';
 
 import { DID_QUALIFIER } from './infra-ss58-verifiable/verifiable.constants';
@@ -416,18 +415,19 @@ export class InfraSS58 {
             keys.push(
               [index, CRYPTO_INFO.ED25519_2018.KEY_NAME, publicKeyRaw],
               [index + 1, CRYPTO_INFO.ED25519_2020.KEY_NAME, publicKeyRaw],
-              [index + 2, CRYPTO_INFO.ED25519_JWK.KEY_NAME, publicKeyRaw]
+              [index + 2, CRYPTO_INFO.ED25519_JWK.KEY_NAME, publicKeyRaw],
+              [index + 3, CRYPTO_INFO.MULTIKEY.KEY_NAME, publicKeyRaw]
             );
           } else {
             throw new Error(`Cannot parse public key ${pk}`);
           }
 
           const vr = new VerificationRelationship(dk.verRels.toNumber());
-          if (vr.isAuthentication()) authn.push(index, index + 1, index + 2);
-          if (vr.isAssertion()) assertion.push(index, index + 1, index + 2);
-          if (vr.isCapabilityInvocation()) capInv.push(index, index + 1, index + 2);
-          if (vr.isKeyAgreement()) keyAgr.push(index, index + 1, index + 2);
-          extraKeyId += 2;
+          if (vr.isAuthentication()) authn.push(index, index + 1, index + 2, index + 3);
+          if (vr.isAssertion()) assertion.push(index, index + 1, index + 2, index + 3);
+          if (vr.isCapabilityInvocation()) capInv.push(index, index + 1, index + 2, index + 3);
+          if (vr.isKeyAgreement()) keyAgr.push(index, index + 1, index + 2, index + 3);
+          extraKeyId += 3;
         }
       });
     }
@@ -515,6 +515,13 @@ export class InfraSS58 {
               x: Buffer.from(publicKeyRaw).toString('base64url'),
             }
           }
+        case CRYPTO_INFO.MULTIKEY.KEY_NAME:
+          return {
+            id: `${id}#keys-${index}`,
+            type: typ,
+            controller: id,
+            publicKeyMultibase: `z${b58.encode(publicKeyRaw)}`,
+          }
         default: // Ed25519VerificationKey2018 or Bls12381G2VerificationKeyDock2022
           return {
             id: `${id}#keys-${index}`,
@@ -522,10 +529,7 @@ export class InfraSS58 {
             controller: id,
             publicKeyBase58: b58.encode(publicKeyRaw),
           }
-
       }
-
-
     });
     const assertionMethod = assertion.map((i) => `${id}#keys-${i}`);
     const authentication = authn.map((i) => `${id}#keys-${i}`);
@@ -552,7 +556,7 @@ export class InfraSS58 {
     }
 
     return {
-      '@context': ['https://www.w3.org/ns/did/v1'],
+      '@context': ['https://www.w3.org/ns/did/v1', 'https://w3c.github.io/vc-data-integrity/contexts/multikey/v1.jsonld', 'https://w3id.org/security/data-integrity/v2', 'https://digitalbazaar.github.io/ed25519-signature-2020-context/contexts/ed25519-signature-2020-v1.jsonld'],
       id,
       controller: controllers.map((c) => `${qualifier}${encodeAddress(c)}`),
       verificationMethod,
@@ -568,7 +572,7 @@ export class InfraSS58 {
     const { id } = InfraSS58.splitDID(did);
     const publicKey = decodeAddress(id);
     return ({
-      '@context': ['https://www.w3.org/ns/did/v1'],
+      '@context': ['https://www.w3.org/ns/did/v1', 'https://w3c.github.io/vc-data-integrity/contexts/multikey/v1.jsonld', 'https://w3id.org/security/data-integrity/v2', 'https://digitalbazaar.github.io/ed25519-signature-2020-context/contexts/ed25519-signature-2020-v1.jsonld'],
       id: did,
       controller: [did],
       verificationMethod: [
@@ -596,11 +600,17 @@ export class InfraSS58 {
             x: Buffer.from(publicKey).toString('base64url'),
           }
         },
+        {        
+          id: `${did}#keys-4`,
+          type: 'Multikey',
+          controller: did,
+          publicKeyMultibase: `z${b58.encode(publicKey)}`,
+        }
       ],
-      authentication: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
-      assertionMethod: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
+      authentication: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`, `${did}#keys-4`],
+      assertionMethod: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`, `${did}#keys-4`],
       keyAgreement: [],
-      capabilityInvocation: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
+      capabilityInvocation: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`, `${did}#keys-4`],
       service: []
     });
   }

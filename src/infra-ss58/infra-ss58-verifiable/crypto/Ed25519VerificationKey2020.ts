@@ -24,6 +24,19 @@ export default class Ed25519VerificationKey2020 {
           throw new Error(`Currently, only base58btc and base64 (with url or pad or both) are supported.`);
       }
     }
+    if (verificationMethod.hasOwnProperty('sec:publicKeyMultibase')) {
+      const key: string = verificationMethod['sec:publicKeyMultibase']['@value'];
+      const prefix = key.substring(0, 1);
+      const publicKeyEncoded = key.substring(1);
+      switch (prefix) {
+        case 'U': case 'M': case 'u': case 'm':  // base64 with url or pad or both
+          return new this(base64.decode(publicKeyEncoded.replace(/=/g, '')));
+        case 'z':// base58btc
+          return new this(b58.decode(publicKeyEncoded));
+        default:
+          throw new Error(`Currently, only base58btc and base64 (with url or pad or both) are supported.`);
+      }
+    }
     throw new Error(`Unsupported signature encoding for 'Ed25519VerificationKey2020'`);
   }
 
@@ -44,8 +57,8 @@ export default class Ed25519VerificationKey2020 {
     return {
       async verify({ data, signature }) {
         const pk = u8aToHex(publicKey);
-        return signatureVerify(data, signature, pk).isValid;
-      },
+        return signatureVerify(data, signature, pk);
+},
     };
   }
 }
