@@ -46,7 +46,6 @@ async function main() {
   vp.addContext('https://www.w3.org/2018/credentials/examples/v1');
   vp.addContext('https://schema.org');
   vp.addContext('https://w3id.org/security/suites/ed25519-2020/v1');
-  vp.addType('CredentialManagerPresentation');
   vp.setHolder(infraApi.didModule.did);
   vp.addCredential(vc);
 

@@ -13,14 +13,20 @@ export default class JsonWebKey2020 {
     }
 
     if (verificationMethod.publicKeyJwk) {
-
       if (verificationMethod.publicKeyJwk.alg !== 'EdDSA' ||
-        verificationMethod.publicKeyJwk.kyy !== 'OKP' ||
+        verificationMethod.publicKeyJwk.kty !== 'OKP' ||
         verificationMethod.publicKeyJwk.crv !== 'Ed25519') {
         throw new Error(`Currently, only Ed25519 crv are supported.`);
       }
       return new this(base64.decode(verificationMethod.publicKeyJwk.x));
-
+    }
+    if (verificationMethod.hasOwnProperty('sec:publicKeyJwk')) {
+      if (verificationMethod['sec:publicKeyJwk']['@value'].alg !== 'EdDSA' ||
+        verificationMethod['sec:publicKeyJwk']['@value'].kty !== 'OKP' ||
+        verificationMethod['sec:publicKeyJwk']['@value'].crv !== 'Ed25519') {
+        throw new Error(`Currently, only Ed25519 crv are supported.`);
+      }
+      return new this(base64.decode(verificationMethod['sec:publicKeyJwk']['@value'].x));
     }
     throw new Error(`Unsupported signature encoding for 'JsonWebKey2020'`);
   }
@@ -42,7 +48,7 @@ export default class JsonWebKey2020 {
     return {
       async verify({ data, signature }) {
         const pk = u8aToHex(publicKey);
-        return signatureVerify(data, signature, pk).isValid;
+        return signatureVerify(data, signature, pk);
       },
     };
   }

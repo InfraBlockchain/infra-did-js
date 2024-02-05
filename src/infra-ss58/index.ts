@@ -4,7 +4,6 @@ import { HttpProvider } from '@polkadot/rpc-provider';
 import { hexToU8a } from '@polkadot/util/hex/toU8a';
 import { stringToU8a } from '@polkadot/util/string/toU8a';
 import { stringToHex } from '@polkadot/util/string/toHex';
-import { u8aToString } from '@polkadot/util/u8a/toString';
 import { u8aToHex } from '@polkadot/util/u8a/toHex';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { encodeAddress, decodeAddress, mnemonicGenerate, mnemonicToMiniSecret, cryptoWaitReady } from '@polkadot/util-crypto';
@@ -33,7 +32,6 @@ export {
   DIDSet, DidKey_SS58, PublicKey_SS58, ServiceEndpointType,
   VerificationRelationship, Codec, BTreeSet, DID_QUALIFIER
 }
-
 
 export class InfraSS58 {
   api!: any;
@@ -556,7 +554,7 @@ export class InfraSS58 {
     }
 
     return {
-      '@context': ['https://www.w3.org/ns/did/v1', 'https://w3c.github.io/vc-data-integrity/contexts/multikey/v1.jsonld', 'https://w3id.org/security/data-integrity/v2', 'https://digitalbazaar.github.io/ed25519-signature-2020-context/contexts/ed25519-signature-2020-v1.jsonld'],
+      '@context': ['https://www.w3.org/ns/did/v1', 'https://w3c.github.io/vc-data-integrity/contexts/multikey/v1.jsonld', 'https://w3id.org/security/data-integrity/v2', 'https://digitalbazaar.github.io/ed25519-signature-2020-context/contexts/ed25519-signature-2020-v1.jsonld', 'https://w3c.github.io/vc-jws-2020/contexts/v1'],
       id,
       controller: controllers.map((c) => `${qualifier}${encodeAddress(c)}`),
       verificationMethod,
@@ -572,7 +570,7 @@ export class InfraSS58 {
     const { id } = InfraSS58.splitDID(did);
     const publicKey = decodeAddress(id);
     return ({
-      '@context': ['https://www.w3.org/ns/did/v1', 'https://w3c.github.io/vc-data-integrity/contexts/multikey/v1.jsonld', 'https://w3id.org/security/data-integrity/v2', 'https://digitalbazaar.github.io/ed25519-signature-2020-context/contexts/ed25519-signature-2020-v1.jsonld'],
+      '@context': ['https://www.w3.org/ns/did/v1', 'https://w3c.github.io/vc-data-integrity/contexts/multikey/v1.jsonld', 'https://w3id.org/security/data-integrity/v2', 'https://digitalbazaar.github.io/ed25519-signature-2020-context/contexts/ed25519-signature-2020-v1.jsonld', 'https://w3c.github.io/vc-jws-2020/contexts/v1'],
       id: did,
       controller: [did],
       verificationMethod: [

@@ -43,7 +43,7 @@ async function main() {
 
   const vp = new VerifiablePresentation(vpId);
   vp.addContext('https://www.w3.org/2018/credentials/examples/v1');
-  vp.addType('CredentialManagerPresentation');
+  vc.addContext('https://schema.org');
   vp.setHolder(infraApi.didModule.did);
   vp.addCredential(vc);
 
