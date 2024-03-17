@@ -352,8 +352,12 @@ export class InfraSS58 {
     resolve: async (didUrl) => this.getDocument(didUrl)
   }
   static resolve(did: string) {
-    did = did.split('#')[0];
-    return InfraSS58.defaultDocuments(did);
+    try {
+      did = did.split('#')[0];
+      return InfraSS58.defaultDocuments(did);
+    } catch (error) { 
+      throw new Error("Maybe the DID is not valid or not ed25519 address. Please check the DID and try again.")
+    }
   }
   public async getDocument(did, getBbsPlusSigKeys = true) {
     did = did.split('#')[0];
