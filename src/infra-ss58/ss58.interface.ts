@@ -4,8 +4,7 @@ import { Codec } from '@polkadot/types-codec/types';
 import { KeyringPair } from '@polkadot/keyring/types';
 import typesBundle from '@docknetwork/node-types';
 import { BBSPlusSignatureParamsG1 } from '@docknetwork/crypto-wasm-ts';
-import { Bls12381BBSSignatureDock2022, Bls12381G2KeyPairDock2022, Ed25519Signature2018, Ed25519VerificationKey2018, Bls12381BBSSignatureProofDock2022, Ed25519VerificationKey2020, Ed25519Signature2020, JsonWebSignature2020, JsonWebKey2020 } from './infra-ss58-verifiable/crypto';
-
+import { Bls12381BBSSignatureDock2022, Bls12381G2KeyPairDock2022, Ed25519Signature2018, Ed25519VerificationKey2018, Bls12381BBSSignatureProofDock2022, Ed25519VerificationKey2020, Ed25519Signature2020, JsonWebSignature2020, JsonWebKey2020, Ed25519MultiKey, DataIntegrityProof } from './infra-ss58-verifiable/crypto';
 
 export { KeyringPair, Codec, typesBundle, BTreeSet };
 
@@ -34,6 +33,14 @@ export const CRYPTO_INFO = {
     SIG_CLS: JsonWebSignature2020,
     LDKeyClass: JsonWebKey2020,
   },
+  MULTIKEY: {
+    CRYPTO_TYPE: 'ed25519',
+    KEY_NAME: 'Multikey',
+    SIG_TYPE: 'Ed25519',
+    SIG_NAME: 'DataIntegrityProof',
+    SIG_CLS: DataIntegrityProof,
+    LDKeyClass: Ed25519MultiKey,
+  }
 } as const
 
 export const CRYPTO_BBS_INFO = {
@@ -47,7 +54,7 @@ export const CRYPTO_BBS_INFO = {
 } as const
 
 export type CRYPTO_INFO = typeof CRYPTO_INFO[keyof typeof CRYPTO_INFO]
-export type SIG_TYPE = typeof CRYPTO_INFO.ED25519_2018.SIG_TYPE | typeof CRYPTO_INFO.ED25519_2020.SIG_TYPE | typeof CRYPTO_INFO.ED25519_JWK.SIG_TYPE;;
+export type SIG_TYPE = typeof CRYPTO_INFO.ED25519_2018.SIG_TYPE | typeof CRYPTO_INFO.ED25519_2020.SIG_TYPE | typeof CRYPTO_INFO.ED25519_JWK.SIG_TYPE | typeof CRYPTO_INFO.MULTIKEY.SIG_TYPE
 
 export type HexString = `0x${string}`;
 export interface IConfig_SS58 {
@@ -112,6 +119,8 @@ export class PublicKey_SS58 {
   }
   static fromKeyringPair(pair: KeyringPair): PublicKey_SS58 {
     switch ((pair as KeyringPair).type) {
+      case CRYPTO_INFO.MULTIKEY.CRYPTO_TYPE:
+        return new this(u8aToHex((pair as KeyringPair).publicKey), CRYPTO_INFO.MULTIKEY.SIG_TYPE);
       case CRYPTO_INFO.ED25519_2018.CRYPTO_TYPE:
         return new this(u8aToHex((pair as KeyringPair).publicKey), CRYPTO_INFO.ED25519_2018.SIG_TYPE);
       case CRYPTO_INFO.ED25519_2020.CRYPTO_TYPE:
@@ -168,7 +177,7 @@ export class ExtrinsicError extends Error {
 }
 
 export class VerificationRelationship {
-  constructor(private _value = 0b0000) {}
+  constructor(private _value = 0b0000) { }
   get value() { return this._value }
   setAuthentication() { this._value |= 0b0001 }
   setAssertion() { this._value |= 0b0010 }
@@ -181,7 +190,7 @@ export class VerificationRelationship {
   isKeyAgreement() { return !!(this._value & 0b1000) }
 }
 export class ServiceEndpointType {
-  constructor(private _value = 0) {}
+  constructor(private _value = 0) { }
   get value() { return this._value }
   setLinkedDomains() { this._value |= 0b0001; }
 }

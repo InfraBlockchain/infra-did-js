@@ -1,4 +1,3 @@
-import { DEFAULT_CONTEXT_V1_URL } from '../verifiable.constants';
 import Ed25519VerificationKey2020 from './Ed25519VerificationKey2020';
 import CustomLinkedDataSignature from './custom-linkeddatasignature';
 

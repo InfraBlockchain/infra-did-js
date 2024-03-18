@@ -43,7 +43,6 @@ export default class CustomLinkedDataSignature extends jsigs.suites.LinkedDataSi
   async verifySignature({ verifyData, verificationMethod, proof }) {
     let signatureBytes;
     let data = verifyData;
-
     const { proofValue, jws } = proof;
     if (proofValue && typeof proofValue === 'string') {
       signatureBytes = base58btc.decode(CustomLinkedDataSignature.fromJsigProofValue(proofValue));

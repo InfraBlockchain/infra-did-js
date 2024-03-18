@@ -1,6 +1,5 @@
 import b58 from 'bs58';
-import * as base64 from '@juanelas/base64';
-import { u8aToHex, u8aToU8a, hexToU8a } from '@polkadot/util';
+import { u8aToHex, u8aToU8a } from '@polkadot/util';
 import { signatureVerify } from '@polkadot/util-crypto/signature';
 export default class Ed25519VerificationKey2018 {
   publicKey: Uint8Array;

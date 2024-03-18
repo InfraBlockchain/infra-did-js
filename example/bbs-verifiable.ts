@@ -66,7 +66,7 @@ async function main() {
         const bbsPlusPresentation = new BBSPlusPresentation();
 
         const { type } = issuerBBSSigSet.keyPair;
-        const issuerKeyDoc = infraApi.getKeyDoc(`${conf.did}#keys-4`, conf.did, type, issuerBBSSigSet.keyPair);
+        const issuerKeyDoc = infraApi.getKeyDoc(`${conf.did}#keys-5`, conf.did, type, issuerBBSSigSet.keyPair);
         const issuedVC = await bbsPlusPresentation.issueCredential(issuerKeyDoc, vc.toJSON());
 
         const idx = await bbsPlusPresentation.addCredentialToPresent(issuedVC, { resolver: infraApi.Resolver });

@@ -4,11 +4,9 @@ import { HttpProvider } from '@polkadot/rpc-provider';
 import { hexToU8a } from '@polkadot/util/hex/toU8a';
 import { stringToU8a } from '@polkadot/util/string/toU8a';
 import { stringToHex } from '@polkadot/util/string/toHex';
-import { u8aToString } from '@polkadot/util/u8a/toString';
 import { u8aToHex } from '@polkadot/util/u8a/toHex';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { encodeAddress, decodeAddress, mnemonicGenerate, mnemonicToMiniSecret, cryptoWaitReady } from '@polkadot/util-crypto';
-
 
 import { BBSPlusSignatureParamsG1, initializeWasm, isWasmInitialized } from '@docknetwork/crypto-wasm-ts';
 
@@ -24,6 +22,7 @@ import {
   PublicJwk_ED,
   PrivateJwk_ED, Codec, BTreeSet, ServiceEndpointType
 } from './ss58.interface';
+import { CryptoHelper } from './derived/crypto.helper';
 
 export { CryptoHelper } from './derived/crypto.helper';
 export { VerifiableCredential, VerifiablePresentation, Schema, BBSPlusPresentation } from './infra-ss58-verifiable';
@@ -34,7 +33,6 @@ export {
   DIDSet, DidKey_SS58, PublicKey_SS58, ServiceEndpointType,
   VerificationRelationship, Codec, BTreeSet, DID_QUALIFIER
 }
-
 
 export class InfraSS58 {
   api!: any;
@@ -350,8 +348,19 @@ export class InfraSS58 {
   public Resolver = {
     resolve: async (didUrl) => this.getDocument(didUrl)
   }
+  static resolve(did: string) {
+    try {
+      did = did.split('#')[0];
+      return InfraSS58.defaultDocuments(did);
+    } catch (error) {
+      throw new Error("Maybe the DID is not valid or not ed25519 address. Please check the DID and try again.")
+    }
+  }
   public async getDocument(did, getBbsPlusSigKeys = true) {
     did = did.split('#')[0];
+    if (!this.api) {
+      return InfraSS58.defaultDocuments(did);
+    }
 
     const qualifier = InfraSS58.splitDID(did).qualifier;
     const hexId = InfraSS58.didToHexPk(did);
@@ -416,18 +425,25 @@ export class InfraSS58 {
             keys.push(
               [index, CRYPTO_INFO.ED25519_2018.KEY_NAME, publicKeyRaw],
               [index + 1, CRYPTO_INFO.ED25519_2020.KEY_NAME, publicKeyRaw],
-              [index + 2, CRYPTO_INFO.ED25519_JWK.KEY_NAME, publicKeyRaw]
+              [index + 2, CRYPTO_INFO.ED25519_JWK.KEY_NAME, publicKeyRaw],
+              [index + 3, CRYPTO_INFO.MULTIKEY.KEY_NAME, publicKeyRaw]
             );
-          } else {
+          } else if (pkObj.x25519) {
+            const publicKeyRaw = hexToU8a(pkObj.x25519);
+            keys.push(
+              [index, "X25519JsonWebKey2020", publicKeyRaw],
+            );
+          }
+          else {
             throw new Error(`Cannot parse public key ${pk}`);
           }
 
           const vr = new VerificationRelationship(dk.verRels.toNumber());
-          if (vr.isAuthentication()) authn.push(index, index + 1, index + 2);
-          if (vr.isAssertion()) assertion.push(index, index + 1, index + 2);
-          if (vr.isCapabilityInvocation()) capInv.push(index, index + 1, index + 2);
-          if (vr.isKeyAgreement()) keyAgr.push(index, index + 1, index + 2);
-          extraKeyId += 2;
+          if (vr.isAuthentication()) authn.push(index, index + 1, index + 2, index + 3);
+          if (vr.isAssertion()) assertion.push(index, index + 1, index + 2, index + 3);
+          if (vr.isCapabilityInvocation()) capInv.push(index, index + 1, index + 2, index + 3);
+          if (vr.isKeyAgreement()) keyAgr.push(index);
+          extraKeyId += 3;
         }
       });
     }
@@ -515,6 +531,25 @@ export class InfraSS58 {
               x: Buffer.from(publicKeyRaw).toString('base64url'),
             }
           }
+        case CRYPTO_INFO.MULTIKEY.KEY_NAME:
+          return {
+            id: `${id}#keys-${index}`,
+            type: typ,
+            controller: id,
+            publicKeyMultibase: `z${b58.encode(publicKeyRaw)}`,
+          }
+        case "X25519JsonWebKey2020":
+          return {
+            id: `${id}#keys-${index}`,
+            type: "JsonWebKey2020",
+            controller: id,
+            publicKeyJwk: {
+              kty: 'OKP',
+              crv: 'X25519',
+              kid: `keys-${index}`,
+              x: Buffer.from(publicKeyRaw).toString('base64url'),
+            }
+          }
         default: // Ed25519VerificationKey2018 or Bls12381G2VerificationKeyDock2022
           return {
             id: `${id}#keys-${index}`,
@@ -522,10 +557,7 @@ export class InfraSS58 {
             controller: id,
             publicKeyBase58: b58.encode(publicKeyRaw),
           }
-
       }
-
-
     });
     const assertionMethod = assertion.map((i) => `${id}#keys-${i}`);
     const authentication = authn.map((i) => `${id}#keys-${i}`);
@@ -552,9 +584,9 @@ export class InfraSS58 {
     }
 
     return {
-      '@context': ['https://www.w3.org/ns/did/v1'],
+      '@context': ['https://www.w3.org/ns/did/v1', 'https://w3c.github.io/vc-data-integrity/contexts/multikey/v1.jsonld', 'https://w3id.org/security/data-integrity/v2', 'https://digitalbazaar.github.io/ed25519-signature-2020-context/contexts/ed25519-signature-2020-v1.jsonld', 'https://w3c.github.io/vc-jws-2020/contexts/v1'],
       id,
-      controller: controllers.map((c) => `${qualifier}${encodeAddress(c)}`),
+      controller: controllers.map((c) => `${qualifier}:${encodeAddress(c)}`),
       verificationMethod,
       authentication,
       assertionMethod,
@@ -567,8 +599,10 @@ export class InfraSS58 {
   static defaultDocuments = (did: string) => {
     const { id } = InfraSS58.splitDID(did);
     const publicKey = decodeAddress(id);
+    const xPkJwk = CryptoHelper.edToX25519Pk(publicKey, 'jwk');
+
     return ({
-      '@context': ['https://www.w3.org/ns/did/v1'],
+      '@context': ['https://www.w3.org/ns/did/v1', 'https://w3c.github.io/vc-data-integrity/contexts/multikey/v1.jsonld', 'https://w3id.org/security/data-integrity/v2', 'https://digitalbazaar.github.io/ed25519-signature-2020-context/contexts/ed25519-signature-2020-v1.jsonld', 'https://w3c.github.io/vc-jws-2020/contexts/v1'],
       id: did,
       controller: [did],
       verificationMethod: [
@@ -596,16 +630,25 @@ export class InfraSS58 {
             x: Buffer.from(publicKey).toString('base64url'),
           }
         },
+        {
+          id: `${did}#keys-4`,
+          type: 'JsonWebKey2020',
+          controller: did,
+          publicKeyJwk: { ...xPkJwk, alg: undefined }
+        },
+        {
+          id: `${did}#keys-5`,
+          type: 'Multikey',
+          controller: did,
+          publicKeyMultibase: `z${b58.encode(publicKey)}`,
+        }
       ],
-      authentication: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
-      assertionMethod: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
-      keyAgreement: [],
-      capabilityInvocation: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`],
+      authentication: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`, `${did}#keys-5`],
+      assertionMethod: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`, `${did}#keys-5`],
+      keyAgreement: [`${did}#keys-4`],
+      capabilityInvocation: [`${did}#keys-1`, `${did}#keys-2`, `${did}#keys-3`, `${did}#keys-5`],
       service: []
     });
   }
 
 }
-
-
-
