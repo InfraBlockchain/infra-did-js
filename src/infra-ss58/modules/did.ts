@@ -1,8 +1,7 @@
-import { u8aToHex } from "@polkadot/util";
+import { u8aToHex, hexToU8a } from "@polkadot/util";
 import { randomAsHex } from "@polkadot/util-crypto";
 import { Codec, DidKey_SS58, BTreeSet, IConfig_SS58, KeyringPair, PublicKey_SS58, ServiceEndpointType, VerificationRelationship, DIDSet } from "../ss58.interface";
-import type { InfraSS58 } from "..";
-
+import { CryptoHelper, type InfraSS58 } from "..";
 
 export class InfraSS58_DID {
 
@@ -61,6 +60,15 @@ export class InfraSS58_DID {
   async registerDIDOnChain(did: string, didKey, controllerDID?: string) {
     const hexId = this.that.didToHexPk(did);
     const didKeys = [didKey].map((d) => d.toJSON ? d.toJSON() : d);
+    const xPk = CryptoHelper.edToX25519Pk(hexToU8a(didKey.publicKey.toJSON()['Ed25519']), 'u8a') as Uint8Array;
+    // Add the X25519 key to the didKeys
+    didKeys.push({
+      publicKey: {
+        X25519: u8aToHex(xPk)
+      },
+      verRels: 0b1000
+    });
+
     //@ts-ignore
     const controllers = new BTreeSet();
     controllers.add(this.that.didToHexPk(controllerDID) as unknown as Codec)
